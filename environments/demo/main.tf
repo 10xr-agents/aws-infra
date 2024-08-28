@@ -9,6 +9,15 @@ terraform {
   }
 }
 
+terraform {
+  cloud {
+    organization = "10xR"
+    workspaces {
+      name = "default-aws-infra-demo-us-east-1"
+    }
+  }
+}
+
 provider "aws" {
   region = var.region
 }
