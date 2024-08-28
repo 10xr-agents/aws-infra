@@ -33,6 +33,7 @@ jobs:
         run: |
           terraform version
           terraform init
+          terraform workspace list
 
       - name: Terraform Destroy
         run: |
