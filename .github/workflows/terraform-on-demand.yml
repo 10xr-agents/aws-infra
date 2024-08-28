@@ -2,15 +2,15 @@ name: 'Terraform-On-Demand'
 
 on:
   workflow_dispatch:
-  inputs:
-    environment:
-      description: 'Application environment to use'
-      required: true
-      default: 'demo'
-    aws-region:
-      description: 'AWS region to use'
-      required: true
-      default: 'us-east-1'
+    inputs:
+      environment:
+        description: 'Application environment to use'
+        required: true
+        default: 'demo'
+      aws-region:
+        description: 'AWS region to use'
+        required: true
+        default: 'us-east-1'
 
 env:
   AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
