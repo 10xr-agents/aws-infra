@@ -1,4 +1,4 @@
-name: 'Terraform-DEMO'
+name: 'Terraform-On-Demand'
 
 on:
   workflow_dispatch:
