@@ -59,4 +59,4 @@ jobs:
         run: terraform show
 
       - name: Terraform Destroy
-        run: terraform destroy -auto-approve -var-file ${{ env.TF_VAR_FILE }} -lock=false
+        run: terraform destroy -lock=false -auto-approve -var-file ${{ env.TF_VAR_FILE }}
