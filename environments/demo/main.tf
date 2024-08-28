@@ -4,7 +4,7 @@ terraform {
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = "~> 5.64.0"  # Use the latest version
+      version = "~> 5.64.0" # Use the latest version
     }
   }
 }
@@ -33,7 +33,7 @@ module "vpc" {
   public_subnet_cidrs  = var.public_subnet_cidrs
   private_subnet_cidrs = var.private_subnet_cidrs
   single_nat_gateway   = var.single_nat_gateway
-  sns_topic_arn         = aws_sns_topic.alerts.arn
+  sns_topic_arn        = aws_sns_topic.alerts.arn
 
   tags = var.tags
 }
@@ -70,13 +70,13 @@ module "s3" {
 module "eks" {
   source = "../../modules/eks"
 
-  project_name         = var.project_name
-  cluster_version      = var.eks_cluster_version
-  subnet_ids           = module.vpc.private_subnet_ids
-  node_groups          = var.eks_node_groups
-  public_access_cidrs  = var.eks_public_access_cidrs
-  s3_bucket_arn        = aws_s3_bucket.main.arn
-  tags                 = var.tags
+  project_name        = var.project_name
+  cluster_version     = var.eks_cluster_version
+  subnet_ids          = module.vpc.private_subnet_ids
+  node_groups         = var.eks_node_groups
+  public_access_cidrs = var.eks_public_access_cidrs
+  s3_bucket_arn       = aws_s3_bucket.main.arn
+  tags                = var.tags
 }
 
 resource "aws_sns_topic" "alerts" {

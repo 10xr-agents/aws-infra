@@ -1,10 +1,10 @@
 # terraform.tfvars
 
-region         = "us-east-1"
-project_name   = "10xr-infra-demo"
-environment    = "demo"
-vpc_cidr       = "10.0.0.0/16"
-availability_zones = ["us-east-1a", "us-east-1b"]
+region               = "us-east-1"
+project_name         = "10xr-infra-demo"
+environment          = "demo"
+vpc_cidr             = "10.0.0.0/16"
+availability_zones   = ["us-east-1a", "us-east-1b"]
 public_subnet_cidrs  = ["10.0.1.0/24", "10.0.3.0/24"]
 private_subnet_cidrs = ["10.0.2.0/24", "10.0.4.0/24"]
 single_nat_gateway   = true
@@ -17,7 +17,7 @@ tags = {
 }
 
 mongodb_connection_string = "mongodb+srv://converseDev:firstPassword1@10xr-demo.3njzs.mongodb.net/converse-server?retryWrites=true&w=majority&appName=10xR-demo"
-eks_cluster_version = "1.24"
+eks_cluster_version       = "1.24"
 eks_node_groups = {
   general = {
     desired_size   = 2
@@ -41,4 +41,4 @@ eks_node_groups = {
   }
 }
 
-eks_public_access_cidrs = ["0.0.0.0/0"]  # Replace with your IP or desired CIDR range
+eks_public_access_cidrs = ["0.0.0.0/0"] # Replace with your IP or desired CIDR range

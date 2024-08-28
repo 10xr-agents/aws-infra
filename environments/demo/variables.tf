@@ -47,7 +47,7 @@ variable "eks_cluster_version" {
 
 variable "eks_node_groups" {
   description = "Map of EKS node group configurations"
-  type        = map(object({
+  type = map(object({
     desired_size   = number
     max_size       = number
     min_size       = number
