@@ -13,7 +13,7 @@ on:
         default: 'us-east-1'
 
 env:
-  TF_CLOUD_ORGANIZATION: "your-org-name"
+  TF_CLOUD_ORGANIZATION: "10xR"
   TF_API_TOKEN: "${{ secrets.TF_API_TOKEN }}"
   CONFIG_DIRECTORY: "environments/${{ github.event.inputs.environment }}"
 
