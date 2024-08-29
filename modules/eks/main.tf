@@ -117,7 +117,7 @@ resource "aws_eks_node_group" "main" {
 
   labels = merge(
     {
-      "eks.amazonaws.com/nodegroup" = each.key
+      "eks.amazon.aws.com/nodegroup" = each.key
     },
     each.value.labels
   )
@@ -400,11 +400,12 @@ resource "aws_iam_policy" "alb_ingress" {
 
 # Helm release for AWS Load Balancer Controller
 resource "helm_release" "aws_load_balancer_controller" {
-  name       = "aws-load-balancer-controller"
-  repository = "https://aws.github.io/eks-charts"
-  chart      = "aws-load-balancer-controller"
-  namespace  = "kube-system"
-  version    = var.alb_controller_version
+  name             = "aws-load-balancer-controller"
+  repository       = "https://aws.github.io/eks-charts"
+  chart            = "aws-load-balancer-controller"
+  namespace        = "kube-system"
+  create_namespace = true
+  version          = var.alb_controller_version
 
   set {
     name  = "clusterName"
@@ -431,11 +432,34 @@ resource "helm_release" "aws_load_balancer_controller" {
     value = var.vpc_id
   }
 
+  # Increase timeout and add retry logic
+  timeout = 900 # 15 minutes
+
+  # Wait for EKS cluster to be ready
   depends_on = [
     aws_eks_cluster.main,
-    aws_iam_role_policy_attachment.alb_ingress,
+    aws_eks_node_group.main,
     kubernetes_config_map.aws_auth
   ]
+}
+
+# Add a null_resource for additional wait and retry logic
+resource "null_resource" "wait_for_alb_controller" {
+  triggers = {
+    helm_release = helm_release.aws_load_balancer_controller.id
+  }
+
+  provisioner "local-exec" {
+    command = <<-EOT
+      kubectl --kubeconfig <(aws eks get-token --cluster-name ${aws_eks_cluster.main.name} | kubectl config view --raw -o yaml | sed 's/''/''/g') \
+        wait --for=condition=available \
+        --timeout=900s \
+        deployment/aws-load-balancer-controller \
+        -n kube-system
+    EOT
+  }
+
+  depends_on = [helm_release.aws_load_balancer_controller]
 }
 
 # AWS Auth ConfigMap
