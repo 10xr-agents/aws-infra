@@ -123,6 +123,7 @@ module "eks" {
   eks_cluster_role_arn = module.security.eks_cluster_role_arn
   eks_node_role_arn    = module.security.eks_nodes_role_arn
   eks_cluster_sg_id    = module.security.eks_nodes_security_group_id
+  default_instance_type = "t3.medium"
 
   tags = var.tags
 }

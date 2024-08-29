@@ -10,13 +10,16 @@ data "aws_eks_cluster_auth" "cluster" {
 
 provider "kubernetes" {
   host                   = data.aws_eks_cluster.cluster.endpoint
-  cluster_ca_certificate = base64decode(data.aws_eks_cluster.cluster.certificate_authority.0.data)
+  cluster_ca_certificate = base64decode(data.aws_eks_cluster.cluster.certificate_authority[0].data)
   token                  = data.aws_eks_cluster_auth.cluster.token
 }
 
 resource "aws_kms_key" "eks" {
-  description         = "EKS Secret Encryption Key"
-  enable_key_rotation = true
+  description             = "EKS Secret Encryption Key"
+  deletion_window_in_days = 7
+  enable_key_rotation     = true
+
+  tags = var.tags
 }
 
 resource "aws_eks_cluster" "main" {
@@ -39,13 +42,48 @@ resource "aws_eks_cluster" "main" {
     resources = ["secrets"]
   }
 
-  lifecycle {
-    prevent_destroy = true
-  }
-
   enabled_cluster_log_types = ["api", "audit", "authenticator", "controllerManager", "scheduler"]
 
-  tags = var.tags
+  tags = merge(
+    var.tags,
+    {
+      "Name" = "${var.project_name}-cluster"
+    }
+  )
+
+  depends_on = [aws_kms_key.eks]
+}
+
+resource "aws_launch_template" "eks_nodes" {
+  name_prefix   = "${var.project_name}-eks-nodes"
+  instance_type = var.default_instance_type
+
+  block_device_mappings {
+    device_name = "/dev/xvda"
+
+    ebs {
+      volume_size = 20
+      volume_type = "gp3"
+    }
+  }
+
+  tag_specifications {
+    resource_type = "instance"
+
+    tags = merge(
+      var.tags,
+      {
+        "Name"                                                  = "${var.project_name}-eks-node"
+        "kubernetes.io/cluster/${var.project_name}-cluster"     = "owned"
+        "k8s.io/cluster-autoscaler/${var.project_name}-cluster" = "owned"
+        "k8s.io/cluster-autoscaler/enabled"                     = "true"
+      }
+    )
+  }
+
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 resource "aws_eks_node_group" "main" {
@@ -63,22 +101,15 @@ resource "aws_eks_node_group" "main" {
   }
 
   instance_types = each.value.instance_types
-  capacity_type  = each.value.capacity_type
-
-  taint {
-    key    = "workload"
-    value  = "specialized"
-    effect = "NO_SCHEDULE"
-  }
 
   launch_template {
-    name    = aws_launch_template.eks_nodes.name
+    id      = aws_launch_template.eks_nodes.id
     version = aws_launch_template.eks_nodes.latest_version
   }
 
   labels = merge(
     {
-      "eks.amazon.aws.com/nodegroup" = each.key
+      "eks.amazonaws.com/nodegroup" = each.key
     },
     each.value.labels
   )
@@ -86,27 +117,24 @@ resource "aws_eks_node_group" "main" {
   tags = merge(
     var.tags,
     {
-      "eks:cluster-name" = aws_eks_cluster.main.name
+      "Name"                                              = "${var.project_name}-${each.key}-node-group"
+      "kubernetes.io/cluster/${aws_eks_cluster.main.name}" = "owned"
     }
   )
 
+  # Ensure that IAM Role permissions are created before and deleted after EKS Node Group handling.
+  # Otherwise, EKS will not be able to properly delete EC2 Instances and Elastic Network Interfaces.
+  depends_on = [aws_launch_template.eks_nodes]
 }
 
-resource "aws_launch_template" "eks_nodes" {
-  name_prefix   = "${var.project_name}-eks-nodes"
-  instance_type = "mixed"
+resource "aws_iam_openid_connect_provider" "eks" {
+  client_id_list  = ["sts.amazonaws.com"]
+  thumbprint_list = [data.tls_certificate.eks.certificates[0].sha1_fingerprint]
+  url             = aws_eks_cluster.main.identity[0].oidc[0].issuer
+}
 
-  instance_market_options {
-    market_type = "spot"
-  }
-
-  tag_specifications {
-    resource_type = "instance"
-    tags = {
-      "k8s.io/cluster-autoscaler/enabled"                     = "true"
-      "k8s.io/cluster-autoscaler/${var.project_name}-cluster" = "owned"
-    }
-  }
+data "tls_certificate" "eks" {
+  url = aws_eks_cluster.main.identity[0].oidc[0].issuer
 }
 
 # ALB Ingress Controller setup
@@ -130,33 +158,13 @@ resource "aws_iam_role" "alb_ingress" {
       }
     ]
   })
+
+  tags = var.tags
 }
 
 resource "aws_iam_role_policy_attachment" "alb_ingress" {
   policy_arn = aws_iam_policy.alb_ingress.arn
   role       = aws_iam_role.alb_ingress.name
-}
-
-resource "helm_release" "aws_load_balancer_controller" {
-  name       = "aws-load-balancer-controller"
-  repository = "https://aws.github.io/eks-charts"
-  chart      = "aws-load-balancer-controller"
-  namespace  = "kube-system"
-
-  set {
-    name  = "clusterName"
-    value = aws_eks_cluster.main.name
-  }
-
-  set {
-    name  = "serviceAccount.create"
-    value = "true"
-  }
-
-  set {
-    name  = "serviceAccount.annotations.eks\\.amazonaws\\.com/role-arn"
-    value = aws_iam_role.alb_ingress.arn
-  }
 }
 
 resource "aws_iam_policy" "alb_ingress" {
@@ -168,11 +176,21 @@ resource "aws_iam_policy" "alb_ingress" {
     Version = "2012-10-17"
     Statement = [
       {
+        Effect   = "Allow"
+        Action   = ["iam:CreateServiceLinkedRole"]
+        Resource = "*"
+        Condition = {
+          StringEquals = {
+            "iam:AWSServiceName" : "elasticloadbalancing.amazonaws.com"
+          }
+        }
+      },
+      {
         Effect = "Allow"
         Action = [
-          "iam:CreateServiceLinkedRole",
           "ec2:DescribeAccountAttributes",
           "ec2:DescribeAddresses",
+          "ec2:DescribeAvailabilityZones",
           "ec2:DescribeInternetGateways",
           "ec2:DescribeVpcs",
           "ec2:DescribeSubnets",
@@ -180,6 +198,8 @@ resource "aws_iam_policy" "alb_ingress" {
           "ec2:DescribeInstances",
           "ec2:DescribeNetworkInterfaces",
           "ec2:DescribeTags",
+          "ec2:GetCoipPoolUsage",
+          "ec2:DescribeCoipPools",
           "elasticloadbalancing:DescribeLoadBalancers",
           "elasticloadbalancing:DescribeLoadBalancerAttributes",
           "elasticloadbalancing:DescribeListeners",
@@ -220,7 +240,13 @@ resource "aws_iam_policy" "alb_ingress" {
         Effect = "Allow"
         Action = [
           "ec2:AuthorizeSecurityGroupIngress",
-          "ec2:RevokeSecurityGroupIngress",
+          "ec2:RevokeSecurityGroupIngress"
+        ]
+        Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
           "ec2:CreateSecurityGroup"
         ]
         Resource = "*"
@@ -233,10 +259,10 @@ resource "aws_iam_policy" "alb_ingress" {
         Resource = "arn:aws:ec2:*:*:security-group/*"
         Condition = {
           StringEquals = {
-            "ec2:CreateAction" = "CreateSecurityGroup"
+            "ec2:CreateAction" : "CreateSecurityGroup"
           }
           Null = {
-            "aws:RequestTag/elbv2.k8s.aws/cluster" = "false"
+            "aws:RequestTag/elbv2.k8s.aws/cluster" : "false"
           }
         }
       },
@@ -249,8 +275,22 @@ resource "aws_iam_policy" "alb_ingress" {
         Resource = "arn:aws:ec2:*:*:security-group/*"
         Condition = {
           Null = {
-            "aws:RequestTag/elbv2.k8s.aws/cluster"  = "true"
-            "aws:ResourceTag/elbv2.k8s.aws/cluster" = "false"
+            "aws:RequestTag/elbv2.k8s.aws/cluster" : "true",
+            "aws:ResourceTag/elbv2.k8s.aws/cluster" : "false"
+          }
+        }
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "ec2:AuthorizeSecurityGroupIngress",
+          "ec2:RevokeSecurityGroupIngress",
+          "ec2:DeleteSecurityGroup"
+        ]
+        Resource = "*"
+        Condition = {
+          Null = {
+            "aws:ResourceTag/elbv2.k8s.aws/cluster" : "false"
           }
         }
       },
@@ -263,7 +303,7 @@ resource "aws_iam_policy" "alb_ingress" {
         Resource = "*"
         Condition = {
           Null = {
-            "aws:RequestTag/elbv2.k8s.aws/cluster" = "false"
+            "aws:RequestTag/elbv2.k8s.aws/cluster" : "false"
           }
         }
       },
@@ -290,10 +330,23 @@ resource "aws_iam_policy" "alb_ingress" {
         ]
         Condition = {
           Null = {
-            "aws:RequestTag/elbv2.k8s.aws/cluster"  = "true"
-            "aws:ResourceTag/elbv2.k8s.aws/cluster" = "false"
+            "aws:RequestTag/elbv2.k8s.aws/cluster" : "true",
+            "aws:ResourceTag/elbv2.k8s.aws/cluster" : "false"
           }
         }
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "elasticloadbalancing:AddTags",
+          "elasticloadbalancing:RemoveTags"
+        ]
+        Resource = [
+          "arn:aws:elasticloadbalancing:*:*:listener/net/*/*/*",
+          "arn:aws:elasticloadbalancing:*:*:listener/app/*/*/*",
+          "arn:aws:elasticloadbalancing:*:*:listener-rule/net/*/*/*",
+          "arn:aws:elasticloadbalancing:*:*:listener-rule/app/*/*/*"
+        ]
       },
       {
         Effect = "Allow"
@@ -310,7 +363,7 @@ resource "aws_iam_policy" "alb_ingress" {
         Resource = "*"
         Condition = {
           Null = {
-            "aws:ResourceTag/elbv2.k8s.aws/cluster" = "false"
+            "aws:ResourceTag/elbv2.k8s.aws/cluster" : "false"
           }
         }
       },
@@ -337,12 +390,27 @@ resource "aws_iam_policy" "alb_ingress" {
   })
 }
 
-resource "aws_iam_openid_connect_provider" "eks" {
-  client_id_list  = ["sts.amazonaws.com"]
-  thumbprint_list = [data.tls_certificate.eks.certificates[0].sha1_fingerprint]
-  url             = aws_eks_cluster.main.identity[0].oidc[0].issuer
-}
+# Helm release for AWS Load Balancer Controller
+resource "helm_release" "aws_load_balancer_controller" {
+  name       = "aws-load-balancer-controller"
+  repository = "https://aws.github.io/eks-charts"
+  chart      = "aws-load-balancer-controller"
+  namespace  = "kube-system"
 
-data "tls_certificate" "eks" {
-  url = aws_eks_cluster.main.identity[0].oidc[0].issuer
+  set {
+    name  = "clusterName"
+    value = aws_eks_cluster.main.name
+  }
+
+  set {
+    name  = "serviceAccount.create"
+    value = "true"
+  }
+
+  set {
+    name  = "serviceAccount.annotations.eks\\.amazonaws\\.com/role-arn"
+    value = aws_iam_role.alb_ingress.arn
+  }
+
+  depends_on = [aws_eks_cluster.main, aws_iam_role_policy_attachment.alb_ingress]
 }

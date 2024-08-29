@@ -50,6 +50,10 @@ variable "eks_cluster_sg_id" {
   type = string
 }
 
+variable "default_instance_type" {
+  type = string
+}
+
 variable "tags" {
   description = "A map of tags to add to all resources"
   type        = map(string)
