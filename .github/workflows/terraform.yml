@@ -1,9 +1,9 @@
-name: 'Terraform'
+name: 'Terraform Multi-Workspace'
 
 on:
   push:
     branches:
-      - master
+      - main
   pull_request:
     branches:
       - '*'
@@ -11,13 +11,19 @@ on:
 env:
   TF_CLOUD_ORGANIZATION: "10xR"
   TF_API_TOKEN: "${{ secrets.TF_API_TOKEN }}"
-  TF_WORKSPACE: "your-workspace-name"
   CONFIG_DIRECTORY: "."
 
 jobs:
   terraform:
     name: 'Terraform'
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        workspace: [
+          "your-workspace-name-dev",
+          "your-workspace-name-staging",
+          "your-workspace-name-prod"
+        ]
 
     steps:
       - name: Checkout
@@ -27,14 +33,14 @@ jobs:
         uses: hashicorp/tfc-workflows-github/actions/upload-configuration@v1.0.0
         id: upload
         with:
-          workspace: ${{ env.TF_WORKSPACE }}
+          workspace: ${{ matrix.workspace }}
           directory: ${{ env.CONFIG_DIRECTORY }}
 
       - name: Create Plan Run
         uses: hashicorp/tfc-workflows-github/actions/create-run@v1.0.0
         id: plan_run
         with:
-          workspace: ${{ env.TF_WORKSPACE }}
+          workspace: ${{ matrix.workspace }}
           configuration_version: ${{ steps.upload.outputs.configuration_version_id }}
 
       - name: Get Plan Output
@@ -49,7 +55,7 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const output = `#### Terraform Plan Output
+            const output = `#### Terraform Plan Output for ${{ matrix.workspace }}
             \`\`\`
             ${{ steps.plan_output.outputs.stdout }}
             \`\`\`
@@ -62,8 +68,8 @@ jobs:
             })
 
       - name: Apply Run
-        if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         uses: hashicorp/tfc-workflows-github/actions/apply-run@v1.0.0
         with:
           run: ${{ fromJSON(steps.plan_run.outputs.payload).data.id }}
-          comment: "Apply run from GitHub Actions CI"
+          comment: "Apply run from GitHub Actions CI for ${{ matrix.workspace }}"
