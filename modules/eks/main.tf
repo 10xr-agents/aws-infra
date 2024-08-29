@@ -78,7 +78,7 @@ resource "aws_eks_node_group" "main" {
 
   labels = merge(
     {
-      "eks.amazonaws.com/nodegroup" = each.key
+      "eks.amazon.aws.com/nodegroup" = each.key
     },
     each.value.labels
   )

@@ -59,6 +59,43 @@ resource "aws_lb_listener" "http" {
   }
 }
 
+
+resource "aws_lb_listener" "tcp" {
+  load_balancer_arn = aws_lb.main.arn
+  port              = "7880"
+  protocol          = "TCP"
+
+  default_action {
+    type = "forward"
+    target_group_arn = aws_lb_target_group.tcp.arn
+  }
+}
+
+resource "aws_lb_listener" "udp" {
+  load_balancer_arn = aws_lb.main.arn
+  port              = "7880"
+  protocol          = "UDP"
+
+  default_action {
+    type = "forward"
+    target_group_arn = aws_lb_target_group.udp.arn
+  }
+}
+
+resource "aws_lb_target_group" "tcp" {
+  name     = "tcp-target-group"
+  port     = 7880
+  protocol = "TCP"
+  vpc_id   = var.vpc_id
+}
+
+resource "aws_lb_target_group" "udp" {
+  name     = "udp-target-group"
+  port     = 7880
+  protocol = "UDP"
+  vpc_id   = var.vpc_id
+}
+
 resource "aws_wafv2_web_acl" "main" {
   name        = "${var.project_name}-waf-acl"
   description = "WAF ACL for ALB"
@@ -215,6 +252,7 @@ resource "aws_s3_bucket" "flow_logs" {
   )
 }
 
+
 resource "aws_s3_bucket_public_access_block" "flow_logs" {
   bucket = aws_s3_bucket.flow_logs.id
 
@@ -261,6 +299,24 @@ resource "aws_s3_bucket" "alb_logs" {
       Name = "${var.project_name}-alb-logs"
     }
   )
+}
+
+resource "aws_s3_bucket_policy" "alb_logs" {
+  bucket = aws_s3_bucket.alb_logs.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Principal = {
+          Service = "elasticloadbalancing.amazonaws.com"
+        }
+        Action = "s3:PutObject"
+        Resource = "${aws_s3_bucket.alb_logs.arn}/*"
+      }
+    ]
+  })
 }
 
 resource "aws_s3_bucket_public_access_block" "alb_logs" {

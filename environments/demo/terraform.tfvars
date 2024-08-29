@@ -30,7 +30,7 @@ eks_node_groups = {
       min_size     = 1
     }
     labels = {
-      "node-group" = "general"
+      "node-group" = "converse-general"
     }
     taints = []
   },
@@ -45,7 +45,7 @@ eks_node_groups = {
       min_size     = 1
     }
     labels = {
-      "node-group" = "spot"
+      "node-group" = "converse-spot"
     }
     taints = []
   }
