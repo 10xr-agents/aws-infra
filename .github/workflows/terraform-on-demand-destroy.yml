@@ -1,4 +1,4 @@
-name: 'Terraform-On-Demand'
+name: 'Terraform-DEMO-Only-Destroy'
 
 on:
   workflow_dispatch:
@@ -19,7 +19,7 @@ env:
 
 jobs:
   terraform:
-    name: 'Terraform On-Demand'
+    name: 'Terraform DEMO Only Destroy'
     runs-on: ubuntu-latest
 
     steps:
@@ -38,19 +38,23 @@ jobs:
           workspace: "default-aws-infra-${{ github.event.inputs.environment }}-${{ github.event.inputs.aws-region }}"
           directory: ${{ env.CONFIG_DIRECTORY }}
 
-      - name: Create Plan Run
+      - name: Create Destroy Plan
         uses: hashicorp/tfc-workflows-github/actions/create-run@v1.0.0
-        id: plan_run
+        id: destroy_plan
         with:
           workspace: "default-aws-infra-${{ github.event.inputs.environment }}-${{ github.event.inputs.aws-region }}"
           configuration_version: ${{ steps.upload.outputs.configuration_version_id }}
+          plan_only: true
+          destroy: true
 
-      - name: Apply Run
+      - name: Apply Destroy Run
         uses: hashicorp/tfc-workflows-github/actions/apply-run@v1.0.0
         with:
-          run: ${{ fromJSON(steps.plan_run.outputs.payload).data.id }}
-          comment: "Apply run from GitHub Actions On-Demand workflow"
+          run: ${{ fromJSON(steps.destroy_plan.outputs.payload).data.id }}
+          comment: "Destroy run from GitHub Actions workflow"
 
-      - name: Show Outputs
+      - name: Delete Workspace
+        if: success()
         run: |
-          terraform show
+          terraform workspace select default
+          terraform workspace delete "default-aws-infra-${{ github.event.inputs.environment }}-${{ github.event.inputs.aws-region }}"
