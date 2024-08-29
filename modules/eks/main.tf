@@ -63,8 +63,10 @@ resource "aws_eks_cluster" "main" {
 }
 
 resource "aws_launch_template" "eks_nodes" {
-  name_prefix   = "${var.project_name}-eks-nodes"
-  instance_type = var.default_instance_type
+  # for_each = var.node_groups
+
+  name_prefix = "${var.project_name}-eks-nodes"
+  # instance_type = each.value.instance_types
 
   block_device_mappings {
     device_name = "/dev/xvda"
@@ -108,7 +110,7 @@ resource "aws_eks_node_group" "main" {
     min_size     = each.value.min_size
   }
 
-  instance_types = each.value.instance_types
+  # instance_types = each.value.instance_types
 
   launch_template {
     id      = aws_launch_template.eks_nodes.id
@@ -125,7 +127,7 @@ resource "aws_eks_node_group" "main" {
   tags = merge(
     var.tags,
     {
-      "Name"                                              = "${var.project_name}-${each.key}-node-group"
+      "Name"                                               = "${var.project_name}-${each.key}-node-group"
       "kubernetes.io/cluster/${aws_eks_cluster.main.name}" = "owned"
     }
   )
