@@ -54,6 +54,37 @@ variable "default_instance_type" {
   type = string
 }
 
+variable "alb_controller_version" {
+  description = "Version of the AWS Load Balancer Controller Helm chart"
+  type        = string
+  default     = "1.4.1"
+}
+
+variable "vpc_id" {
+  description = "ID of the VPC where the EKS cluster will be created"
+  type        = string
+}
+
+variable "map_additional_iam_roles" {
+  description = "Additional IAM roles to add to the aws-auth configmap"
+  type        = list(object({
+    rolearn  = string
+    username = string
+    groups   = list(string)
+  }))
+  default = []
+}
+
+variable "map_additional_iam_users" {
+  description = "Additional IAM users to add to the aws-auth configmap"
+  type        = list(object({
+    userarn  = string
+    username = string
+    groups   = list(string)
+  }))
+  default = []
+}
+
 variable "tags" {
   description = "A map of tags to add to all resources"
   type        = map(string)

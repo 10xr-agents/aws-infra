@@ -14,6 +14,14 @@ provider "kubernetes" {
   token                  = data.aws_eks_cluster_auth.cluster.token
 }
 
+provider "helm" {
+  kubernetes {
+    host                   = data.aws_eks_cluster.cluster.endpoint
+    cluster_ca_certificate = base64decode(data.aws_eks_cluster.cluster.certificate_authority[0].data)
+    token                  = data.aws_eks_cluster_auth.cluster.token
+  }
+}
+
 resource "aws_kms_key" "eks" {
   description             = "EKS Secret Encryption Key"
   deletion_window_in_days = 7
@@ -396,6 +404,7 @@ resource "helm_release" "aws_load_balancer_controller" {
   repository = "https://aws.github.io/eks-charts"
   chart      = "aws-load-balancer-controller"
   namespace  = "kube-system"
+  version    = var.alb_controller_version
 
   set {
     name  = "clusterName"
@@ -412,5 +421,48 @@ resource "helm_release" "aws_load_balancer_controller" {
     value = aws_iam_role.alb_ingress.arn
   }
 
-  depends_on = [aws_eks_cluster.main, aws_iam_role_policy_attachment.alb_ingress]
+  set {
+    name  = "region"
+    value = data.aws_region.current.name
+  }
+
+  set {
+    name  = "vpcId"
+    value = var.vpc_id
+  }
+
+  depends_on = [
+    aws_eks_cluster.main,
+    aws_iam_role_policy_attachment.alb_ingress,
+    kubernetes_config_map.aws_auth
+  ]
 }
+
+# AWS Auth ConfigMap
+resource "kubernetes_config_map" "aws_auth" {
+  metadata {
+    name      = "aws-auth"
+    namespace = "kube-system"
+  }
+
+  data = {
+    mapRoles = yamlencode(
+      concat(
+        [
+          {
+            rolearn  = var.eks_node_role_arn
+            username = "system:node:{{EC2PrivateDNSName}}"
+            groups   = ["system:bootstrappers", "system:nodes"]
+          },
+        ],
+        var.map_additional_iam_roles
+      )
+    )
+    mapUsers = yamlencode(var.map_additional_iam_users)
+  }
+
+  depends_on = [aws_eks_cluster.main]
+}
+
+# Get current region
+data "aws_region" "current" {}

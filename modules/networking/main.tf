@@ -272,76 +272,76 @@ data "aws_elb_service_account" "main" {}
 
 # Global Accelerator and Shield configurations (commented out)
 # Uncomment and configure these resources if you have the necessary AWS subscriptions
-
-resource "aws_globalaccelerator_accelerator" "main" {
-  name            = "${var.project_name}-accelerator"
-  ip_address_type = "IPV4"
-  enabled         = true
-
-  attributes {
-    flow_logs_enabled   = true
-    flow_logs_s3_bucket = aws_s3_bucket.alb_logs.id
-    flow_logs_s3_prefix = "flow-logs/"
-  }
-
-  tags = merge(
-    var.tags,
-    {
-      Name = "${var.project_name}-accelerator"
-    }
-  )
-}
-
-resource "aws_shield_protection" "global_accelerator" {
-  name         = "${var.project_name}-shield-global-accelerator"
-  resource_arn = aws_globalaccelerator_accelerator.main.id
-
-  tags = merge(
-    var.tags,
-    {
-      Name = "${var.project_name}-shield-global-accelerator"
-    }
-  )
-}
-
-resource "aws_globalaccelerator_listener" "main" {
-  accelerator_arn = aws_globalaccelerator_accelerator.main.id
-  client_affinity = "SOURCE_IP"
-  protocol        = "TCP"
-
-  port_range {
-    from_port = 80
-    to_port   = 80
-  }
-
-  port_range {
-    from_port = 443
-    to_port   = 443
-  }
-}
-
-resource "aws_globalaccelerator_endpoint_group" "main" {
-  listener_arn = aws_globalaccelerator_listener.main.id
-
-  endpoint_configuration {
-    endpoint_id = aws_lb.main.arn
-    weight      = 100
-  }
-
-  health_check_path             = "/healthz"
-  health_check_interval_seconds = 10
-  health_check_port             = 443
-  health_check_protocol         = "HTTPS"
-}
-
-resource "aws_shield_protection" "alb" {
-  name         = "${var.project_name}-shield-alb"
-  resource_arn = aws_lb.main.arn
-
-  tags = merge(
-    var.tags,
-    {
-      Name = "${var.project_name}-shield-alb"
-    }
-  )
-}
+#
+# resource "aws_globalaccelerator_accelerator" "main" {
+#   name            = "${var.project_name}-accelerator"
+#   ip_address_type = "IPV4"
+#   enabled         = true
+#
+#   attributes {
+#     flow_logs_enabled   = true
+#     flow_logs_s3_bucket = aws_s3_bucket.alb_logs.id
+#     flow_logs_s3_prefix = "flow-logs/"
+#   }
+#
+#   tags = merge(
+#     var.tags,
+#     {
+#       Name = "${var.project_name}-accelerator"
+#     }
+#   )
+# }
+#
+# resource "aws_shield_protection" "global_accelerator" {
+#   name         = "${var.project_name}-shield-global-accelerator"
+#   resource_arn = aws_globalaccelerator_accelerator.main.id
+#
+#   tags = merge(
+#     var.tags,
+#     {
+#       Name = "${var.project_name}-shield-global-accelerator"
+#     }
+#   )
+# }
+#
+# resource "aws_globalaccelerator_listener" "main" {
+#   accelerator_arn = aws_globalaccelerator_accelerator.main.id
+#   client_affinity = "SOURCE_IP"
+#   protocol        = "TCP"
+#
+#   port_range {
+#     from_port = 80
+#     to_port   = 80
+#   }
+#
+#   port_range {
+#     from_port = 443
+#     to_port   = 443
+#   }
+# }
+#
+# resource "aws_globalaccelerator_endpoint_group" "main" {
+#   listener_arn = aws_globalaccelerator_listener.main.id
+#
+#   endpoint_configuration {
+#     endpoint_id = aws_lb.main.arn
+#     weight      = 100
+#   }
+#
+#   health_check_path             = "/healthz"
+#   health_check_interval_seconds = 10
+#   health_check_port             = 443
+#   health_check_protocol         = "HTTPS"
+# }
+#
+# resource "aws_shield_protection" "alb" {
+#   name         = "${var.project_name}-shield-alb"
+#   resource_arn = aws_lb.main.arn
+#
+#   tags = merge(
+#     var.tags,
+#     {
+#       Name = "${var.project_name}-shield-alb"
+#     }
+#   )
+# }

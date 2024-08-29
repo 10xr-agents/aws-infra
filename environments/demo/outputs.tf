@@ -55,7 +55,7 @@ output "alb_dns_name" {
 }
 
 # Global Accelerator Output
-output "global_accelerator_ips" {
-  description = "The static IP addresses of the Global Accelerator"
-  value       = module.networking.global_accelerator_ips
-}
+# output "global_accelerator_ips" {
+#   description = "The static IP addresses of the Global Accelerator"
+#   value       = module.networking.global_accelerator_ips
+# }

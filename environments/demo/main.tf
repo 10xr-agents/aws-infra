@@ -4,7 +4,19 @@ terraform {
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = "~> 5.64.0" # Use the latest version
+      version = "~> 5.64.0"
+    }
+    kubernetes = {
+      source  = "hashicorp/kubernetes"
+      version = "~> 2.32.0"
+    }
+    helm = {
+      source  = "hashicorp/helm"
+      version = "~> 2.15.0"
+    }
+    tls = {
+      source  = "hashicorp/tls"
+      version = "~> 4.0.5"
     }
   }
 }
@@ -20,6 +32,18 @@ terraform {
 
 provider "aws" {
   region = var.region
+}
+
+provider "helm" {
+  kubernetes {
+    host                   = module.eks.cluster_endpoint
+    cluster_ca_certificate = base64decode(module.eks.cluster_ca_certificate)
+    exec {
+      api_version = "client.authentication.k8s.io/v1beta1"
+      command     = "aws"
+      args        = ["eks", "get-token", "--cluster-name", module.eks.cluster_name]
+    }
+  }
 }
 
 
@@ -120,12 +144,13 @@ module "eks" {
   public_access_cidrs = var.eks_public_access_cidrs
   s3_bucket_arn       = aws_s3_bucket.main.arn
 
-  eks_cluster_role_arn = module.security.eks_cluster_role_arn
-  eks_node_role_arn    = module.security.eks_nodes_role_arn
-  eks_cluster_sg_id    = module.security.eks_nodes_security_group_id
+  eks_cluster_role_arn  = module.security.eks_cluster_role_arn
+  eks_node_role_arn     = module.security.eks_nodes_role_arn
+  eks_cluster_sg_id     = module.security.eks_nodes_security_group_id
   default_instance_type = "t3.medium"
 
-  tags = var.tags
+  tags   = var.tags
+  vpc_id = module.vpc.vpc_id
 }
 
 
