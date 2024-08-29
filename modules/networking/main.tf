@@ -93,6 +93,14 @@ resource "aws_iam_role" "vpc_flow_log_role" {
       }
     ]
   })
+
+
+  # Add lifecycle rule to handle potential conflicts
+  lifecycle {
+    create_before_destroy = true
+  }
+
+  tags = var.tags
 }
 
 resource "aws_iam_role_policy" "vpc_flow_log_policy" {
@@ -317,15 +325,7 @@ resource "aws_s3_bucket_policy" "alb_logs" {
       {
         Effect = "Allow"
         Principal = {
-          AWS = "arn:aws:iam::${data.aws_elb_service_account.main.id}:root"
-        }
-        Action = "s3:PutObject"
-        Resource = "${aws_s3_bucket.alb_logs.arn}/*"
-      },
-      {
-        Effect = "Allow"
-        Principal = {
-          AWS = "arn:aws:elb:*:${data.aws_elb_service_account.main.id}:root"
+          AWS = data.aws_elb_service_account.main.arn
         }
         Action   = "s3:PutObject"
         Resource = "${aws_s3_bucket.alb_logs.arn}/*"

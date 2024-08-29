@@ -68,17 +68,29 @@ resource "aws_cloudwatch_log_group" "eks" {
   retention_in_days = 30
 
   tags = var.tags
+
+  lifecycle {
+    ignore_changes = [name]
+  }
 }
 
 # Update IAM role for EKS nodes to include CloudWatch Logs permissions
 resource "aws_iam_role_policy_attachment" "eks_cloudwatch_policy" {
   policy_arn = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
-  role       = var.eks_node_role_arn
+  role       = split("/", var.eks_node_role_arn)[1]
 }
+
+resource "aws_iam_role_policy_attachment" "cloudwatch_agent_policy" {
+  for_each = var.node_groups
+
+  policy_arn = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
+  role       = split("/", var.eks_node_role_arn)[1]
+}
+
 
 # Add CloudWatch agent configuration
 resource "aws_ssm_parameter" "cw_agent_config" {
-  name  = "/aws/eks/${var.project_name}-cluster/cloudwatch-agent-config"
+  name  = "/custom/eks/${var.project_name}-cluster/cloudwatch-agent-config"
   type  = "String"
   value = jsonencode({
     logs = {
@@ -88,12 +100,12 @@ resource "aws_ssm_parameter" "cw_agent_config" {
           collect_list = [
             {
               file_path = "/var/log/messages"
-              log_group_name = "/aws/eks/${var.project_name}-cluster/nodes"
+              log_group_name = "/custom/eks/${var.project_name}-cluster/nodes"
               log_stream_name = "{instance_id}"
             },
             {
               file_path = "/var/log/kubernetes.log"
-              log_group_name = "/aws/eks/${var.project_name}-cluster/kubernetes"
+              log_group_name = "/custom/eks/${var.project_name}-cluster/kubernetes"
               log_stream_name = "{instance_id}"
             }
           ]
@@ -189,14 +201,6 @@ resource "aws_eks_node_group" "main" {
   # Ensure that IAM Role permissions are created before and deleted after EKS Node Group handling.
   # Otherwise, EKS will not be able to properly delete EC2 Instances and Elastic Network Interfaces.
   depends_on = [aws_launch_template.eks_nodes]
-}
-
-# Add CloudWatch Logs permissions to node groups
-resource "aws_iam_role_policy_attachment" "cloudwatch_agent_policy" {
-  for_each = var.node_groups
-
-  policy_arn = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
-  role       = var.eks_node_role_arn
 }
 
 resource "aws_iam_openid_connect_provider" "eks" {
@@ -629,11 +633,30 @@ resource "kubernetes_config_map" "aws_auth" {
   depends_on = [aws_eks_cluster.main]
 }
 
+resource "null_resource" "wait_for_cluster" {
+  depends_on = [aws_eks_cluster.main]
+
+  provisioner "local-exec" {
+    command = "sleep 60"
+  }
+}
+
 # Add CoreDNS add-on
 resource "aws_eks_addon" "coredns" {
   cluster_name = aws_eks_cluster.main.name
   addon_name   = "coredns"
   addon_version     = "v1.11.1-eksbuild.11"
+
+  depends_on = [
+    null_resource.wait_for_cluster,
+    aws_eks_node_group.main
+  ]
+
+  timeouts {
+    create = "30m"
+    update = "30m"
+    delete = "30m"
+  }
 }
 
 # Add kube-proxy add-on

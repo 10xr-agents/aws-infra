@@ -549,35 +549,11 @@ resource "aws_iam_role_policy_attachment" "alb_ingress" {
   role       = aws_iam_role.eks_nodes.name
 }
 
-resource "aws_cloudtrail" "main" {
-  name                          = "${var.project_name}-cloudtrail"
-  s3_bucket_name                = aws_s3_bucket.cloudtrail_logs.id
-  include_global_service_events = true
-  is_multi_region_trail         = true
-  enable_logging                = true
-  enable_log_file_validation    = true
-
-  event_selector {
-    read_write_type           = "All"
-    include_management_events = true
-
-    data_resource {
-      type   = "AWS::S3::Object"
-      values = ["arn:aws:s3:::"]
-    }
-  }
-
-  cloud_watch_logs_group_arn = "${aws_cloudwatch_log_group.cloudtrail.arn}:*"
-  cloud_watch_logs_role_arn  = aws_iam_role.cloudtrail_cloudwatch_role.arn
-
-  tags = var.tags
-}
-
 resource "aws_s3_bucket" "cloudtrail_logs" {
-  bucket        = "${var.project_name}-cloudtrail-logs"
+  bucket        = "${var.project_name}-cloudtrail-logs-${data.aws_caller_identity.current.account_id}"
   force_destroy = true
 
-  tags = var.tags
+  tags = merge(var.tags, { Name = "${var.project_name}-cloudtrail-logs" })
 }
 
 resource "aws_s3_bucket_policy" "cloudtrail_logs" {
@@ -601,16 +577,60 @@ resource "aws_s3_bucket_policy" "cloudtrail_logs" {
           Service = "cloudtrail.amazonaws.com"
         }
         Action   = "s3:PutObject"
-        Resource = "${aws_s3_bucket.cloudtrail_logs.arn}/AWSLogs/*"
+        Resource = "${aws_s3_bucket.cloudtrail_logs.arn}/AWSLogs/${data.aws_caller_identity.current.account_id}/*"
         Condition = {
           StringEquals = {
             "s3:x-amz-acl" = "bucket-owner-full-control"
+          }
+        }
+      },
+      {
+        Sid    = "AllowSSLRequestsOnly"
+        Effect = "Deny"
+        Principal = "*"
+        Action   = "s3:*"
+        Resource = [
+          aws_s3_bucket.cloudtrail_logs.arn,
+          "${aws_s3_bucket.cloudtrail_logs.arn}/*"
+        ]
+        Condition = {
+          Bool = {
+            "aws:SecureTransport" = "false"
           }
         }
       }
     ]
   })
 }
+
+resource "aws_cloudtrail" "main" {
+  count                         = var.enable_cloudtrail ? 1 : 0
+  name                          = "${var.project_name}-cloudtrail"
+  s3_bucket_name                = aws_s3_bucket.cloudtrail_logs.id
+  include_global_service_events = true
+  is_multi_region_trail         = true
+  enable_log_file_validation    = true
+  is_organization_trail         = var.is_organization_master
+  enable_logging                = true
+
+  event_selector {
+    read_write_type           = "All"
+    include_management_events = true
+
+    data_resource {
+      type   = "AWS::S3::Object"
+      values = ["arn:aws:s3:::"]
+    }
+  }
+
+  cloud_watch_logs_group_arn = "${aws_cloudwatch_log_group.cloudtrail.arn}:*"
+  cloud_watch_logs_role_arn  = aws_iam_role.cloudtrail_cloudwatch_role.arn
+
+  depends_on = [aws_s3_bucket_policy.cloudtrail_logs]
+
+  tags = merge(var.tags, { Name = "${var.project_name}-cloudtrail" })
+}
+
 
 resource "aws_cloudwatch_log_group" "cloudtrail" {
   name              = "/aws/cloudtrail/${var.project_name}"
