@@ -204,7 +204,15 @@ resource "aws_iam_role_policy" "s3_access" {
 }
 
 # GuardDuty
+# Check for existing GuardDuty detectors
+data "aws_guardduty_detector" "existing" {
+  count = var.enable_guardduty ? 1 : 0
+}
+
+# GuardDuty Detector
 resource "aws_guardduty_detector" "main" {
+  count = var.enable_guardduty && length(data.aws_guardduty_detector.existing) == 0 ? 1 : 0
+
   enable = true
 
   datasources {
@@ -233,9 +241,12 @@ resource "aws_guardduty_detector" "main" {
   )
 }
 
+# GuardDuty Organization Configuration
 resource "aws_guardduty_organization_configuration" "main" {
+  count = var.enable_guardduty ? 1 : 0
+
+  detector_id = length(data.aws_guardduty_detector.existing) > 0 ? data.aws_guardduty_detector.existing[0].id : aws_guardduty_detector.main[0].id
   auto_enable_organization_members = "ALL"
-  detector_id                      = aws_guardduty_detector.main.id
 
   datasources {
     s3_logs {
@@ -244,6 +255,13 @@ resource "aws_guardduty_organization_configuration" "main" {
     kubernetes {
       audit_logs {
         enable = true
+      }
+    }
+    malware_protection {
+      scan_ec2_instance_with_findings {
+        ebs_volumes {
+          auto_enable = true
+        }
       }
     }
   }
@@ -262,15 +280,54 @@ resource "aws_securityhub_standards_subscription" "aws_foundational" {
   depends_on    = [aws_securityhub_account.main]
 }
 
+# Create GuardDuty product subscription only if it doesn't exist
 resource "aws_securityhub_product_subscription" "guardduty" {
   product_arn = "arn:aws:securityhub:${var.aws_region}::product/aws/guardduty"
   depends_on  = [aws_securityhub_account.main]
+
+  lifecycle {
+    ignore_changes = [product_arn]
+  }
 }
 
 # CloudTrail
 resource "aws_kms_key" "cloudtrail" {
   description         = "KMS key for CloudTrail logs encryption"
   enable_key_rotation = true
+}
+
+# Add KMS key policy
+resource "aws_kms_key_policy" "cloudtrail" {
+  key_id = aws_kms_key.cloudtrail.id
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "Enable IAM User Permissions"
+        Effect = "Allow"
+        Principal = {
+          AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
+        }
+        Action   = "kms:*"
+        Resource = "*"
+      },
+      {
+        Sid    = "Allow CloudTrail to encrypt logs"
+        Effect = "Allow"
+        Principal = {
+          Service = "cloudtrail.amazonaws.com"
+        }
+        Action = [
+          "kms:Encrypt*",
+          "kms:Decrypt*",
+          "kms:ReEncrypt*",
+          "kms:GenerateDataKey*",
+          "kms:Describe*"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
 }
 
 resource "aws_cloudtrail" "main" {
@@ -358,6 +415,8 @@ resource "aws_s3_bucket_policy" "cloudtrail" {
   })
 }
 
+data "aws_caller_identity" "current" {}
+
 # AWS Config
 resource "aws_config_configuration_recorder" "main" {
   name     = "${var.project_name}-config-recorder"
@@ -402,10 +461,39 @@ resource "aws_config_config_rule" "instances_in_vpc" {
   depends_on = [aws_config_configuration_recorder.main]
 }
 
+resource "aws_iam_role" "ssm_role" {
+  name = "${var.project_name}-ssm-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "ssm.amazonaws.com"
+        }
+      }
+    ]
+  })
+}
+
+# Attach necessary policies to the role (adjust as needed)
+resource "aws_iam_role_policy_attachment" "ssm_policy" {
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonSSMAutomationRole"
+  role       = aws_iam_role.ssm_role.name
+}
+
+# Update the remediation configuration
 resource "aws_config_remediation_configuration" "instances_in_vpc" {
   config_rule_name = aws_config_config_rule.instances_in_vpc.name
   target_type      = "SSM_DOCUMENT"
   target_id        = "AWS-StopEC2Instance"
+
+  parameter {
+    name         = "AutomationAssumeRole"
+    static_value = aws_iam_role.ssm_role.arn
+  }
 
   parameter {
     name           = "InstanceId"

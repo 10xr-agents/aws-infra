@@ -27,7 +27,7 @@ output "cloudtrail_s3_bucket_name" {
 
 output "guardduty_detector_id" {
   description = "The ID of the GuardDuty detector"
-  value       = aws_guardduty_detector.main.id
+  value       = var.enable_guardduty ? (length(data.aws_guardduty_detector.existing) > 0 ? data.aws_guardduty_detector.existing[0].id : aws_guardduty_detector.main[0].id) : null
 }
 
 output "config_recorder_id" {

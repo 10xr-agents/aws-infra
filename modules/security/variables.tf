@@ -31,3 +31,9 @@ variable "s3_bucket_arn" {
   description = "ARN of the S3 bucket for EKS node access"
   type        = string
 }
+
+variable "enable_guardduty" {
+  description = "Whether to enable GuardDuty"
+  type        = bool
+  default     = true
+}
