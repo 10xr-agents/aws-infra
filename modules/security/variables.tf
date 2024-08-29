@@ -32,8 +32,37 @@ variable "s3_bucket_arn" {
   type        = string
 }
 
+variable "enable_cloudtrail" {
+  description = "Whether to enable CloudTrail"
+  type        = bool
+  default     = false
+}
+
+variable "enable_security_hub" {
+  description = "Whether to enable Security Hub"
+  type        = bool
+  default     = false
+}
+
 variable "enable_guardduty" {
   description = "Whether to enable GuardDuty"
   type        = bool
-  default     = true
+  default     = false
+}
+
+variable "enable_config" {
+  description = "Whether to enable AWS Config"
+  type        = bool
+  default     = false
+}
+
+variable "is_organization_master" {
+  description = "When true, it creates an organization trail that logs events for the master account and all member accounts in the AWS Organization."
+  type        = bool
+  default     = false
+}
+
+variable "sns_topic_arn" {
+  description = "ARN of the SNS topic for alarms"
+  type        = string
 }

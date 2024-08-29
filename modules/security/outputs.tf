@@ -20,17 +20,22 @@ output "eks_nodes_role_arn" {
   value       = aws_iam_role.eks_nodes.arn
 }
 
+output "eks_cluster_security_group_id" {
+  description = "ID of the EKS cluster security group"
+  value       = aws_security_group.eks_cluster.id
+}
+
 output "cloudtrail_s3_bucket_name" {
   description = "Name of the S3 bucket used for CloudTrail logs"
-  value       = aws_s3_bucket.cloudtrail.id
+  value       = var.enable_cloudtrail ? aws_s3_bucket.cloudtrail[0].id : null
 }
 
 output "guardduty_detector_id" {
   description = "The ID of the GuardDuty detector"
-  value       = var.enable_guardduty ? (length(data.aws_guardduty_detector.existing) > 0 ? data.aws_guardduty_detector.existing[0].id : aws_guardduty_detector.main[0].id) : null
+  value       = var.enable_guardduty ? aws_guardduty_detector.main[0].id : null
 }
 
 output "config_recorder_id" {
   description = "The ID of the AWS Config recorder"
-  value       = aws_config_configuration_recorder.main.id
+  value       = var.enable_config ? aws_config_configuration_recorder.main[0].id : null
 }

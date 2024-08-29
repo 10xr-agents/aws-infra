@@ -41,11 +41,16 @@ module "vpc" {
 module "security" {
   source = "../../modules/security"
 
-  project_name  = var.project_name
-  vpc_id        = module.vpc.vpc_id
-  aws_region    = var.region
-  s3_bucket_arn = aws_s3_bucket.main.arn
-  tags          = var.tags
+  project_name        = var.project_name
+  vpc_id              = module.vpc.vpc_id
+  aws_region          = var.region
+  s3_bucket_arn       = aws_s3_bucket.main.arn
+  sns_topic_arn       = aws_sns_topic.alerts.arn
+  tags                = var.tags
+  enable_cloudtrail   = false # Set to true when you're ready to enable CloudTrail
+  enable_security_hub = false # Set to true when you're ready to enable Security Hub
+  enable_guardduty    = true  # You can keep this enabled
+  enable_config       = false # Set to true when you're ready to enable AWS Config
 }
 
 module "networking" {

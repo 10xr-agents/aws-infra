@@ -1,6 +1,8 @@
 # modules/security/main.tf
 
-# ALB Security Group
+data "aws_caller_identity" "current" {}
+
+# Security Groups
 resource "aws_security_group" "alb" {
   name        = "${var.project_name}-alb-sg"
   description = "Security group for ALB"
@@ -22,15 +24,9 @@ resource "aws_security_group" "alb" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  tags = merge(
-    var.tags,
-    {
-      Name = "${var.project_name}-alb-sg"
-    }
-  )
+  tags = merge(var.tags, { Name = "${var.project_name}-alb-sg" })
 }
 
-# EKS Cluster Security Group
 resource "aws_security_group" "eks_cluster" {
   name        = "${var.project_name}-eks-cluster-sg"
   description = "Security group for EKS cluster"
@@ -43,15 +39,9 @@ resource "aws_security_group" "eks_cluster" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  tags = merge(
-    var.tags,
-    {
-      Name = "${var.project_name}-eks-cluster-sg"
-    }
-  )
+  tags = merge(var.tags, { Name = "${var.project_name}-eks-cluster-sg" })
 }
 
-# EKS Nodes Security Group
 resource "aws_security_group" "eks_nodes" {
   name        = "${var.project_name}-eks-nodes-sg"
   description = "Security group for EKS nodes"
@@ -80,30 +70,25 @@ resource "aws_security_group" "eks_nodes" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  tags = merge(
-    var.tags,
-    {
-      Name = "${var.project_name}-eks-nodes-sg"
-    }
-  )
+  tags = merge(var.tags, { Name = "${var.project_name}-eks-nodes-sg" })
 }
 
-# EKS Cluster IAM Role
+# IAM Roles and Policies
 resource "aws_iam_role" "eks_cluster" {
   name = "${var.project_name}-eks-cluster-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
-    Statement = [
-      {
-        Action = "sts:AssumeRole"
-        Effect = "Allow"
-        Principal = {
-          Service = "eks.amazonaws.com"
-        }
+    Statement = [{
+      Action = "sts:AssumeRole"
+      Effect = "Allow"
+      Principal = {
+        Service = "eks.amazonaws.com"
       }
-    ]
+    }]
   })
+
+  tags = merge(var.tags, { Name = "${var.project_name}-eks-cluster-role" })
 }
 
 resource "aws_iam_role_policy_attachment" "eks_cluster_policy" {
@@ -116,22 +101,21 @@ resource "aws_iam_role_policy_attachment" "eks_vpc_resource_controller" {
   role       = aws_iam_role.eks_cluster.name
 }
 
-# EKS Node Group IAM Role
 resource "aws_iam_role" "eks_nodes" {
   name = "${var.project_name}-eks-nodes-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
-    Statement = [
-      {
-        Action = "sts:AssumeRole"
-        Effect = "Allow"
-        Principal = {
-          Service = "ec2.amazonaws.com"
-        }
+    Statement = [{
+      Action = "sts:AssumeRole"
+      Effect = "Allow"
+      Principal = {
+        Service = "ec2.amazonaws.com"
       }
-    ]
+    }]
   })
+
+  tags = merge(var.tags, { Name = "${var.project_name}-eks-nodes-role" })
 }
 
 resource "aws_iam_role_policy_attachment" "eks_worker_node_policy" {
@@ -155,63 +139,52 @@ resource "aws_iam_role_policy" "eks_nodes_additional" {
 
   policy = jsonencode({
     Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Action = [
-          "cloudwatch:PutMetricData",
-          "ec2:DescribeVolumes",
-          "ec2:DescribeTags",
-          "logs:PutLogEvents",
-          "logs:DescribeLogStreams",
-          "logs:DescribeLogGroups",
-          "logs:CreateLogStream",
-          "logs:CreateLogGroup"
-        ]
-        Resource = "*"
-        Condition = {
-          StringEquals = {
-            "aws:RequestedRegion" : var.aws_region
-          }
+    Statement = [{
+      Effect = "Allow"
+      Action = [
+        "cloudwatch:PutMetricData",
+        "ec2:DescribeVolumes",
+        "ec2:DescribeTags",
+        "logs:PutLogEvents",
+        "logs:DescribeLogStreams",
+        "logs:DescribeLogGroups",
+        "logs:CreateLogStream",
+        "logs:CreateLogGroup"
+      ]
+      Resource = "*"
+      Condition = {
+        StringEquals = {
+          "aws:RequestedRegion" : var.aws_region
         }
       }
-    ]
+    }]
   })
 }
 
-# S3 access policy for EKS nodes
 resource "aws_iam_role_policy" "s3_access" {
   name = "${var.project_name}-s3-access"
   role = aws_iam_role.eks_nodes.id
 
   policy = jsonencode({
     Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Action = [
-          "s3:GetObject",
-          "s3:PutObject",
-          "s3:ListBucket"
-        ]
-        Resource = [
-          var.s3_bucket_arn,
-          "${var.s3_bucket_arn}/*"
-        ]
-      }
-    ]
+    Statement = [{
+      Effect = "Allow"
+      Action = [
+        "s3:GetObject",
+        "s3:PutObject",
+        "s3:ListBucket"
+      ]
+      Resource = [
+        var.s3_bucket_arn,
+        "${var.s3_bucket_arn}/*"
+      ]
+    }]
   })
 }
 
 # GuardDuty
-# Check for existing GuardDuty detectors
-data "aws_guardduty_detector" "existing" {
-  count = var.enable_guardduty ? 1 : 0
-}
-
-# GuardDuty Detector
 resource "aws_guardduty_detector" "main" {
-  count = var.enable_guardduty && length(data.aws_guardduty_detector.existing) == 0 ? 1 : 0
+  count = var.enable_guardduty ? 1 : 0
 
   enable = true
 
@@ -233,19 +206,13 @@ resource "aws_guardduty_detector" "main" {
     }
   }
 
-  tags = merge(
-    var.tags,
-    {
-      Name = "${var.project_name}-guardduty"
-    }
-  )
+  tags = merge(var.tags, { Name = "${var.project_name}-guardduty" })
 }
 
-# GuardDuty Organization Configuration
 resource "aws_guardduty_organization_configuration" "main" {
-  count = var.enable_guardduty ? 1 : 0
+  count = var.enable_guardduty && var.is_organization_master ? 1 : 0
 
-  detector_id = length(data.aws_guardduty_detector.existing) > 0 ? data.aws_guardduty_detector.existing[0].id : aws_guardduty_detector.main[0].id
+  detector_id                      = aws_guardduty_detector.main[0].id
   auto_enable_organization_members = "ALL"
 
   datasources {
@@ -268,37 +235,116 @@ resource "aws_guardduty_organization_configuration" "main" {
 }
 
 # Security Hub
-resource "aws_securityhub_account" "main" {}
+resource "aws_securityhub_account" "main" {
+  count = var.enable_security_hub ? 1 : 0
+}
 
 resource "aws_securityhub_standards_subscription" "cis" {
-  standards_arn = "arn:aws:securityhub:::ruleset/cis-aws-foundations-benchmark/v/1.2.0"
+  count         = var.enable_security_hub ? 1 : 0
+  standards_arn = "arn:aws:securityhub:${var.aws_region}::standards/cis-aws-foundations-benchmark/v/1.2.0"
   depends_on    = [aws_securityhub_account.main]
 }
 
 resource "aws_securityhub_standards_subscription" "aws_foundational" {
+  count         = var.enable_security_hub ? 1 : 0
   standards_arn = "arn:aws:securityhub:${var.aws_region}::standards/aws-foundational-security-best-practices/v/1.0.0"
   depends_on    = [aws_securityhub_account.main]
 }
 
-# Create GuardDuty product subscription only if it doesn't exist
-resource "aws_securityhub_product_subscription" "guardduty" {
-  product_arn = "arn:aws:securityhub:${var.aws_region}::product/aws/guardduty"
-  depends_on  = [aws_securityhub_account.main]
-
-  lifecycle {
-    ignore_changes = [product_arn]
-  }
-}
-
 # CloudTrail
-resource "aws_kms_key" "cloudtrail" {
-  description         = "KMS key for CloudTrail logs encryption"
-  enable_key_rotation = true
+resource "aws_cloudtrail" "main" {
+  count                         = var.enable_cloudtrail ? 1 : 0
+  name                          = "${var.project_name}-cloudtrail"
+  s3_bucket_name                = aws_s3_bucket.cloudtrail[0].id
+  include_global_service_events = true
+  is_multi_region_trail         = true
+  enable_log_file_validation    = true
+  kms_key_id                    = aws_kms_key.cloudtrail[0].arn
+  is_organization_trail         = var.is_organization_master
+  enable_logging                = true
+
+  event_selector {
+    read_write_type           = "All"
+    include_management_events = true
+
+    data_resource {
+      type   = "AWS::S3::Object"
+      values = ["arn:aws:s3:::"]
+    }
+  }
+
+  insight_selector {
+    insight_type = "ApiCallRateInsight"
+  }
+
+  tags = merge(var.tags, { Name = "${var.project_name}-cloudtrail" })
+
+  depends_on = [aws_s3_bucket_policy.cloudtrail]
 }
 
-# Add KMS key policy
+resource "aws_s3_bucket" "cloudtrail" {
+  count         = var.enable_cloudtrail ? 1 : 0
+  bucket        = "${var.project_name}-cloudtrail-logs-${data.aws_caller_identity.current.account_id}"
+  force_destroy = true
+
+  tags = merge(var.tags, { Name = "${var.project_name}-cloudtrail-logs" })
+}
+
+resource "aws_s3_bucket_public_access_block" "cloudtrail" {
+  count  = var.enable_cloudtrail ? 1 : 0
+  bucket = aws_s3_bucket.cloudtrail[0].id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+resource "aws_s3_bucket_policy" "cloudtrail" {
+  count  = var.enable_cloudtrail ? 1 : 0
+  bucket = aws_s3_bucket.cloudtrail[0].id
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "AWSCloudTrailAclCheck"
+        Effect = "Allow"
+        Principal = {
+          Service = "cloudtrail.amazonaws.com"
+        }
+        Action   = "s3:GetBucketAcl"
+        Resource = aws_s3_bucket.cloudtrail[0].arn
+      },
+      {
+        Sid    = "AWSCloudTrailWrite"
+        Effect = "Allow"
+        Principal = {
+          Service = "cloudtrail.amazonaws.com"
+        }
+        Action   = "s3:PutObject"
+        Resource = "${aws_s3_bucket.cloudtrail[0].arn}/*"
+        Condition = {
+          StringEquals = {
+            "s3:x-amz-acl" = "bucket-owner-full-control"
+          }
+        }
+      }
+    ]
+  })
+}
+
+resource "aws_kms_key" "cloudtrail" {
+  count                   = var.enable_cloudtrail ? 1 : 0
+  description             = "KMS key for CloudTrail logs encryption"
+  enable_key_rotation     = true
+  deletion_window_in_days = 7
+
+  tags = merge(var.tags, { Name = "${var.project_name}-cloudtrail-kms-key" })
+}
+
 resource "aws_kms_key_policy" "cloudtrail" {
-  key_id = aws_kms_key.cloudtrail.id
+  count  = var.enable_cloudtrail ? 1 : 0
+  key_id = aws_kms_key.cloudtrail[0].id
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -330,97 +376,11 @@ resource "aws_kms_key_policy" "cloudtrail" {
   })
 }
 
-resource "aws_cloudtrail" "main" {
-  name                          = "${var.project_name}-cloudtrail"
-  s3_bucket_name                = aws_s3_bucket.cloudtrail.id
-  include_global_service_events = true
-  is_multi_region_trail         = true
-  enable_log_file_validation    = true
-
-  event_selector {
-    read_write_type           = "All"
-    include_management_events = true
-
-    data_resource {
-      type   = "AWS::S3::Object"
-      values = ["arn:aws:s3:::"]
-    }
-  }
-  kms_key_id            = aws_kms_key.cloudtrail.arn
-  is_organization_trail = true
-  enable_logging        = true
-
-  insight_selector {
-    insight_type = "ApiCallRateInsight"
-  }
-
-  tags = merge(
-    var.tags,
-    {
-      Name = "${var.project_name}-cloudtrail"
-    }
-  )
-}
-
-resource "aws_s3_bucket" "cloudtrail" {
-  bucket        = "${var.project_name}-cloudtrail-logs"
-  force_destroy = true
-
-  tags = merge(
-    var.tags,
-    {
-      Name = "${var.project_name}-cloudtrail-logs"
-    }
-  )
-}
-
-resource "aws_s3_bucket_public_access_block" "cloudtrail" {
-  bucket = aws_s3_bucket.cloudtrail.id
-
-  block_public_acls       = true
-  block_public_policy     = true
-  ignore_public_acls      = true
-  restrict_public_buckets = true
-}
-
-resource "aws_s3_bucket_policy" "cloudtrail" {
-  bucket = aws_s3_bucket.cloudtrail.id
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Sid    = "AWSCloudTrailAclCheck"
-        Effect = "Allow"
-        Principal = {
-          Service = "cloudtrail.amazonaws.com"
-        }
-        Action   = "s3:GetBucketAcl"
-        Resource = aws_s3_bucket.cloudtrail.arn
-      },
-      {
-        Sid    = "AWSCloudTrailWrite"
-        Effect = "Allow"
-        Principal = {
-          Service = "cloudtrail.amazonaws.com"
-        }
-        Action   = "s3:PutObject"
-        Resource = "${aws_s3_bucket.cloudtrail.arn}/*"
-        Condition = {
-          StringEquals = {
-            "s3:x-amz-acl" = "bucket-owner-full-control"
-          }
-        }
-      }
-    ]
-  })
-}
-
-data "aws_caller_identity" "current" {}
-
 # AWS Config
 resource "aws_config_configuration_recorder" "main" {
+  count    = var.enable_config ? 1 : 0
   name     = "${var.project_name}-config-recorder"
-  role_arn = aws_iam_role.config_role.arn
+  role_arn = aws_iam_role.config_role[0].arn
 
   recording_group {
     all_supported                 = true
@@ -429,29 +389,32 @@ resource "aws_config_configuration_recorder" "main" {
 }
 
 resource "aws_iam_role" "config_role" {
-  name = "${var.project_name}-config-role"
+  count = var.enable_config ? 1 : 0
+  name  = "${var.project_name}-config-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
-    Statement = [
-      {
-        Action = "sts:AssumeRole"
-        Effect = "Allow"
-        Principal = {
-          Service = "config.amazonaws.com"
-        }
+    Statement = [{
+      Action = "sts:AssumeRole"
+      Effect = "Allow"
+      Principal = {
+        Service = "config.amazonaws.com"
       }
-    ]
+    }]
   })
+
+  tags = merge(var.tags, { Name = "${var.project_name}-config-role" })
 }
 
 resource "aws_iam_role_policy_attachment" "config_policy" {
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSConfigRole"
-  role       = aws_iam_role.config_role.name
+  count      = var.enable_config ? 1 : 0
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWS_ConfigRole"
+  role       = aws_iam_role.config_role[0].name
 }
 
 resource "aws_config_config_rule" "instances_in_vpc" {
-  name = "instances-in-vpc"
+  count = var.enable_config ? 1 : 0
+  name  = "instances-in-vpc"
 
   source {
     owner             = "AWS"
@@ -462,37 +425,38 @@ resource "aws_config_config_rule" "instances_in_vpc" {
 }
 
 resource "aws_iam_role" "ssm_role" {
-  name = "${var.project_name}-ssm-role"
+  count = var.enable_config ? 1 : 0
+  name  = "${var.project_name}-ssm-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
-    Statement = [
-      {
-        Action = "sts:AssumeRole"
-        Effect = "Allow"
-        Principal = {
-          Service = "ssm.amazonaws.com"
-        }
+    Statement = [{
+      Action = "sts:AssumeRole"
+      Effect = "Allow"
+      Principal = {
+        Service = "ssm.amazonaws.com"
       }
-    ]
+    }]
   })
+
+  tags = merge(var.tags, { Name = "${var.project_name}-ssm-role" })
 }
 
-# Attach necessary policies to the role (adjust as needed)
 resource "aws_iam_role_policy_attachment" "ssm_policy" {
+  count      = var.enable_config ? 1 : 0
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonSSMAutomationRole"
-  role       = aws_iam_role.ssm_role.name
+  role       = aws_iam_role.ssm_role[0].name
 }
 
-# Update the remediation configuration
 resource "aws_config_remediation_configuration" "instances_in_vpc" {
-  config_rule_name = aws_config_config_rule.instances_in_vpc.name
+  count            = var.enable_config ? 1 : 0
+  config_rule_name = aws_config_config_rule.instances_in_vpc[0].name
   target_type      = "SSM_DOCUMENT"
   target_id        = "AWS-StopEC2Instance"
 
   parameter {
     name         = "AutomationAssumeRole"
-    static_value = aws_iam_role.ssm_role.arn
+    static_value = aws_iam_role.ssm_role[0].arn
   }
 
   parameter {
@@ -502,4 +466,5 @@ resource "aws_config_remediation_configuration" "instances_in_vpc" {
 
   automatic                  = true
   maximum_automatic_attempts = 5
+  retry_attempt_seconds      = 60
 }
