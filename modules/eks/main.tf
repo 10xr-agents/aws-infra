@@ -74,7 +74,7 @@ resource "aws_launch_template" "eks_nodes" {
     device_name = "/dev/xvda"
 
     ebs {
-      volume_size = 20
+      volume_size = each.value.disk_size
       volume_type = "gp3"
     }
   }
@@ -107,9 +107,9 @@ resource "aws_eks_node_group" "main" {
   subnet_ids      = var.subnet_ids
 
   scaling_config {
-    desired_size = each.value.desired_size
-    max_size     = each.value.max_size
-    min_size     = each.value.min_size
+    desired_size = each.value.scaling_config.desired_size
+    max_size     = each.value.scaling_config.max_size
+    min_size     = each.value.scaling_config.min_size
   }
 
   instance_types = each.value.instance_types

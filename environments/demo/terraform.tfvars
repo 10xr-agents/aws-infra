@@ -34,6 +34,21 @@ eks_node_groups = {
     }
     taints = []
   },
+  compute = {
+    name           = "compute-node-group"
+    instance_types = ["c5.large"]
+    capacity_type  = "ON_DEMAND"
+    disk_size      = 20
+    scaling_config = {
+      desired_size = 2
+      max_size     = 4
+      min_size     = 1
+    }
+    labels = {
+      "node-group" = "converse-compute"
+    }
+    taints = []
+  },
   spot = {
     name           = "spot-node-group"
     instance_types = ["t3.small", "t3.medium"]
