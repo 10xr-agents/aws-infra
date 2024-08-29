@@ -1,8 +1,9 @@
 # modules/s3/main.tf
 
 resource "aws_kms_key" "s3" {
-  description         = "S3 Bucket Encryption Key"
-  enable_key_rotation = true
+  description             = "S3 Bucket Encryption Key"
+  deletion_window_in_days = 7
+  enable_key_rotation     = true
 }
 
 resource "aws_s3_bucket" "main" {
@@ -24,7 +25,7 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "main" {
   rule {
     apply_server_side_encryption_by_default {
       kms_master_key_id = aws_kms_key.s3.arn
-      sse_algorithm     = "AES256"
+      sse_algorithm     = "aws:kms"
     }
   }
 }
@@ -56,7 +57,6 @@ resource "aws_s3_bucket_lifecycle_configuration" "main" {
   }
 }
 
-# Configure bucket logging
 resource "aws_s3_bucket_logging" "main" {
   count  = var.enable_logging ? 1 : 0
   bucket = aws_s3_bucket.main.id
@@ -65,9 +65,10 @@ resource "aws_s3_bucket_logging" "main" {
   target_prefix = "log/${aws_s3_bucket.main.id}/"
 }
 
-
-# Configure bucket ACL (private)
-resource "aws_s3_bucket_acl" "main" {
+resource "aws_s3_bucket_ownership_controls" "main" {
   bucket = aws_s3_bucket.main.id
-  acl    = "private"
+
+  rule {
+    object_ownership = "BucketOwnerPreferred"
+  }
 }

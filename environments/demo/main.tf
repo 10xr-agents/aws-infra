@@ -89,7 +89,7 @@ module "eks" {
       capacity_type  = "ON_DEMAND"
       subnet_ids     = module.vpc.private_subnet_ids # Explicitly set subnet IDs for this node group
       labels = {
-        "node-group" = "general"
+        "node-group" = "converse-general"
       }
     },
     cpu_optimized = {
@@ -101,7 +101,7 @@ module "eks" {
       capacity_type  = "ON_DEMAND"
       subnet_ids     = module.vpc.private_subnet_ids # Explicitly set subnet IDs for this node group
       labels = {
-        "node-group" = "cpu-optimized"
+        "node-group" = "converse-cpu-optimized"
       }
     },
     spot = {
@@ -113,7 +113,7 @@ module "eks" {
       capacity_type  = "SPOT"
       subnet_ids     = module.vpc.private_subnet_ids # Explicitly set subnet IDs for this node group
       labels = {
-        "node-group" = "spot"
+        "node-group" = "converse-spot"
       }
     }
   }
