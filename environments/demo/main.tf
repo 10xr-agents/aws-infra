@@ -53,9 +53,9 @@ module "vpc" {
   region               = var.region
   project_name         = var.project_name
   vpc_cidr             = var.vpc_cidr
-  availability_zones   = var.availability_zones
-  public_subnet_cidrs  = var.public_subnet_cidrs
-  private_subnet_cidrs = var.private_subnet_cidrs
+  availability_zones   = slice(var.availability_zones, 0, 2)  # Use only first 2 AZs
+  public_subnet_cidrs  = slice(var.public_subnet_cidrs, 0, 2)  # Use only first 2 public subnets
+  private_subnet_cidrs = slice(var.private_subnet_cidrs, 0, 2)  # Use only first 2 private subnets
   single_nat_gateway   = var.single_nat_gateway
   sns_topic_arn        = aws_sns_topic.alerts.arn
 
@@ -71,11 +71,55 @@ module "security" {
   s3_bucket_arn       = aws_s3_bucket.main.arn
   sns_topic_arn       = aws_sns_topic.alerts.arn
   tags                = var.tags
-  enable_cloudtrail   = false # Set to true when you're ready to enable CloudTrail
-  enable_security_hub = false # Set to true when you're ready to enable Security Hub
-  enable_guardduty    = true  # You can keep this enabled
-  enable_config       = false # Set to true when you're ready to enable AWS Config
+  enable_cloudtrail   = false
+  enable_security_hub = false
+  enable_guardduty    = true
+  enable_config       = false
+
+  # Add rules for ICE/UDP, ICE/TCP, TURN/TLS, TURN/UDP
+#   additional_security_group_rules = [
+#     {
+#       type        = "ingress"
+#       from_port   = 3478
+#       to_port     = 3478
+#       protocol    = "udp"
+#       cidr_blocks = ["0.0.0.0/0"]
+#       description = "TURN/UDP"
+#     },
+#     {
+#       type        = "ingress"
+#       from_port   = 3478
+#       to_port     = 3478
+#       protocol    = "tcp"
+#       cidr_blocks = ["0.0.0.0/0"]
+#       description = "TURN/TLS"
+#     },
+#     {
+#       type        = "ingress"
+#       from_port   = 49152
+#       to_port     = 65535
+#       protocol    = "udp"
+#       cidr_blocks = ["0.0.0.0/0"]
+#       description = "ICE/UDP port range"
+#     },
+#     {
+#       type        = "ingress"
+#       from_port   = 443
+#       to_port     = 443
+#       protocol    = "tcp"
+#       cidr_blocks = ["0.0.0.0/0"]
+#       description = "ICE/TCP"
+#     }
+#   ]
 }
+
+module "s3" {
+  source = "../../modules/s3"
+
+  bucket_name = "${var.project_name}-bucket"
+  tags        = var.tags
+}
+
 
 module "networking" {
   source = "../../modules/networking"
@@ -88,13 +132,26 @@ module "networking" {
   acm_certificate_arn   = var.acm_certificate_arn
   sns_topic_arn         = aws_sns_topic.alerts.arn
   tags                  = var.tags
-}
 
-module "s3" {
-  source = "../../modules/s3"
-
-  bucket_name = "${var.project_name}-bucket"
-  tags        = var.tags
+  # Add NLB configuration
+#   create_nlb            = true
+#   nlb_internal          = false
+#   nlb_subnet_ids        = module.vpc.public_subnet_ids
+#   nlb_target_groups     = [
+#     {
+#       name        = "ice-udp-tg"
+#       port        = 3478
+#       protocol    = "UDP"
+#       target_type = "ip"
+#     },
+#     {
+#       name        = "turn-tls-tg"
+#       port        = 3478
+#       protocol    = "TCP"
+#       target_type = "ip"
+#     }
+#   ]
+  eks_cluster_sg_id = module.eks.cluster_security_group_id
 }
 
 module "eks" {
@@ -102,45 +159,8 @@ module "eks" {
 
   project_name    = var.project_name
   cluster_version = var.eks_cluster_version
-  subnet_ids      = module.vpc.private_subnet_ids # Use only private subnets for worker nodes
-  node_groups = {
-    general = {
-      name           = "general"
-      desired_size   = 2
-      max_size       = 4
-      min_size       = 2
-      instance_types = ["t3.medium"]
-      capacity_type  = "ON_DEMAND"
-      subnet_ids     = module.vpc.private_subnet_ids # Explicitly set subnet IDs for this node group
-      labels = {
-        "node-group" = "converse-general"
-      }
-    },
-    cpu_optimized = {
-      name           = "cpu-optimized"
-      desired_size   = 2
-      max_size       = 4
-      min_size       = 2
-      instance_types = ["c5.large"]
-      capacity_type  = "ON_DEMAND"
-      subnet_ids     = module.vpc.private_subnet_ids # Explicitly set subnet IDs for this node group
-      labels = {
-        "node-group" = "converse-cpu-optimized"
-      }
-    },
-    spot = {
-      name           = "spot"
-      desired_size   = 1
-      max_size       = 3
-      min_size       = 0
-      instance_types = ["t3.small", "t3.medium"]
-      capacity_type  = "SPOT"
-      subnet_ids     = module.vpc.private_subnet_ids # Explicitly set subnet IDs for this node group
-      labels = {
-        "node-group" = "converse-spot"
-      }
-    }
-  }
+  subnet_ids      = module.vpc.private_subnet_ids
+  node_groups     = var.eks_node_groups
   public_access_cidrs = var.eks_public_access_cidrs
   s3_bucket_arn       = aws_s3_bucket.main.arn
 

@@ -39,3 +39,8 @@ output "config_recorder_id" {
   description = "The ID of the AWS Config recorder"
   value       = var.enable_config ? aws_config_configuration_recorder.main[0].id : null
 }
+
+output "nlb_security_group_id" {
+  description = "ID of the NLB security group"
+  value       = aws_security_group.nlb.id
+}

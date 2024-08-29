@@ -61,6 +61,130 @@ resource "aws_lb_listener" "http" {
   }
 }
 
+# Add Network Load Balancer (NLB) for non-HTTP traffic
+resource "aws_lb" "nlb" {
+  name               = "${var.project_name}-nlb"
+  internal           = false
+  load_balancer_type = "network"
+  subnets            = var.public_subnet_ids
+
+  enable_cross_zone_load_balancing = true
+
+  tags = merge(
+    var.tags,
+    {
+      Name        = "${var.project_name}-nlb"
+      Environment = var.environment
+      ManagedBy   = "Terraform"
+    }
+  )
+}
+
+# NLB Listeners and Target Groups
+resource "aws_lb_listener" "nlb_udp" {
+  load_balancer_arn = aws_lb.nlb.arn
+  port              = 3478
+  protocol          = "UDP"
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.nlb_udp.arn
+  }
+}
+
+resource "aws_lb_listener" "nlb_tcp" {
+  load_balancer_arn = aws_lb.nlb.arn
+  port              = 3478
+  protocol          = "TCP"
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.nlb_tcp.arn
+  }
+}
+
+resource "aws_lb_target_group" "nlb_udp" {
+  name        = "${var.project_name}-nlb-udp-tg"
+  port        = 3478
+  protocol    = "UDP"
+  vpc_id      = var.vpc_id
+  target_type = "ip"
+
+  health_check {
+    protocol = "TCP"
+    port     = 3478
+  }
+}
+
+resource "aws_lb_target_group" "nlb_tcp" {
+  name        = "${var.project_name}-nlb-tcp-tg"
+  port        = 3478
+  protocol    = "TCP"
+  vpc_id      = var.vpc_id
+  target_type = "ip"
+
+  health_check {
+    protocol = "TCP"
+    port     = 3478
+  }
+}
+
+# Add security group for NLB traffic
+resource "aws_security_group" "nlb" {
+  name        = "${var.project_name}-nlb-sg"
+  description = "Security group for NLB"
+  vpc_id      = var.vpc_id
+
+  ingress {
+    from_port   = 3478
+    to_port     = 3478
+    protocol    = "udp"
+    cidr_blocks = ["0.0.0.0/0"]
+    description = "TURN/UDP"
+  }
+
+  ingress {
+    from_port   = 3478
+    to_port     = 3478
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+    description = "TURN/TLS"
+  }
+
+  ingress {
+    from_port   = 49152
+    to_port     = 65535
+    protocol    = "udp"
+    cidr_blocks = ["0.0.0.0/0"]
+    description = "ICE/UDP port range"
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = merge(
+    var.tags,
+    {
+      Name = "${var.project_name}-nlb-sg"
+    }
+  )
+}
+
+# Update ALB security group for better EKS integration
+resource "aws_security_group_rule" "alb_to_eks" {
+  type                     = "egress"
+  from_port                = 0
+  to_port                  = 65535
+  protocol                 = "tcp"
+  source_security_group_id = var.eks_cluster_sg_id
+  security_group_id        = var.alb_security_group_id
+}
+
+
 # Removed TCP and UDP listeners as they're not typically used with Application Load Balancers
 
 resource "aws_wafv2_web_acl" "main" {

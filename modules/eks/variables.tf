@@ -18,12 +18,21 @@ variable "subnet_ids" {
 variable "node_groups" {
   description = "Map of EKS node group configurations"
   type = map(object({
-    desired_size   = number
-    max_size       = number
-    min_size       = number
+    name           = string
     instance_types = list(string)
     capacity_type  = string
-    labels         = map(string)
+    disk_size      = number
+    scaling_config = object({
+      desired_size = number
+      max_size     = number
+      min_size     = number
+    })
+    labels = map(string)
+    taints = list(object({
+      key    = string
+      value  = string
+      effect = string
+    }))
   }))
 }
 

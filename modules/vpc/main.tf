@@ -35,7 +35,7 @@ resource "aws_internet_gateway" "main" {
 }
 
 resource "aws_subnet" "public" {
-  count                   = length(var.availability_zones)
+  count                   = 2  # Limit to 2 AZs
   vpc_id                  = aws_vpc.main.id
   cidr_block              = var.public_subnet_cidrs[count.index]
   availability_zone       = var.availability_zones[count.index]
@@ -56,12 +56,12 @@ resource "aws_subnet" "public" {
 }
 
 resource "aws_subnet" "private" {
-  count             = length(var.availability_zones)
+  count             = 2  # Limit to 2 AZs
   vpc_id            = aws_vpc.main.id
   cidr_block        = var.private_subnet_cidrs[count.index]
   availability_zone = var.availability_zones[count.index]
 
-  ipv6_cidr_block = cidrsubnet(aws_vpc.main.ipv6_cidr_block, 8, count.index + length(var.availability_zones))
+  ipv6_cidr_block = cidrsubnet(aws_vpc.main.ipv6_cidr_block, 8, count.index + 2)
 
   tags = merge(
     var.tags,
@@ -211,10 +211,18 @@ resource "aws_vpc_endpoint_route_table_association" "private_s3" {
 
 # Add VPC Flow Logs
 resource "aws_flow_log" "main" {
-  iam_role_arn    = aws_iam_role.vpc_flow_log_role.arn
-  log_destination = aws_cloudwatch_log_group.vpc_flow_log.arn
-  traffic_type    = "ALL"
-  vpc_id          = aws_vpc.main.id
+  iam_role_arn         = aws_iam_role.vpc_flow_log_role.arn
+  log_destination      = aws_cloudwatch_log_group.vpc_flow_log.arn
+  traffic_type         = "ALL"
+  vpc_id               = aws_vpc.main.id
+  log_destination_type = "cloud-watch-logs"
+
+  tags = merge(
+    var.tags,
+    {
+      Name = "${var.project_name}-vpc-flow-log"
+    }
+  )
 }
 
 resource "aws_cloudwatch_log_group" "vpc_flow_log" {
@@ -279,7 +287,9 @@ locals {
     "elasticloadbalancing",
     "sts",
     "kms",
-    "logs"
+    "logs",
+    "autoscaling",  # Added for EKS
+    "eks-fargate-pods"  # Added for EKS Fargate (if you plan to use it)
   ]
 }
 

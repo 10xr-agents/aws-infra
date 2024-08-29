@@ -39,3 +39,24 @@ output "waf_web_acl_arn" {
 #   description = "IP address sets of the Global Accelerator"
 #   value       = aws_globalaccelerator_accelerator.main.ip_sets
 # }
+
+
+output "nlb_arn" {
+  description = "ARN of the Network Load Balancer"
+  value       = aws_lb.nlb.arn
+}
+
+output "nlb_dns_name" {
+  description = "DNS name of the Network Load Balancer"
+  value       = aws_lb.nlb.dns_name
+}
+
+output "nlb_udp_target_group_arn" {
+  description = "ARN of the NLB UDP target group"
+  value       = aws_lb_target_group.nlb_udp.arn
+}
+
+output "nlb_tcp_target_group_arn" {
+  description = "ARN of the NLB TCP target group"
+  value       = aws_lb_target_group.nlb_tcp.arn
+}

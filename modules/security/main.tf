@@ -70,8 +70,73 @@ resource "aws_security_group" "eks_nodes" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
+  ingress {
+    description     = "Allow ICE/UDP traffic"
+    from_port       = 49152
+    to_port         = 65535
+    protocol        = "udp"
+    cidr_blocks     = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    description     = "Allow TURN/UDP traffic"
+    from_port       = 3478
+    to_port         = 3478
+    protocol        = "udp"
+    cidr_blocks     = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    description     = "Allow TURN/TLS traffic"
+    from_port       = 3478
+    to_port         = 3478
+    protocol        = "tcp"
+    cidr_blocks     = ["0.0.0.0/0"]
+  }
+
   tags = merge(var.tags, { Name = "${var.project_name}-eks-nodes-sg" })
 }
+
+# Add a new security group for the NLB
+resource "aws_security_group" "nlb" {
+  name        = "${var.project_name}-nlb-sg"
+  description = "Security group for Network Load Balancer"
+  vpc_id      = var.vpc_id
+
+  ingress {
+    description = "Allow ICE/UDP traffic"
+    from_port   = 49152
+    to_port     = 65535
+    protocol    = "udp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    description = "Allow TURN/UDP traffic"
+    from_port   = 3478
+    to_port     = 3478
+    protocol    = "udp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    description = "Allow TURN/TLS traffic"
+    from_port   = 3478
+    to_port     = 3478
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = merge(var.tags, { Name = "${var.project_name}-nlb-sg" })
+}
+
 
 resource "aws_security_group_rule" "cluster_to_nodes" {
   security_group_id        = aws_security_group.eks_cluster.id
@@ -89,6 +154,26 @@ resource "aws_security_group_rule" "nodes_to_cluster" {
   to_port                  = 65535
   protocol                 = "all"
   source_security_group_id = aws_security_group.eks_cluster.id
+}
+
+resource "aws_security_group_rule" "cluster_ingress_node_https" {
+  description              = "Allow pods to communicate with the cluster API Server"
+  from_port                = 443
+  protocol                 = "tcp"
+  security_group_id        = aws_security_group.eks_cluster.id
+  source_security_group_id = aws_security_group.eks_nodes.id
+  to_port                  = 443
+  type                     = "ingress"
+}
+
+resource "aws_security_group_rule" "node_ingress_cluster" {
+  description              = "Allow worker Kubelets and pods to receive communication from the cluster control plane"
+  from_port                = 1025
+  protocol                 = "tcp"
+  security_group_id        = aws_security_group.eks_nodes.id
+  source_security_group_id = aws_security_group.eks_cluster.id
+  to_port                  = 65535
+  type                     = "ingress"
 }
 
 # IAM Roles and Policies
@@ -157,25 +242,28 @@ resource "aws_iam_role_policy" "eks_nodes_additional" {
 
   policy = jsonencode({
     Version = "2012-10-17"
-    Statement = [{
-      Effect = "Allow"
-      Action = [
-        "cloudwatch:PutMetricData",
-        "ec2:DescribeVolumes",
-        "ec2:DescribeTags",
-        "logs:PutLogEvents",
-        "logs:DescribeLogStreams",
-        "logs:DescribeLogGroups",
-        "logs:CreateLogStream",
-        "logs:CreateLogGroup"
-      ]
-      Resource = "*"
-      Condition = {
-        StringEquals = {
-          "aws:RequestedRegion" : var.aws_region
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "cloudwatch:PutMetricData",
+          "ec2:DescribeVolumes",
+          "ec2:DescribeTags",
+          "logs:PutLogEvents",
+          "logs:DescribeLogStreams",
+          "logs:DescribeLogGroups",
+          "logs:CreateLogStream",
+          "logs:CreateLogGroup",
+          "route53:ChangeResourceRecordSets"  # Add permission for External DNS
+        ]
+        Resource = "*"
+        Condition = {
+          StringEquals = {
+            "aws:RequestedRegion" : var.aws_region
+          }
         }
       }
-    }]
+    ]
   })
 }
 
@@ -485,4 +573,103 @@ resource "aws_config_remediation_configuration" "instances_in_vpc" {
   automatic                  = true
   maximum_automatic_attempts = 5
   retry_attempt_seconds      = 60
+}
+
+# Add a new IAM policy for ALB Ingress Controller
+resource "aws_iam_policy" "alb_ingress" {
+  name        = "${var.project_name}-alb-ingress-policy"
+  path        = "/"
+  description = "IAM policy for ALB Ingress Controller"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "acm:DescribeCertificate",
+          "acm:ListCertificates",
+          "acm:GetCertificate",
+          "ec2:AuthorizeSecurityGroupIngress",
+          "ec2:CreateSecurityGroup",
+          "ec2:CreateTags",
+          "ec2:DeleteTags",
+          "ec2:DeleteSecurityGroup",
+          "ec2:DescribeAccountAttributes",
+          "ec2:DescribeAddresses",
+          "ec2:DescribeInstances",
+          "ec2:DescribeInstanceStatus",
+          "ec2:DescribeInternetGateways",
+          "ec2:DescribeNetworkInterfaces",
+          "ec2:DescribeSecurityGroups",
+          "ec2:DescribeSubnets",
+          "ec2:DescribeTags",
+          "ec2:DescribeVpcs",
+          "ec2:ModifyInstanceAttribute",
+          "ec2:ModifyNetworkInterfaceAttribute",
+          "ec2:RevokeSecurityGroupIngress",
+          "elasticloadbalancing:AddListenerCertificates",
+          "elasticloadbalancing:AddTags",
+          "elasticloadbalancing:CreateListener",
+          "elasticloadbalancing:CreateLoadBalancer",
+          "elasticloadbalancing:CreateRule",
+          "elasticloadbalancing:CreateTargetGroup",
+          "elasticloadbalancing:DeleteListener",
+          "elasticloadbalancing:DeleteLoadBalancer",
+          "elasticloadbalancing:DeleteRule",
+          "elasticloadbalancing:DeleteTargetGroup",
+          "elasticloadbalancing:DeregisterTargets",
+          "elasticloadbalancing:DescribeListenerCertificates",
+          "elasticloadbalancing:DescribeListeners",
+          "elasticloadbalancing:DescribeLoadBalancers",
+          "elasticloadbalancing:DescribeLoadBalancerAttributes",
+          "elasticloadbalancing:DescribeRules",
+          "elasticloadbalancing:DescribeSSLPolicies",
+          "elasticloadbalancing:DescribeTags",
+          "elasticloadbalancing:DescribeTargetGroups",
+          "elasticloadbalancing:DescribeTargetGroupAttributes",
+          "elasticloadbalancing:DescribeTargetHealth",
+          "elasticloadbalancing:ModifyListener",
+          "elasticloadbalancing:ModifyLoadBalancerAttributes",
+          "elasticloadbalancing:ModifyRule",
+          "elasticloadbalancing:ModifyTargetGroup",
+          "elasticloadbalancing:ModifyTargetGroupAttributes",
+          "elasticloadbalancing:RegisterTargets",
+          "elasticloadbalancing:RemoveListenerCertificates",
+          "elasticloadbalancing:RemoveTags",
+          "elasticloadbalancing:SetIpAddressType",
+          "elasticloadbalancing:SetSecurityGroups",
+          "elasticloadbalancing:SetSubnets",
+          "elasticloadbalancing:SetWebAcl",
+          "iam:CreateServiceLinkedRole",
+          "iam:GetServerCertificate",
+          "iam:ListServerCertificates",
+          "waf-regional:GetWebACLForResource",
+          "waf-regional:GetWebACL",
+          "waf-regional:AssociateWebACL",
+          "waf-regional:DisassociateWebACL",
+          "tag:GetResources",
+          "tag:TagResources",
+          "waf:GetWebACL",
+          "wafv2:GetWebACL",
+          "wafv2:GetWebACLForResource",
+          "wafv2:AssociateWebACL",
+          "wafv2:DisassociateWebACL",
+          "shield:DescribeProtection",
+          "shield:GetSubscriptionState",
+          "shield:DeleteProtection",
+          "shield:CreateProtection",
+          "shield:DescribeSubscription",
+          "shield:ListProtections"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+# Attach ALB Ingress policy to EKS nodes role
+resource "aws_iam_role_policy_attachment" "alb_ingress" {
+  policy_arn = aws_iam_policy.alb_ingress.arn
+  role       = aws_iam_role.eks_nodes.name
 }

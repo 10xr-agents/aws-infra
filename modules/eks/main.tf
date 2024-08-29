@@ -63,10 +63,10 @@ resource "aws_eks_cluster" "main" {
 }
 
 resource "aws_launch_template" "eks_nodes" {
-  # for_each = var.node_groups
+  for_each = var.node_groups
 
-  name_prefix = "${var.project_name}-eks-nodes"
-  # instance_type = each.value.instance_types
+  name_prefix   = "${var.project_name}-${each.key}-lt"
+  instance_type = each.value.instance_types[0]
 
   vpc_security_group_ids = [var.eks_cluster_sg_id]
 
@@ -85,9 +85,9 @@ resource "aws_launch_template" "eks_nodes" {
     tags = merge(
       var.tags,
       {
-        "Name"                                                  = "${var.project_name}-eks-node"
-        "kubernetes.io/cluster/${var.project_name}-cluster"     = "owned"
-        "k8s.io/cluster-autoscaler/${var.project_name}-cluster" = "owned"
+        "Name"                                                  = "${var.project_name}-${each.key}-node"
+        "kubernetes.io/cluster/${aws_eks_cluster.main.name}"    = "owned"
+        "k8s.io/cluster-autoscaler/${aws_eks_cluster.main.name}" = "owned"
         "k8s.io/cluster-autoscaler/enabled"                     = "true"
       }
     )
@@ -112,11 +112,15 @@ resource "aws_eks_node_group" "main" {
     min_size     = each.value.min_size
   }
 
-  # instance_types = each.value.instance_types
+  instance_types = each.value.instance_types
 
   launch_template {
-    id      = aws_launch_template.eks_nodes.id
-    version = aws_launch_template.eks_nodes.latest_version
+    id      = aws_launch_template.eks_nodes[each.key].id
+    version = aws_launch_template.eks_nodes[each.key].latest_version
+  }
+
+  update_config {
+    max_unavailable = 1
   }
 
   labels = merge(
@@ -402,6 +406,83 @@ resource "aws_iam_policy" "alb_ingress" {
   })
 }
 
+# Add Cluster Autoscaler
+resource "helm_release" "cluster_autoscaler" {
+  name       = "cluster-autoscaler"
+  repository = "https://kubernetes.github.io/autoscaler"
+  chart      = "cluster-autoscaler"
+  namespace  = "kube-system"
+
+  set {
+    name  = "autoDiscovery.clusterName"
+    value = aws_eks_cluster.main.name
+  }
+
+  set {
+    name  = "awsRegion"
+    value = data.aws_region.current.name
+  }
+
+  set {
+    name  = "rbac.serviceAccount.annotations.eks\\.amazonaws\\.com/role-arn"
+    value = aws_iam_role.cluster_autoscaler.arn
+  }
+
+  depends_on = [aws_eks_node_group.main]
+}
+
+resource "aws_iam_role" "cluster_autoscaler" {
+  name = "${var.project_name}-cluster-autoscaler"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRoleWithWebIdentity"
+        Effect = "Allow"
+        Principal = {
+          Federated = aws_iam_openid_connect_provider.eks.arn
+        }
+        Condition = {
+          StringEquals = {
+            "${replace(aws_iam_openid_connect_provider.eks.url, "https://", "")}:sub" : "system:serviceaccount:kube-system:cluster-autoscaler"
+          }
+        }
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "cluster_autoscaler" {
+  policy_arn = aws_iam_policy.cluster_autoscaler.arn
+  role       = aws_iam_role.cluster_autoscaler.name
+}
+
+resource "aws_iam_policy" "cluster_autoscaler" {
+  name        = "${var.project_name}-cluster-autoscaler"
+  path        = "/"
+  description = "Policy for Cluster Autoscaler"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "autoscaling:DescribeAutoScalingGroups",
+          "autoscaling:DescribeAutoScalingInstances",
+          "autoscaling:DescribeLaunchConfigurations",
+          "autoscaling:DescribeTags",
+          "autoscaling:SetDesiredCapacity",
+          "autoscaling:TerminateInstanceInAutoScalingGroup",
+          "ec2:DescribeLaunchTemplateVersions"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}
+
 # Helm release for AWS Load Balancer Controller
 resource "helm_release" "aws_load_balancer_controller" {
   name             = "aws-load-balancer-controller"
@@ -490,6 +571,30 @@ resource "kubernetes_config_map" "aws_auth" {
   }
 
   depends_on = [aws_eks_cluster.main]
+}
+
+# Add CoreDNS add-on
+resource "aws_eks_addon" "coredns" {
+  cluster_name = aws_eks_cluster.main.name
+  addon_name   = "coredns"
+
+  resolve_conflicts = "OVERWRITE"
+}
+
+# Add kube-proxy add-on
+resource "aws_eks_addon" "kube_proxy" {
+  cluster_name = aws_eks_cluster.main.name
+  addon_name   = "kube-proxy"
+
+  resolve_conflicts = "OVERWRITE"
+}
+
+# Add vpc-cni add-on
+resource "aws_eks_addon" "vpc_cni" {
+  cluster_name = aws_eks_cluster.main.name
+  addon_name   = "vpc-cni"
+
+  resolve_conflicts = "OVERWRITE"
 }
 
 # Get current region

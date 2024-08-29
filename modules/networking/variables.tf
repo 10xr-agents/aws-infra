@@ -35,6 +35,11 @@ variable "sns_topic_arn" {
   type        = string
 }
 
+variable "eks_cluster_sg_id" {
+  description = "Security group ID of the EKS cluster"
+  type        = string
+}
+
 variable "tags" {
   description = "A map of tags to add to all resources"
   type        = map(string)
