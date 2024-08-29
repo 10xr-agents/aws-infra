@@ -1,7 +1,7 @@
 # modules/s3/main.tf
 
 resource "aws_kms_key" "s3" {
-  description = "S3 Bucket Encryption Key"
+  description         = "S3 Bucket Encryption Key"
   enable_key_rotation = true
 }
 
@@ -24,7 +24,7 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "main" {
   rule {
     apply_server_side_encryption_by_default {
       kms_master_key_id = aws_kms_key.s3.arn
-      sse_algorithm = "AES256"
+      sse_algorithm     = "AES256"
     }
   }
 }

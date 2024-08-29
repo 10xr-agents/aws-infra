@@ -5,10 +5,10 @@ provider "aws" {
 }
 
 resource "aws_vpc" "main" {
-  cidr_block           = var.vpc_cidr
-  enable_dns_hostnames = true
-  enable_dns_support   = true
-  instance_tenancy     = "default"
+  cidr_block                       = var.vpc_cidr
+  enable_dns_hostnames             = true
+  enable_dns_support               = true
+  instance_tenancy                 = "default"
   assign_generated_ipv6_cidr_block = true
 
   lifecycle {
@@ -48,8 +48,8 @@ resource "aws_subnet" "public" {
   tags = merge(
     var.tags,
     {
-      Name = "${var.project_name}-public-subnet-${count.index + 1}"
-      "kubernetes.io/role/elb" = 1
+      Name                                        = "${var.project_name}-public-subnet-${count.index + 1}"
+      "kubernetes.io/role/elb"                    = 1
       "kubernetes.io/cluster/${var.project_name}" = "shared"
     }
   )
@@ -66,16 +66,16 @@ resource "aws_subnet" "private" {
   tags = merge(
     var.tags,
     {
-      Name = "${var.project_name}-private-subnet-${count.index + 1}"
-      "kubernetes.io/role/internal-elb" = 1
+      Name                                        = "${var.project_name}-private-subnet-${count.index + 1}"
+      "kubernetes.io/role/internal-elb"           = 1
       "kubernetes.io/cluster/${var.project_name}" = "shared"
     }
   )
 }
 
 resource "aws_eip" "nat" {
-  count = var.single_nat_gateway ? 1 : length(var.availability_zones)
-  domain   = "vpc"
+  count  = var.single_nat_gateway ? 1 : length(var.availability_zones)
+  domain = "vpc"
 
   tags = merge(
     var.tags,
@@ -109,7 +109,7 @@ resource "aws_cloudwatch_metric_alarm" "nat_gateway_error_port_allocation" {
   statistic           = "Sum"
   threshold           = "0"
   alarm_description   = "This metric monitors NAT gateway port allocation errors"
-  alarm_actions       = [var.sns_topic_arn]  # Define this variable
+  alarm_actions       = [var.sns_topic_arn] # Define this variable
 
   dimensions = {
     NatGatewayId = aws_nat_gateway.main[count.index].id
@@ -162,7 +162,7 @@ resource "aws_route_table_association" "private" {
 }
 
 resource "aws_network_acl" "private" {
-  vpc_id = aws_vpc.main.id
+  vpc_id     = aws_vpc.main.id
   subnet_ids = aws_subnet.private[*].id
 
   egress {
@@ -335,8 +335,8 @@ resource "aws_security_group" "vpc_endpoints" {
 module "flow_logs_bucket" {
   source = "../s3"
 
-  bucket_name = "${var.project_name}-vpc-flow-logs"
-  log_bucket = "${var.project_name}-logs"
+  bucket_name    = "${var.project_name}-vpc-flow-logs"
+  log_bucket     = "${var.project_name}-logs"
   enable_logging = true
   tags = merge(
     var.tags,

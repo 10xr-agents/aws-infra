@@ -2,7 +2,7 @@
 
 variable "vpc_id" {
   description = "The ID of the VPC"
-  type       = string
+  type        = string
 }
 
 variable "project_name" {

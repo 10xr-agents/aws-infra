@@ -20,9 +20,9 @@ resource "aws_lb" "main" {
   tags = merge(
     var.tags,
     {
-      Name = "${var.project_name}-alb"
+      Name        = "${var.project_name}-alb"
       Environment = var.environment
-      ManagedBy = "Terraform"
+      ManagedBy   = "Terraform"
     }
   )
 }
@@ -186,10 +186,10 @@ resource "aws_globalaccelerator_endpoint_group" "main" {
     weight      = 100
   }
 
-  health_check_path = "/healthz"
+  health_check_path             = "/healthz"
   health_check_interval_seconds = 10
-  health_check_port = 443
-  health_check_protocol = "HTTPS"
+  health_check_port             = 443
+  health_check_protocol         = "HTTPS"
 }
 
 resource "aws_shield_protection" "alb" {

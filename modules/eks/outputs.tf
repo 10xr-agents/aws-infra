@@ -20,16 +20,6 @@ output "cluster_security_group_id" {
   value       = aws_eks_cluster.main.vpc_config[0].cluster_security_group_id
 }
 
-output "cluster_iam_role_name" {
-  description = "IAM role name of the EKS cluster"
-  value       = aws_iam_role.eks_cluster.name
-}
-
-output "cluster_iam_role_arn" {
-  description = "IAM role ARN of the EKS cluster"
-  value       = aws_iam_role.eks_cluster.arn
-}
-
 output "cluster_oidc_issuer_url" {
   description = "The URL on the EKS cluster for the OpenID Connect identity provider"
   value       = aws_eks_cluster.main.identity[0].oidc[0].issuer

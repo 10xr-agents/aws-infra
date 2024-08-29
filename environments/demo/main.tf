@@ -41,10 +41,11 @@ module "vpc" {
 module "security" {
   source = "../../modules/security"
 
-  project_name = var.project_name
-  vpc_id       = module.vpc.vpc_id
-  aws_region   = var.region
-  tags         = var.tags
+  project_name  = var.project_name
+  vpc_id        = module.vpc.vpc_id
+  aws_region    = var.region
+  s3_bucket_arn = aws_s3_bucket.main.arn
+  tags          = var.tags
 }
 
 module "networking" {
@@ -70,14 +71,57 @@ module "s3" {
 module "eks" {
   source = "../../modules/eks"
 
-  project_name        = var.project_name
-  cluster_version     = var.eks_cluster_version
-  subnet_ids          = module.vpc.private_subnet_ids
-  node_groups         = var.eks_node_groups
+  project_name    = var.project_name
+  cluster_version = var.eks_cluster_version
+  subnet_ids      = module.vpc.private_subnet_ids # Use only private subnets for worker nodes
+  node_groups = {
+    general = {
+      name           = "general"
+      desired_size   = 2
+      max_size       = 4
+      min_size       = 2
+      instance_types = ["t3.medium"]
+      capacity_type  = "ON_DEMAND"
+      subnet_ids     = module.vpc.private_subnet_ids # Explicitly set subnet IDs for this node group
+      labels = {
+        "node-group" = "general"
+      }
+    },
+    cpu_optimized = {
+      name           = "cpu-optimized"
+      desired_size   = 2
+      max_size       = 4
+      min_size       = 2
+      instance_types = ["c5.large"]
+      capacity_type  = "ON_DEMAND"
+      subnet_ids     = module.vpc.private_subnet_ids # Explicitly set subnet IDs for this node group
+      labels = {
+        "node-group" = "cpu-optimized"
+      }
+    },
+    spot = {
+      name           = "spot"
+      desired_size   = 1
+      max_size       = 3
+      min_size       = 0
+      instance_types = ["t3.small", "t3.medium"]
+      capacity_type  = "SPOT"
+      subnet_ids     = module.vpc.private_subnet_ids # Explicitly set subnet IDs for this node group
+      labels = {
+        "node-group" = "spot"
+      }
+    }
+  }
   public_access_cidrs = var.eks_public_access_cidrs
   s3_bucket_arn       = aws_s3_bucket.main.arn
-  tags                = var.tags
+
+  eks_cluster_role_arn = module.security.eks_cluster_role_arn
+  eks_node_role_arn    = module.security.eks_nodes_role_arn
+  eks_cluster_sg_id    = module.security.eks_nodes_security_group_id
+
+  tags = var.tags
 }
+
 
 resource "aws_sns_topic" "alerts" {
   name = "${var.project_name}-alerts"

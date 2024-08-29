@@ -23,6 +23,11 @@ variable "tags" {
 
 variable "allowed_cidr_blocks" {
   description = "A list of ip blocks/sets"
-  type = list(string)
+  type        = list(string)
   default     = ["0.0.0.0/0"]
+}
+
+variable "s3_bucket_arn" {
+  description = "ARN of the S3 bucket for EKS node access"
+  type        = string
 }
