@@ -61,6 +61,71 @@ resource "aws_lb_listener" "http" {
   }
 }
 
+# Add VPC Flow Logs
+resource "aws_flow_log" "main" {
+  iam_role_arn    = aws_iam_role.vpc_flow_log_role.arn
+  log_destination = aws_cloudwatch_log_group.vpc_flow_log.arn
+  traffic_type    = "ALL"
+  vpc_id          = var.vpc_id
+
+  tags = var.tags
+}
+
+resource "aws_cloudwatch_log_group" "vpc_flow_log" {
+  name              = "/aws/vpc/${var.project_name}/flow-logs"
+  retention_in_days = 30
+
+  tags = var.tags
+}
+
+resource "aws_iam_role" "vpc_flow_log_role" {
+  name = "${var.project_name}-vpc-flow-log-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Principal = {
+          Service = "vpc-flow-logs.amazonaws.com"
+        }
+        Action = "sts:AssumeRole"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy" "vpc_flow_log_policy" {
+  name = "${var.project_name}-vpc-flow-log-policy"
+  role = aws_iam_role.vpc_flow_log_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents",
+          "logs:DescribeLogGroups",
+          "logs:DescribeLogStreams"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+# Add CloudWatch logs for Load Balancers
+resource "aws_cloudwatch_log_group" "alb_logs" {
+  name              = "/aws/alb/${var.project_name}"
+  retention_in_days = 30
+
+  tags = var.tags
+}
+
+
 # Add Network Load Balancer (NLB) for non-HTTP traffic
 resource "aws_lb" "nlb" {
   name               = "${var.project_name}-nlb"
@@ -255,6 +320,14 @@ resource "aws_s3_bucket_policy" "alb_logs" {
           AWS = "arn:aws:iam::${data.aws_elb_service_account.main.id}:root"
         }
         Action = "s3:PutObject"
+        Resource = "${aws_s3_bucket.alb_logs.arn}/*"
+      },
+      {
+        Effect = "Allow"
+        Principal = {
+          AWS = "arn:aws:elb:*:${data.aws_elb_service_account.main.id}:root"
+        }
+        Action   = "s3:PutObject"
         Resource = "${aws_s3_bucket.alb_logs.arn}/*"
       }
     ]

@@ -256,3 +256,83 @@ resource "kubernetes_secret" "mongodb_secret" {
 
   depends_on = [module.eks]
 }
+
+# Add CloudWatch dashboard for overall monitoring
+resource "aws_cloudwatch_dashboard" "main" {
+  dashboard_name = "${var.project_name}-dashboard"
+
+  dashboard_body = jsonencode({
+    widgets = [
+      {
+        type   = "metric"
+        x      = 0
+        y      = 0
+        width  = 12
+        height = 6
+
+        properties = {
+          metrics = [
+            ["AWS/EKS", "cluster_failed_node_count", "ClusterName", module.eks.cluster_name],
+            [".", "cluster_node_count", ".", "."]
+          ]
+          view    = "timeSeries"
+          stacked = false
+          region  = var.region
+          title   = "EKS Node Count"
+        }
+      },
+      {
+        type   = "metric"
+        x      = 12
+        y      = 0
+        width  = 12
+        height = 6
+
+        properties = {
+          metrics = [
+            ["AWS/Usage", "ResourceCount", "Type", "Resource", "Resource", "OnDemand", "Service", "EC2"]
+          ]
+          view    = "timeSeries"
+          stacked = false
+          region  = var.region
+          title   = "EC2 Instance Count"
+        }
+      }
+    ]
+  })
+}
+
+# Add CloudWatch alarms for critical components
+resource "aws_cloudwatch_metric_alarm" "eks_node_count" {
+  alarm_name          = "${var.project_name}-eks-node-count"
+  comparison_operator = "LessThanThreshold"
+  evaluation_periods  = "2"
+  metric_name         = "cluster_node_count"
+  namespace           = "AWS/EKS"
+  period              = "300"
+  statistic           = "Average"
+  threshold           = "2"
+  alarm_description   = "This metric monitors the number of EKS nodes"
+  alarm_actions       = [aws_sns_topic.alerts.arn]
+
+  dimensions = {
+    ClusterName = module.eks.cluster_name
+  }
+}
+
+resource "aws_cloudwatch_metric_alarm" "eks_failed_node_count" {
+  alarm_name          = "${var.project_name}-eks-failed-node-count"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = "1"
+  metric_name         = "cluster_failed_node_count"
+  namespace           = "AWS/EKS"
+  period              = "300"
+  statistic           = "Maximum"
+  threshold           = "0"
+  alarm_description   = "This metric monitors the number of failed EKS nodes"
+  alarm_actions       = [aws_sns_topic.alerts.arn]
+
+  dimensions = {
+    ClusterName = module.eks.cluster_name
+  }
+}

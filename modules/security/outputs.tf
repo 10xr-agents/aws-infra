@@ -27,7 +27,7 @@ output "eks_cluster_security_group_id" {
 
 output "cloudtrail_s3_bucket_name" {
   description = "Name of the S3 bucket used for CloudTrail logs"
-  value       = var.enable_cloudtrail ? aws_s3_bucket.cloudtrail[0].id : null
+  value       = var.enable_cloudtrail ? aws_s3_bucket.cloudtrail_logs.id : null
 }
 
 output "guardduty_detector_id" {

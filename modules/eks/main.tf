@@ -62,6 +62,47 @@ resource "aws_eks_cluster" "main" {
   depends_on = [aws_kms_key.eks]
 }
 
+# Add CloudWatch log group for EKS
+resource "aws_cloudwatch_log_group" "eks" {
+  name              = "/aws/eks/${var.project_name}-cluster/cluster"
+  retention_in_days = 30
+
+  tags = var.tags
+}
+
+# Update IAM role for EKS nodes to include CloudWatch Logs permissions
+resource "aws_iam_role_policy_attachment" "eks_cloudwatch_policy" {
+  policy_arn = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
+  role       = var.eks_node_role_arn
+}
+
+# Add CloudWatch agent configuration
+resource "aws_ssm_parameter" "cw_agent_config" {
+  name  = "/aws/eks/${var.project_name}-cluster/cloudwatch-agent-config"
+  type  = "String"
+  value = jsonencode({
+    logs = {
+      force_flush_interval = 5
+      logs_collected = {
+        files = {
+          collect_list = [
+            {
+              file_path = "/var/log/messages"
+              log_group_name = "/aws/eks/${var.project_name}-cluster/nodes"
+              log_stream_name = "{instance_id}"
+            },
+            {
+              file_path = "/var/log/kubernetes.log"
+              log_group_name = "/aws/eks/${var.project_name}-cluster/kubernetes"
+              log_stream_name = "{instance_id}"
+            }
+          ]
+        }
+      }
+    }
+  })
+}
+
 resource "aws_launch_template" "eks_nodes" {
   for_each = var.node_groups
 
@@ -78,6 +119,14 @@ resource "aws_launch_template" "eks_nodes" {
       volume_type = "gp3"
     }
   }
+
+  user_data = base64encode(<<-EOF
+              #!/bin/bash
+              /etc/eks/bootstrap.sh ${aws_eks_cluster.main.name}
+              yum install -y amazon-cloudwatch-agent
+              /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c ssm:${aws_ssm_parameter.cw_agent_config.name}
+              EOF
+  )
 
   tag_specifications {
     resource_type = "instance"
@@ -140,6 +189,14 @@ resource "aws_eks_node_group" "main" {
   # Ensure that IAM Role permissions are created before and deleted after EKS Node Group handling.
   # Otherwise, EKS will not be able to properly delete EC2 Instances and Elastic Network Interfaces.
   depends_on = [aws_launch_template.eks_nodes]
+}
+
+# Add CloudWatch Logs permissions to node groups
+resource "aws_iam_role_policy_attachment" "cloudwatch_agent_policy" {
+  for_each = var.node_groups
+
+  policy_arn = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
+  role       = var.eks_node_role_arn
 }
 
 resource "aws_iam_openid_connect_provider" "eks" {

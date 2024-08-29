@@ -357,131 +357,6 @@ resource "aws_securityhub_standards_subscription" "aws_foundational" {
   depends_on    = [aws_securityhub_account.main]
 }
 
-# CloudTrail
-resource "aws_cloudtrail" "main" {
-  count                         = var.enable_cloudtrail ? 1 : 0
-  name                          = "${var.project_name}-cloudtrail"
-  s3_bucket_name                = aws_s3_bucket.cloudtrail[0].id
-  include_global_service_events = true
-  is_multi_region_trail         = true
-  enable_log_file_validation    = true
-  kms_key_id                    = aws_kms_key.cloudtrail[0].arn
-  is_organization_trail         = var.is_organization_master
-  enable_logging                = true
-
-  event_selector {
-    read_write_type           = "All"
-    include_management_events = true
-
-    data_resource {
-      type   = "AWS::S3::Object"
-      values = ["arn:aws:s3:::"]
-    }
-  }
-
-  insight_selector {
-    insight_type = "ApiCallRateInsight"
-  }
-
-  tags = merge(var.tags, { Name = "${var.project_name}-cloudtrail" })
-
-  depends_on = [aws_s3_bucket_policy.cloudtrail]
-}
-
-resource "aws_s3_bucket" "cloudtrail" {
-  count         = var.enable_cloudtrail ? 1 : 0
-  bucket        = "${var.project_name}-cloudtrail-logs-${data.aws_caller_identity.current.account_id}"
-  force_destroy = true
-
-  tags = merge(var.tags, { Name = "${var.project_name}-cloudtrail-logs" })
-}
-
-resource "aws_s3_bucket_public_access_block" "cloudtrail" {
-  count  = var.enable_cloudtrail ? 1 : 0
-  bucket = aws_s3_bucket.cloudtrail[0].id
-
-  block_public_acls       = true
-  block_public_policy     = true
-  ignore_public_acls      = true
-  restrict_public_buckets = true
-}
-
-resource "aws_s3_bucket_policy" "cloudtrail" {
-  count  = var.enable_cloudtrail ? 1 : 0
-  bucket = aws_s3_bucket.cloudtrail[0].id
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Sid    = "AWSCloudTrailAclCheck"
-        Effect = "Allow"
-        Principal = {
-          Service = "cloudtrail.amazonaws.com"
-        }
-        Action   = "s3:GetBucketAcl"
-        Resource = aws_s3_bucket.cloudtrail[0].arn
-      },
-      {
-        Sid    = "AWSCloudTrailWrite"
-        Effect = "Allow"
-        Principal = {
-          Service = "cloudtrail.amazonaws.com"
-        }
-        Action   = "s3:PutObject"
-        Resource = "${aws_s3_bucket.cloudtrail[0].arn}/*"
-        Condition = {
-          StringEquals = {
-            "s3:x-amz-acl" = "bucket-owner-full-control"
-          }
-        }
-      }
-    ]
-  })
-}
-
-resource "aws_kms_key" "cloudtrail" {
-  count                   = var.enable_cloudtrail ? 1 : 0
-  description             = "KMS key for CloudTrail logs encryption"
-  enable_key_rotation     = true
-  deletion_window_in_days = 7
-
-  tags = merge(var.tags, { Name = "${var.project_name}-cloudtrail-kms-key" })
-}
-
-resource "aws_kms_key_policy" "cloudtrail" {
-  count  = var.enable_cloudtrail ? 1 : 0
-  key_id = aws_kms_key.cloudtrail[0].id
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Sid    = "Enable IAM User Permissions"
-        Effect = "Allow"
-        Principal = {
-          AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
-        }
-        Action   = "kms:*"
-        Resource = "*"
-      },
-      {
-        Sid    = "Allow CloudTrail to encrypt logs"
-        Effect = "Allow"
-        Principal = {
-          Service = "cloudtrail.amazonaws.com"
-        }
-        Action = [
-          "kms:Encrypt*",
-          "kms:Decrypt*",
-          "kms:ReEncrypt*",
-          "kms:GenerateDataKey*",
-          "kms:Describe*"
-        ]
-        Resource = "*"
-      }
-    ]
-  })
-}
-
 # AWS Config
 resource "aws_config_configuration_recorder" "main" {
   count    = var.enable_config ? 1 : 0
@@ -672,4 +547,124 @@ resource "aws_iam_policy" "alb_ingress" {
 resource "aws_iam_role_policy_attachment" "alb_ingress" {
   policy_arn = aws_iam_policy.alb_ingress.arn
   role       = aws_iam_role.eks_nodes.name
+}
+
+resource "aws_cloudtrail" "main" {
+  name                          = "${var.project_name}-cloudtrail"
+  s3_bucket_name                = aws_s3_bucket.cloudtrail_logs.id
+  include_global_service_events = true
+  is_multi_region_trail         = true
+  enable_logging                = true
+  enable_log_file_validation    = true
+
+  event_selector {
+    read_write_type           = "All"
+    include_management_events = true
+
+    data_resource {
+      type   = "AWS::S3::Object"
+      values = ["arn:aws:s3:::"]
+    }
+  }
+
+  cloud_watch_logs_group_arn = "${aws_cloudwatch_log_group.cloudtrail.arn}:*"
+  cloud_watch_logs_role_arn  = aws_iam_role.cloudtrail_cloudwatch_role.arn
+
+  tags = var.tags
+}
+
+resource "aws_s3_bucket" "cloudtrail_logs" {
+  bucket        = "${var.project_name}-cloudtrail-logs"
+  force_destroy = true
+
+  tags = var.tags
+}
+
+resource "aws_s3_bucket_policy" "cloudtrail_logs" {
+  bucket = aws_s3_bucket.cloudtrail_logs.id
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "AWSCloudTrailAclCheck"
+        Effect = "Allow"
+        Principal = {
+          Service = "cloudtrail.amazonaws.com"
+        }
+        Action   = "s3:GetBucketAcl"
+        Resource = aws_s3_bucket.cloudtrail_logs.arn
+      },
+      {
+        Sid    = "AWSCloudTrailWrite"
+        Effect = "Allow"
+        Principal = {
+          Service = "cloudtrail.amazonaws.com"
+        }
+        Action   = "s3:PutObject"
+        Resource = "${aws_s3_bucket.cloudtrail_logs.arn}/AWSLogs/*"
+        Condition = {
+          StringEquals = {
+            "s3:x-amz-acl" = "bucket-owner-full-control"
+          }
+        }
+      }
+    ]
+  })
+}
+
+resource "aws_cloudwatch_log_group" "cloudtrail" {
+  name              = "/aws/cloudtrail/${var.project_name}"
+  retention_in_days = 30
+
+  tags = var.tags
+}
+
+resource "aws_iam_role" "cloudtrail_cloudwatch_role" {
+  name = "${var.project_name}-cloudtrail-cloudwatch-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Principal = {
+          Service = "cloudtrail.amazonaws.com"
+        }
+        Action = "sts:AssumeRole"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy" "cloudtrail_cloudwatch_policy" {
+  name = "${var.project_name}-cloudtrail-cloudwatch-policy"
+  role = aws_iam_role.cloudtrail_cloudwatch_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "logs:CreateLogStream",
+          "logs:PutLogEvents"
+        ]
+        Resource = "${aws_cloudwatch_log_group.cloudtrail.arn}:*"
+      }
+    ]
+  })
+}
+
+# Add CloudWatch logs for security groups
+resource "aws_cloudwatch_log_group" "security_groups" {
+  name              = "/aws/security-groups/${var.project_name}"
+  retention_in_days = 30
+
+  tags = var.tags
+}
+
+# Update IAM roles to include more detailed logging
+resource "aws_iam_role_policy_attachment" "cloudwatch_logs_policy" {
+  policy_arn = "arn:aws:iam::aws:policy/CloudWatchLogsFullAccess"
+  role       = aws_iam_role.eks_cluster.name
 }
