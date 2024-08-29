@@ -56,4 +56,4 @@ jobs:
         if: success()
         run: |
           terraform workspace select default
-          terraform workspace delete "default-aws-infra-${{ github.event.inputs.environment }}-${{ github.event.inputs.aws-region }}"
+#          terraform workspace delete "default-aws-infra-${{ github.event.inputs.environment }}-${{ github.event.inputs.aws-region }}"
