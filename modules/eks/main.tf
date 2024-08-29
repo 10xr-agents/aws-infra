@@ -71,6 +71,7 @@ resource "aws_cloudwatch_log_group" "eks" {
 
   lifecycle {
     ignore_changes = [name]
+    create_before_destroy = true
   }
 }
 

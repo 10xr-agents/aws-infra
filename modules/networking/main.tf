@@ -63,7 +63,7 @@ resource "aws_lb_listener" "http" {
 
 # Add VPC Flow Logs
 resource "aws_flow_log" "main" {
-  iam_role_arn    = aws_iam_role.vpc_flow_log_role.arn
+  iam_role_arn    = var.vpc_flow_log_role_arn
   log_destination = aws_cloudwatch_log_group.vpc_flow_log.arn
   traffic_type    = "ALL"
   vpc_id          = var.vpc_id
@@ -78,34 +78,9 @@ resource "aws_cloudwatch_log_group" "vpc_flow_log" {
   tags = var.tags
 }
 
-resource "aws_iam_role" "vpc_flow_log_role" {
-  name = "${var.project_name}-vpc-flow-log-role"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Principal = {
-          Service = "vpc-flow-logs.amazonaws.com"
-        }
-        Action = "sts:AssumeRole"
-      }
-    ]
-  })
-
-
-  # Add lifecycle rule to handle potential conflicts
-  lifecycle {
-    create_before_destroy = true
-  }
-
-  tags = var.tags
-}
-
 resource "aws_iam_role_policy" "vpc_flow_log_policy" {
   name = "${var.project_name}-vpc-flow-log-policy"
-  role = aws_iam_role.vpc_flow_log_role.id
+  role = var.vpc_flow_log_role_id
 
   policy = jsonencode({
     Version = "2012-10-17"

@@ -252,6 +252,13 @@ resource "aws_iam_role" "vpc_flow_log_role" {
       }
     ]
   })
+
+  # Add lifecycle rule to handle potential conflicts
+  lifecycle {
+    create_before_destroy = true
+  }
+
+  tags = var.tags
 }
 
 resource "aws_iam_role_policy" "vpc_flow_log_policy" {
