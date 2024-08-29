@@ -17,7 +17,7 @@ tags = {
 }
 
 mongodb_connection_string = "mongodb+srv://converseDev:firstPassword1@10xr-demo.3njzs.mongodb.net/converse-server?retryWrites=true&w=majority&appName=10xR-demo"
-eks_cluster_version       = "1.24"
+eks_cluster_version       = "1.30"
 eks_node_groups = {
   general = {
     desired_size   = 2

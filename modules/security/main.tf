@@ -183,6 +183,7 @@ resource "aws_guardduty_organization_configuration" "main" {
       }
     }
   }
+  auto_enable = false
 }
 
 resource "aws_securityhub_account" "main" {}
