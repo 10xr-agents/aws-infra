@@ -66,7 +66,7 @@ resource "aws_launch_template" "eks_nodes" {
   for_each = var.node_groups
 
   name_prefix   = "${var.project_name}-${each.key}-lt"
-  instance_type = each.value.instance_types[0]
+  #instance_type = each.value.instance_types[0]
 
   vpc_security_group_ids = [var.eks_cluster_sg_id]
 
@@ -112,15 +112,11 @@ resource "aws_eks_node_group" "main" {
     min_size     = each.value.scaling_config.min_size
   }
 
-  instance_types = each.value.instance_types
+  #instance_types = each.value.instance_types
 
   launch_template {
     id      = aws_launch_template.eks_nodes[each.key].id
     version = aws_launch_template.eks_nodes[each.key].latest_version
-  }
-
-  update_config {
-    max_unavailable = 1
   }
 
   labels = merge(
@@ -129,6 +125,9 @@ resource "aws_eks_node_group" "main" {
     },
     each.value.labels
   )
+
+  # Add capacity_type here
+  capacity_type = each.value.capacity_type
 
   tags = merge(
     var.tags,
@@ -577,24 +576,21 @@ resource "kubernetes_config_map" "aws_auth" {
 resource "aws_eks_addon" "coredns" {
   cluster_name = aws_eks_cluster.main.name
   addon_name   = "coredns"
-
-  resolve_conflicts = "OVERWRITE"
+  addon_version     = "v1.11.1-eksbuild.11"
 }
 
 # Add kube-proxy add-on
 resource "aws_eks_addon" "kube_proxy" {
   cluster_name = aws_eks_cluster.main.name
   addon_name   = "kube-proxy"
-
-  resolve_conflicts = "OVERWRITE"
+  addon_version     = "v1.30.3-eksbuild.2"
 }
 
 # Add vpc-cni add-on
 resource "aws_eks_addon" "vpc_cni" {
   cluster_name = aws_eks_cluster.main.name
   addon_name   = "vpc-cni"
-
-  resolve_conflicts = "OVERWRITE"
+  addon_version     = "v1.18.3-eksbuild.2"
 }
 
 # Get current region

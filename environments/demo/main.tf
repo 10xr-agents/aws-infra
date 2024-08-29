@@ -139,6 +139,7 @@ module "networking" {
   vpc_id                = module.vpc.vpc_id
   public_subnet_ids     = module.vpc.public_subnet_ids
   alb_security_group_id = module.security.alb_security_group_id
+  nlb_security_group_id = module.security.nlb_security_group_id
   acm_certificate_arn   = var.acm_certificate_arn
   sns_topic_arn         = aws_sns_topic.alerts.arn
   tags                  = var.tags

@@ -70,6 +70,8 @@ resource "aws_lb" "nlb" {
 
   enable_cross_zone_load_balancing = true
 
+  security_groups = [var.nlb_security_group_id]  # Add this line
+
   tags = merge(
     var.tags,
     {
@@ -94,7 +96,7 @@ resource "aws_lb_listener" "nlb_udp" {
 
 resource "aws_lb_listener" "nlb_tcp" {
   load_balancer_arn = aws_lb.nlb.arn
-  port              = 3478
+  port              = 3479
   protocol          = "TCP"
 
   default_action {
@@ -118,60 +120,15 @@ resource "aws_lb_target_group" "nlb_udp" {
 
 resource "aws_lb_target_group" "nlb_tcp" {
   name        = "${var.project_name}-nlb-tcp-tg"
-  port        = 3478
+  port        = 3479
   protocol    = "TCP"
   vpc_id      = var.vpc_id
   target_type = "ip"
 
   health_check {
     protocol = "TCP"
-    port     = 3478
+    port     = 3479
   }
-}
-
-# Add security group for NLB traffic
-resource "aws_security_group" "nlb" {
-  name        = "${var.project_name}-nlb-sg"
-  description = "Security group for NLB"
-  vpc_id      = var.vpc_id
-
-  ingress {
-    from_port   = 3478
-    to_port     = 3478
-    protocol    = "udp"
-    cidr_blocks = ["0.0.0.0/0"]
-    description = "TURN/UDP"
-  }
-
-  ingress {
-    from_port   = 3478
-    to_port     = 3478
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-    description = "TURN/TLS"
-  }
-
-  ingress {
-    from_port   = 49152
-    to_port     = 65535
-    protocol    = "udp"
-    cidr_blocks = ["0.0.0.0/0"]
-    description = "ICE/UDP port range"
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  tags = merge(
-    var.tags,
-    {
-      Name = "${var.project_name}-nlb-sg"
-    }
-  )
 }
 
 # Update ALB security group for better EKS integration

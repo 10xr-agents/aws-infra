@@ -25,6 +25,11 @@ variable "alb_security_group_id" {
   type        = string
 }
 
+variable "nlb_security_group_id" {
+  description = "ID of the NLB security group"
+  type        = string
+}
+
 variable "acm_certificate_arn" {
   description = "ARN of the ACM certificate for the ALB"
   type        = string

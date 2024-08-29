@@ -288,8 +288,7 @@ locals {
     "sts",
     "kms",
     "logs",
-    "autoscaling",  # Added for EKS
-    "eks-fargate-pods"  # Added for EKS Fargate (if you plan to use it)
+    "autoscaling"
   ]
 }
 
