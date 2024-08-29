@@ -274,6 +274,7 @@ locals {
     "ecr.api",
     "ecr.dkr",
     "ec2",
+    "eks",
     "ec2messages",
     "elasticloadbalancing",
     "sts",

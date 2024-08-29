@@ -68,6 +68,8 @@ resource "aws_launch_template" "eks_nodes" {
   name_prefix = "${var.project_name}-eks-nodes"
   # instance_type = each.value.instance_types
 
+  vpc_security_group_ids = [var.eks_cluster_sg_id]
+
   block_device_mappings {
     device_name = "/dev/xvda"
 
