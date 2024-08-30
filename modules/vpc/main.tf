@@ -185,6 +185,15 @@ resource "aws_network_acl" "private" {
     to_port    = 0
   }
 
+  ingress {
+    protocol   = "tcp"
+    rule_no    = 110
+    action     = "allow"
+    cidr_block = "0.0.0.0/0"
+    from_port  = 1024
+    to_port    = 65535
+  }
+
   tags = merge(
     var.tags,
     {
