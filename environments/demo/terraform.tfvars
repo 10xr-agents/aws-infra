@@ -1,19 +1,19 @@
 # terraform.tfvars
 
 region               = "us-east-1"
-project_name         = "10xr-infra"
+project_name         = "10xr-infra-demo"
 environment          = "demo"
 vpc_cidr             = "10.0.0.0/16"
-availability_zones   = ["us-east-1a", "us-east-1b", "us-east-1c"]
-public_subnet_cidrs  = ["10.0.1.0/24", "10.0.3.0/24", "10.0.5.0/24"]
-private_subnet_cidrs = ["10.0.2.0/24", "10.0.4.0/24", "10.0.6.0/24"]
+availability_zones   = ["us-east-1a", "us-east-1b"]
+public_subnet_cidrs  = ["10.0.1.0/24", "10.0.3.0/24"]
+private_subnet_cidrs = ["10.0.2.0/24", "10.0.4.0/24"]
 single_nat_gateway   = true
 
 acm_certificate_arn = "arn:aws:acm:us-east-1:761018882607:certificate/6af0470e-edcb-4e68-8926-157102b36c53"
 tags = {
-  Environment = "demo"
-  Project     = "10xR-Infra"
-  ManagedBy   = "Terraform"
+  Environment                             = "demo"
+  Project                                 = "10xR-Infra"
+  ManagedBy                               = "Terraform"
   "kubernetes.io/cluster/10xr-infra-demo" = "shared"
 }
 
@@ -35,8 +35,8 @@ eks_node_groups = {
     }
     taints = []
     tags = {
-      "kubernetes.io/cluster/10xr-infra-demo" = "owned"
-      "k8s.io/cluster-autoscaler/enabled"                            = "true"
+      "kubernetes.io/cluster/10xr-infra-demo"     = "owned"
+      "k8s.io/cluster-autoscaler/enabled"         = "true"
       "k8s.io/cluster-autoscaler/10xr-infra-demo" = "owned"
     }
   },
@@ -55,8 +55,8 @@ eks_node_groups = {
     }
     taints = []
     tags = {
-      "kubernetes.io/cluster/10xr-infra-demo" = "owned"
-      "k8s.io/cluster-autoscaler/enabled"                            = "true"
+      "kubernetes.io/cluster/10xr-infra-demo"     = "owned"
+      "k8s.io/cluster-autoscaler/enabled"         = "true"
       "k8s.io/cluster-autoscaler/10xr-infra-demo" = "owned"
     }
   },
@@ -75,8 +75,8 @@ eks_node_groups = {
     }
     taints = []
     tags = {
-      "kubernetes.io/cluster/10xr-infra-demo" = "owned"
-      "k8s.io/cluster-autoscaler/enabled"                            = "true"
+      "kubernetes.io/cluster/10xr-infra-demo"     = "owned"
+      "k8s.io/cluster-autoscaler/enabled"         = "true"
       "k8s.io/cluster-autoscaler/10xr-infra-demo" = "owned"
     }
   }

@@ -46,6 +46,14 @@ provider "helm" {
   }
 }
 
+data "aws_eks_cluster" "cluster" {
+  name = module.eks.cluster_id
+}
+
+data "aws_eks_cluster_auth" "cluster" {
+  name = module.eks.cluster_id
+}
+
 provider "kubernetes" {
   host                   = module.eks.cluster_endpoint
   cluster_ca_certificate = base64decode(module.eks.cluster_ca_certificate)
@@ -63,9 +71,9 @@ module "vpc" {
   region               = var.region
   project_name         = var.project_name
   vpc_cidr             = var.vpc_cidr
-  availability_zones   = slice(var.availability_zones, 0, 2)  # Use only first 2 AZs
+  availability_zones   = slice(var.availability_zones, 0, 2)   # Use only first 2 AZs
   public_subnet_cidrs  = slice(var.public_subnet_cidrs, 0, 2)  # Use only first 2 public subnets
-  private_subnet_cidrs = slice(var.private_subnet_cidrs, 0, 2)  # Use only first 2 private subnets
+  private_subnet_cidrs = slice(var.private_subnet_cidrs, 0, 2) # Use only first 2 private subnets
   single_nat_gateway   = var.single_nat_gateway
   sns_topic_arn        = aws_sns_topic.alerts.arn
 
@@ -75,53 +83,53 @@ module "vpc" {
 module "security" {
   source = "../../modules/security"
 
-  project_name        = var.project_name
-  vpc_id              = module.vpc.vpc_id
-  aws_region          = var.region
-  s3_bucket_arn       = aws_s3_bucket.main.arn
-  sns_topic_arn       = aws_sns_topic.alerts.arn
+  project_name            = var.project_name
+  vpc_id                  = module.vpc.vpc_id
+  aws_region              = var.region
+  s3_bucket_arn           = aws_s3_bucket.main.arn
+  sns_topic_arn           = aws_sns_topic.alerts.arn
   eks_public_access_cidrs = var.eks_public_access_cidrs
-  tags                = var.tags
-  enable_cloudtrail   = false
-  enable_security_hub = false
-  enable_guardduty    = true
-  enable_config       = false
+  tags                    = var.tags
+  enable_cloudtrail       = false
+  enable_security_hub     = false
+  enable_guardduty        = true
+  enable_config           = false
 
   # Add rules for ICE/UDP, ICE/TCP, TURN/TLS, TURN/UDP
-#   additional_security_group_rules = [
-#     {
-#       type        = "ingress"
-#       from_port   = 3478
-#       to_port     = 3478
-#       protocol    = "udp"
-#       cidr_blocks = ["0.0.0.0/0"]
-#       description = "TURN/UDP"
-#     },
-#     {
-#       type        = "ingress"
-#       from_port   = 3478
-#       to_port     = 3478
-#       protocol    = "tcp"
-#       cidr_blocks = ["0.0.0.0/0"]
-#       description = "TURN/TLS"
-#     },
-#     {
-#       type        = "ingress"
-#       from_port   = 49152
-#       to_port     = 65535
-#       protocol    = "udp"
-#       cidr_blocks = ["0.0.0.0/0"]
-#       description = "ICE/UDP port range"
-#     },
-#     {
-#       type        = "ingress"
-#       from_port   = 443
-#       to_port     = 443
-#       protocol    = "tcp"
-#       cidr_blocks = ["0.0.0.0/0"]
-#       description = "ICE/TCP"
-#     }
-#   ]
+  #   additional_security_group_rules = [
+  #     {
+  #       type        = "ingress"
+  #       from_port   = 3478
+  #       to_port     = 3478
+  #       protocol    = "udp"
+  #       cidr_blocks = ["0.0.0.0/0"]
+  #       description = "TURN/UDP"
+  #     },
+  #     {
+  #       type        = "ingress"
+  #       from_port   = 3478
+  #       to_port     = 3478
+  #       protocol    = "tcp"
+  #       cidr_blocks = ["0.0.0.0/0"]
+  #       description = "TURN/TLS"
+  #     },
+  #     {
+  #       type        = "ingress"
+  #       from_port   = 49152
+  #       to_port     = 65535
+  #       protocol    = "udp"
+  #       cidr_blocks = ["0.0.0.0/0"]
+  #       description = "ICE/UDP port range"
+  #     },
+  #     {
+  #       type        = "ingress"
+  #       from_port   = 443
+  #       to_port     = 443
+  #       protocol    = "tcp"
+  #       cidr_blocks = ["0.0.0.0/0"]
+  #       description = "ICE/TCP"
+  #     }
+  #   ]
 }
 
 module "s3" {
@@ -146,33 +154,33 @@ module "networking" {
   tags                  = var.tags
 
   # Add NLB configuration
-#   create_nlb            = true
-#   nlb_internal          = false
-#   nlb_subnet_ids        = module.vpc.public_subnet_ids
-#   nlb_target_groups     = [
-#     {
-#       name        = "ice-udp-tg"
-#       port        = 3478
-#       protocol    = "UDP"
-#       target_type = "ip"
-#     },
-#     {
-#       name        = "turn-tls-tg"
-#       port        = 3478
-#       protocol    = "TCP"
-#       target_type = "ip"
-#     }
-#   ]
+  #   create_nlb            = true
+  #   nlb_internal          = false
+  #   nlb_subnet_ids        = module.vpc.public_subnet_ids
+  #   nlb_target_groups     = [
+  #     {
+  #       name        = "ice-udp-tg"
+  #       port        = 3478
+  #       protocol    = "UDP"
+  #       target_type = "ip"
+  #     },
+  #     {
+  #       name        = "turn-tls-tg"
+  #       port        = 3478
+  #       protocol    = "TCP"
+  #       target_type = "ip"
+  #     }
+  #   ]
   eks_cluster_sg_id = module.eks.cluster_security_group_id
 }
 
 module "eks" {
   source = "../../modules/eks"
 
-  project_name    = var.project_name
-  cluster_version = var.eks_cluster_version
-  subnet_ids      = module.vpc.private_subnet_ids
-  node_groups     = var.eks_node_groups
+  project_name        = var.project_name
+  cluster_version     = var.eks_cluster_version
+  subnet_ids          = module.vpc.private_subnet_ids
+  node_groups         = var.eks_node_groups
   public_access_cidrs = var.eks_public_access_cidrs
   s3_bucket_arn       = aws_s3_bucket.main.arn
 

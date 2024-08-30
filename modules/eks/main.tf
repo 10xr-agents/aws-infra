@@ -70,7 +70,7 @@ resource "aws_cloudwatch_log_group" "eks" {
   tags = var.tags
 
   lifecycle {
-    ignore_changes = [name]
+    ignore_changes        = [name]
     create_before_destroy = true
   }
 }
@@ -91,8 +91,8 @@ resource "aws_iam_role_policy_attachment" "cloudwatch_agent_policy" {
 
 # Add CloudWatch agent configuration
 resource "aws_ssm_parameter" "cw_agent_config" {
-  name  = "/custom/eks/${var.project_name}-cluster/cloudwatch-agent-config"
-  type  = "String"
+  name = "/custom/eks/${var.project_name}-cluster/cloudwatch-agent-config"
+  type = "String"
   value = jsonencode({
     logs = {
       force_flush_interval = 5
@@ -100,13 +100,13 @@ resource "aws_ssm_parameter" "cw_agent_config" {
         files = {
           collect_list = [
             {
-              file_path = "/var/log/messages"
-              log_group_name = "/custom/eks/${var.project_name}-cluster/nodes"
+              file_path       = "/var/log/messages"
+              log_group_name  = "/custom/eks/${var.project_name}-cluster/nodes"
               log_stream_name = "{instance_id}"
             },
             {
-              file_path = "/var/log/kubernetes.log"
-              log_group_name = "/custom/eks/${var.project_name}-cluster/kubernetes"
+              file_path       = "/var/log/kubernetes.log"
+              log_group_name  = "/custom/eks/${var.project_name}-cluster/kubernetes"
               log_stream_name = "{instance_id}"
             }
           ]
@@ -119,7 +119,7 @@ resource "aws_ssm_parameter" "cw_agent_config" {
 resource "aws_launch_template" "eks_nodes" {
   for_each = var.node_groups
 
-  name_prefix   = "${var.project_name}-${each.key}-lt"
+  name_prefix = "${var.project_name}-${each.key}-lt"
   #instance_type = each.value.instance_types[0]
 
   vpc_security_group_ids = [var.eks_cluster_sg_id]
@@ -155,10 +155,10 @@ resource "aws_launch_template" "eks_nodes" {
     tags = merge(
       var.tags,
       {
-        "Name"                                                  = "${var.project_name}-${each.key}-node"
-        "kubernetes.io/cluster/${aws_eks_cluster.main.name}"    = "owned"
+        "Name"                                                   = "${var.project_name}-${each.key}-node"
+        "kubernetes.io/cluster/${aws_eks_cluster.main.name}"     = "owned"
         "k8s.io/cluster-autoscaler/${aws_eks_cluster.main.name}" = "owned"
-        "k8s.io/cluster-autoscaler/enabled"                     = "true"
+        "k8s.io/cluster-autoscaler/enabled"                      = "true"
       }
     )
   }
@@ -182,7 +182,7 @@ resource "aws_eks_node_group" "main" {
     min_size     = each.value.scaling_config.min_size
   }
 
-  ami_type       = "AL2_x86_64"
+  ami_type = "AL2_x86_64"
   #instance_types = each.value.instance_types
 
   launch_template {
@@ -642,6 +642,10 @@ resource "kubernetes_config_map" "aws_auth" {
   }
 
   depends_on = [aws_eks_cluster.main]
+
+  lifecycle {
+    ignore_changes = [data]
+  }
 }
 
 resource "null_resource" "wait_for_cluster" {
@@ -654,9 +658,9 @@ resource "null_resource" "wait_for_cluster" {
 
 # Add CoreDNS add-on
 resource "aws_eks_addon" "coredns" {
-  cluster_name = aws_eks_cluster.main.name
-  addon_name   = "coredns"
-  addon_version     = "v1.11.1-eksbuild.11"
+  cluster_name  = aws_eks_cluster.main.name
+  addon_name    = "coredns"
+  addon_version = "v1.11.1-eksbuild.11"
 
   depends_on = [
     null_resource.wait_for_cluster,
@@ -672,16 +676,16 @@ resource "aws_eks_addon" "coredns" {
 
 # Add kube-proxy add-on
 resource "aws_eks_addon" "kube_proxy" {
-  cluster_name = aws_eks_cluster.main.name
-  addon_name   = "kube-proxy"
-  addon_version     = "v1.30.3-eksbuild.2"
+  cluster_name  = aws_eks_cluster.main.name
+  addon_name    = "kube-proxy"
+  addon_version = "v1.30.3-eksbuild.2"
 }
 
 # Add vpc-cni add-on
 resource "aws_eks_addon" "vpc_cni" {
-  cluster_name = aws_eks_cluster.main.name
-  addon_name   = "vpc-cni"
-  addon_version     = "v1.18.3-eksbuild.2"
+  cluster_name  = aws_eks_cluster.main.name
+  addon_name    = "vpc-cni"
+  addon_version = "v1.18.3-eksbuild.2"
 }
 
 # Get current region
