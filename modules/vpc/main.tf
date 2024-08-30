@@ -96,6 +96,8 @@ resource "aws_nat_gateway" "main" {
       Name = "${var.project_name}-nat-${count.index + 1}"
     }
   )
+
+  depends_on = [aws_internet_gateway.main]
 }
 
 resource "aws_cloudwatch_metric_alarm" "nat_gateway_error_port_allocation" {
