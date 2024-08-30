@@ -14,7 +14,7 @@ tags = {
   Environment = "demo"
   Project     = "10xR-Infra"
   ManagedBy   = "Terraform"
-  "kubernetes.io/cluster/${var.project_name}-${var.environment}" = "shared"
+  "kubernetes.io/cluster/10xr-infra-demo" = "shared"
 }
 
 mongodb_connection_string = "mongodb+srv://converseDev:firstPassword1@10xr-demo.3njzs.mongodb.net/converse-server?retryWrites=true&w=majority&appName=10xR-demo"
@@ -35,9 +35,9 @@ eks_node_groups = {
     }
     taints = []
     tags = {
-      "kubernetes.io/cluster/${var.project_name}-${var.environment}" = "owned"
+      "kubernetes.io/cluster/10xr-infra-demo" = "owned"
       "k8s.io/cluster-autoscaler/enabled"                            = "true"
-      "k8s.io/cluster-autoscaler/${var.project_name}-${var.environment}" = "owned"
+      "k8s.io/cluster-autoscaler/10xr-infra-demo" = "owned"
     }
   },
   compute = {
@@ -55,9 +55,9 @@ eks_node_groups = {
     }
     taints = []
     tags = {
-      "kubernetes.io/cluster/${var.project_name}-${var.environment}" = "owned"
+      "kubernetes.io/cluster/10xr-infra-demo" = "owned"
       "k8s.io/cluster-autoscaler/enabled"                            = "true"
-      "k8s.io/cluster-autoscaler/${var.project_name}-${var.environment}" = "owned"
+      "k8s.io/cluster-autoscaler/10xr-infra-demo" = "owned"
     }
   },
   spot = {
