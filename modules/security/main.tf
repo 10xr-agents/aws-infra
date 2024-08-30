@@ -32,6 +32,13 @@ resource "aws_security_group" "eks_cluster" {
   description = "Security group for EKS cluster"
   vpc_id      = var.vpc_id
 
+  ingress {
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = var.eks_public_access_cidrs
+  }
+
   egress {
     from_port   = 0
     to_port     = 0

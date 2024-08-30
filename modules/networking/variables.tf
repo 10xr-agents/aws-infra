@@ -30,11 +30,6 @@ variable "nlb_security_group_id" {
   type        = string
 }
 
-variable "vpc_flow_log_role_id" {
-  description = "Flow Log Role ID"
-  type        = string
-}
-
 variable "acm_certificate_arn" {
   description = "ARN of the ACM certificate for the ALB"
   type        = string

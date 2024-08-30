@@ -27,6 +27,12 @@ variable "allowed_cidr_blocks" {
   default     = ["0.0.0.0/0"]
 }
 
+variable "eks_public_access_cidrs" {
+  description = "List of CIDR blocks that can access the Amazon EKS public API server endpoint"
+  type        = list(string)
+  default     = ["0.0.0.0/0"]
+}
+
 variable "s3_bucket_arn" {
   description = "ARN of the S3 bucket for EKS node access"
   type        = string

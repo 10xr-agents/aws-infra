@@ -40,16 +40,6 @@ output "vpc_endpoint_s3_id" {
   value       = aws_vpc_endpoint.s3.id
 }
 
-output "vpc_flow_log_id" {
-  description = "ID of VPC Flow Log"
-  value       = aws_flow_log.main.id
-}
-
-output "vpc_flow_log_arn" {
-  description = "ID of VPC Flow Log"
-  value       = aws_flow_log.main.arn
-}
-
 output "vpc_endpoints_security_group_id" {
   description = "ID of the security group for VPC endpoints"
   value       = aws_security_group.vpc_endpoints.id

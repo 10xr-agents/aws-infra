@@ -80,6 +80,7 @@ module "security" {
   aws_region          = var.region
   s3_bucket_arn       = aws_s3_bucket.main.arn
   sns_topic_arn       = aws_sns_topic.alerts.arn
+  eks_public_access_cidrs = var.eks_public_access_cidrs
   tags                = var.tags
   enable_cloudtrail   = false
   enable_security_hub = false
@@ -142,7 +143,6 @@ module "networking" {
   nlb_security_group_id = module.security.nlb_security_group_id
   acm_certificate_arn   = var.acm_certificate_arn
   sns_topic_arn         = aws_sns_topic.alerts.arn
-  vpc_flow_log_role_id = module.vpc.vpc_flow_log_id
   tags                  = var.tags
 
   # Add NLB configuration

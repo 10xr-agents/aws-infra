@@ -69,28 +69,6 @@ resource "aws_cloudwatch_log_group" "vpc_flow_log" {
   tags = var.tags
 }
 
-resource "aws_iam_role_policy" "vpc_flow_log_policy" {
-  name = "${var.project_name}-vpc-flow-log-policy"
-  role = var.vpc_flow_log_role_id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Action = [
-          "logs:CreateLogGroup",
-          "logs:CreateLogStream",
-          "logs:PutLogEvents",
-          "logs:DescribeLogGroups",
-          "logs:DescribeLogStreams"
-        ]
-        Resource = "*"
-      }
-    ]
-  })
-}
-
 # Add CloudWatch logs for Load Balancers
 resource "aws_cloudwatch_log_group" "alb_logs" {
   name              = "/aws/alb/${var.project_name}"
