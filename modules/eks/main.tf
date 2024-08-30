@@ -148,7 +148,7 @@ resource "aws_launch_template" "eks_nodes" {
               journalctl -xe
               systemctl status sandbox-image.service
 
-              cat /var/log/cloud-init.log
+              #cat /var/log/cloud-init.log | grep -i error
               --==BOUNDARY==--
               EOF
   )
@@ -621,6 +621,8 @@ resource "null_resource" "wait_for_alb_controller" {
   depends_on = [helm_release.aws_load_balancer_controller]
 }
 
+data "aws_caller_identity" "current" {}
+
 # AWS Auth ConfigMap
 resource "kubernetes_config_map" "aws_auth" {
   metadata {
@@ -641,7 +643,16 @@ resource "kubernetes_config_map" "aws_auth" {
         var.map_additional_iam_roles
       )
     )
-    mapUsers = yamlencode(var.map_additional_iam_users)
+    mapUsers = yamlencode(
+      concat(
+          var.include_root_user ? [{
+          userarn  = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
+          username = "root"
+          groups   = ["system:masters"]
+        }] : [],
+        var.map_additional_iam_users
+      )
+    )
   }
 
   depends_on = [aws_eks_cluster.main]

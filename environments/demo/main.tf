@@ -188,6 +188,7 @@ module "eks" {
   eks_node_role_arn     = module.security.eks_nodes_role_arn
   eks_cluster_sg_id     = module.security.eks_nodes_security_group_id
   default_instance_type = "t3.medium"
+  include_root_user     = true
 
   tags   = var.tags
   vpc_id = module.vpc.vpc_id

@@ -94,6 +94,12 @@ variable "map_additional_iam_users" {
   default = []
 }
 
+variable "include_root_user" {
+  description = "Whether to include the root user in the aws-auth ConfigMap"
+  type        = bool
+  default     = false
+}
+
 variable "tags" {
   description = "A map of tags to add to all resources"
   type        = map(string)
