@@ -33,6 +33,7 @@ variable "node_groups" {
       value  = string
       effect = string
     }))
+    tags = map(string)
   }))
 }
 

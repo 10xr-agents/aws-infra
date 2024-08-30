@@ -141,7 +141,7 @@ resource "aws_launch_template" "eks_nodes" {
               Content-Type: text/x-shellscript; charset="us-ascii"
 
               #!/bin/bash
-              /etc/eks/bootstrap.sh ${aws_eks_cluster.main.name}
+              /etc/eks/bootstrap.sh ${aws_eks_cluster.main.name} --b64-cluster-ca ${aws_eks_cluster.main.certificate_authority[0].data} --apiserver-endpoint ${aws_eks_cluster.main.endpoint}
               yum install -y amazon-cloudwatch-agent
               /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c ssm:${aws_ssm_parameter.cw_agent_config.name}
 
@@ -182,6 +182,7 @@ resource "aws_eks_node_group" "main" {
     min_size     = each.value.scaling_config.min_size
   }
 
+  ami_type       = "AL2_x86_64"
   #instance_types = each.value.instance_types
 
   launch_template {
@@ -193,7 +194,8 @@ resource "aws_eks_node_group" "main" {
     {
       "eks.amazon.aws.com/nodegroup" = each.key
     },
-    each.value.labels
+    each.value.labels,
+    each.value.tags
   )
 
   # Add capacity_type here
