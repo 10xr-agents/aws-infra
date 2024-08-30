@@ -194,8 +194,7 @@ resource "aws_eks_node_group" "main" {
     {
       "eks.amazon.aws.com/nodegroup" = each.key
     },
-    each.value.labels,
-    each.value.tags
+    each.value.labels
   )
 
   # Add capacity_type here
