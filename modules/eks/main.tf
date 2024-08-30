@@ -641,13 +641,13 @@ resource "null_resource" "wait_for_alb_controller" {
   }
 
   provisioner "local-exec" {
-    command = <<-EOT
-      kubectl --kubeconfig <(aws eks get-token --cluster-name ${aws_eks_cluster.main.name} | kubectl config view --raw -o yaml | sed 's/''/''/g') \
-        wait --for=condition=available \
-        --timeout=900s \
-        deployment/aws-load-balancer-controller \
-        -n kube-system
-    EOT
+    interpreter = ["/bin/bash", "-c"]
+    command     = <<EOT
+    KUBECONFIG_FILE=$(mktemp)
+    aws eks get-token --cluster-name 10xr-infra-demo-cluster | kubectl config view --raw -o yaml | sed 's/''/''/g' > $KUBECONFIG_FILE
+    kubectl --kubeconfig $KUBECONFIG_FILE wait --for=condition=available --timeout=900s deployment/aws-load-balancer-controller -n kube-system
+    rm $KUBECONFIG_FILE
+  EOT
   }
 
   depends_on = [helm_release.aws_load_balancer_controller]
@@ -694,14 +694,6 @@ resource "kubernetes_config_map" "aws_auth" {
   }
 }
 
-resource "null_resource" "wait_for_cluster" {
-  depends_on = [aws_eks_cluster.main]
-
-  provisioner "local-exec" {
-    command = "sleep 60"
-  }
-}
-
 # Add CoreDNS add-on
 resource "aws_eks_addon" "coredns" {
   cluster_name  = aws_eks_cluster.main.name
@@ -709,7 +701,6 @@ resource "aws_eks_addon" "coredns" {
   addon_version = "v1.11.1-eksbuild.11"
 
   depends_on = [
-    null_resource.wait_for_cluster,
     aws_eks_node_group.main
   ]
 
