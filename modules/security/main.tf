@@ -144,6 +144,7 @@ resource "aws_security_group" "nlb" {
   tags = merge(var.tags, { Name = "${var.project_name}-nlb-sg" })
 }
 
+
 resource "aws_security_group_rule" "cluster_to_nodes" {
   security_group_id        = aws_security_group.eks_cluster.id
   type                     = "egress"
@@ -180,16 +181,6 @@ resource "aws_security_group_rule" "node_ingress_cluster" {
   source_security_group_id = aws_security_group.eks_cluster.id
   to_port                  = 65535
   type                     = "ingress"
-}
-
-resource "aws_security_group_rule" "eks_nodes_outbound" {
-  type              = "egress"
-  from_port         = 0
-  to_port           = 0
-  protocol          = "-1"
-  cidr_blocks       = ["0.0.0.0/0"]
-  security_group_id = aws_security_group.eks_nodes.id
-  description       = "Allow all outbound traffic"
 }
 
 resource "aws_security_group_rule" "eks_nodes_https" {
