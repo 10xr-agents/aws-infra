@@ -134,10 +134,18 @@ resource "aws_launch_template" "eks_nodes" {
   }
 
   user_data = base64encode(<<-EOF
+              MIME-Version: 1.0
+              Content-Type: multipart/mixed; boundary="==BOUNDARY=="
+
+              --==BOUNDARY==
+              Content-Type: text/x-shellscript; charset="us-ascii"
+
               #!/bin/bash
               /etc/eks/bootstrap.sh ${aws_eks_cluster.main.name}
               yum install -y amazon-cloudwatch-agent
               /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c ssm:${aws_ssm_parameter.cw_agent_config.name}
+
+              --==BOUNDARY==--
               EOF
   )
 

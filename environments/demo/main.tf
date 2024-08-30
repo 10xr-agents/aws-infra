@@ -143,7 +143,6 @@ module "networking" {
   acm_certificate_arn   = var.acm_certificate_arn
   sns_topic_arn         = aws_sns_topic.alerts.arn
   vpc_flow_log_role_id = module.vpc.vpc_flow_log_id
-  vpc_flow_log_role_arn = module.vpc.vpc_flow_log_arn
   tags                  = var.tags
 
   # Add NLB configuration

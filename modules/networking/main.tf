@@ -62,15 +62,6 @@ resource "aws_lb_listener" "http" {
 }
 
 # Add VPC Flow Logs
-resource "aws_flow_log" "main" {
-  iam_role_arn    = var.vpc_flow_log_role_arn
-  log_destination = aws_cloudwatch_log_group.vpc_flow_log.arn
-  traffic_type    = "ALL"
-  vpc_id          = var.vpc_id
-
-  tags = var.tags
-}
-
 resource "aws_cloudwatch_log_group" "vpc_flow_log" {
   name              = "/aws/vpc/${var.project_name}/flow-logs"
   retention_in_days = 30
