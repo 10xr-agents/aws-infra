@@ -371,3 +371,38 @@ resource "aws_flow_log" "s3" {
   traffic_type         = "ALL"
   vpc_id               = aws_vpc.main.id
 }
+
+resource "aws_route53_health_check" "nat_gateway" {
+  count             = length(aws_nat_gateway.main)
+  fqdn              = "www.amazon.com"
+  port              = 80
+  type              = "HTTP"
+  resource_path     = "/"
+  failure_threshold = "5"
+  request_interval  = "30"
+
+  tags = merge(
+    var.tags,
+    {
+      Name = "${var.project_name}-nat-gateway-health-check-${count.index + 1}"
+    }
+  )
+}
+
+resource "aws_cloudwatch_metric_alarm" "nat_gateway_health" {
+  count               = length(aws_nat_gateway.main)
+  alarm_name          = "${var.project_name}-nat-gateway-health-${count.index + 1}"
+  comparison_operator = "LessThanThreshold"
+  evaluation_periods  = "2"
+  metric_name         = "HealthCheckStatus"
+  namespace           = "AWS/Route53"
+  period              = "60"
+  statistic           = "Minimum"
+  threshold           = "1"
+  alarm_description   = "This metric monitors NAT Gateway health"
+  alarm_actions       = [var.sns_topic_arn]
+
+  dimensions = {
+    HealthCheckId = aws_route53_health_check.nat_gateway[count.index].id
+  }
+}

@@ -44,3 +44,8 @@ output "vpc_endpoints_security_group_id" {
   description = "ID of the security group for VPC endpoints"
   value       = aws_security_group.vpc_endpoints.id
 }
+
+output "private_subnet_route_table_associations" {
+  description = "List of IDs of the private subnet route table associations"
+  value       = aws_route_table_association.private[*].id
+}

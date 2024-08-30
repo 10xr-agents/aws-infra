@@ -144,7 +144,6 @@ resource "aws_security_group" "nlb" {
   tags = merge(var.tags, { Name = "${var.project_name}-nlb-sg" })
 }
 
-
 resource "aws_security_group_rule" "cluster_to_nodes" {
   security_group_id        = aws_security_group.eks_cluster.id
   type                     = "egress"
@@ -181,6 +180,36 @@ resource "aws_security_group_rule" "node_ingress_cluster" {
   source_security_group_id = aws_security_group.eks_cluster.id
   to_port                  = 65535
   type                     = "ingress"
+}
+
+resource "aws_security_group_rule" "eks_nodes_outbound" {
+  type              = "egress"
+  from_port         = 0
+  to_port           = 0
+  protocol          = "-1"
+  cidr_blocks       = ["0.0.0.0/0"]
+  security_group_id = aws_security_group.eks_nodes.id
+  description       = "Allow all outbound traffic"
+}
+
+resource "aws_security_group_rule" "eks_nodes_https" {
+  type              = "egress"
+  from_port         = 443
+  to_port           = 443
+  protocol          = "tcp"
+  cidr_blocks       = ["0.0.0.0/0"]
+  security_group_id = aws_security_group.eks_nodes.id
+  description       = "Allow HTTPS outbound traffic"
+}
+
+resource "aws_security_group_rule" "eks_nodes_dns" {
+  type              = "egress"
+  from_port         = 53
+  to_port           = 53
+  protocol          = "udp"
+  cidr_blocks       = ["0.0.0.0/0"]
+  security_group_id = aws_security_group.eks_nodes.id
+  description       = "Allow DNS queries"
 }
 
 # IAM Roles and Policies
@@ -694,4 +723,46 @@ resource "aws_cloudwatch_log_group" "security_groups" {
 resource "aws_iam_role_policy_attachment" "cloudwatch_logs_policy" {
   policy_arn = "arn:aws:iam::aws:policy/CloudWatchLogsFullAccess"
   role       = aws_iam_role.eks_cluster.name
+}
+
+resource "aws_security_group_rule" "eks_nodes_dns" {
+  type              = "egress"
+  from_port         = 53
+  to_port           = 53
+  protocol          = "udp"
+  cidr_blocks       = ["0.0.0.0/0"]
+  security_group_id = aws_security_group.eks_nodes.id
+  description       = "Allow DNS queries"
+}
+
+resource "aws_iam_role_policy_attachment" "eks_nodes_additional" {
+  policy_arn = aws_iam_policy.eks_nodes_additional.arn
+  role       = aws_iam_role.eks_nodes.name
+}
+
+resource "aws_iam_policy" "eks_nodes_additional" {
+  name        = "${var.project_name}-eks-nodes-additional"
+  path        = "/"
+  description = "Additional permissions for EKS nodes"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "ec2:DescribeInstances",
+          "ec2:DescribeRegions",
+          "ecr:GetAuthorizationToken",
+          "ecr:BatchCheckLayerAvailability",
+          "ecr:GetDownloadUrlForLayer",
+          "ecr:GetRepositoryPolicy",
+          "ecr:DescribeRepositories",
+          "ecr:ListImages",
+          "ecr:BatchGetImage"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
 }
