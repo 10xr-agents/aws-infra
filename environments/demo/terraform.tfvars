@@ -11,10 +11,9 @@ single_nat_gateway   = true
 
 acm_certificate_arn = "arn:aws:acm:us-east-1:761018882607:certificate/6af0470e-edcb-4e68-8926-157102b36c53"
 tags = {
-  Environment                             = "demo"
-  Project                                 = "10xR-Infra"
-  ManagedBy                               = "Terraform"
-  "kubernetes.io/cluster/10xr-infra-demo" = "shared"
+  Environment = "demo"
+  Project     = "10xR-Infra"
+  ManagedBy   = "Terraform"
 }
 
 mongodb_connection_string = "mongodb+srv://converseDev:firstPassword1@10xr-demo.3njzs.mongodb.net/converse-server?retryWrites=true&w=majority&appName=10xR-demo"
@@ -34,11 +33,6 @@ eks_node_groups = {
       "node-group" = "converse-general"
     }
     taints = []
-    tags = {
-      "kubernetes.io/cluster/10xr-infra-demo"     = "owned"
-      "k8s.io/cluster-autoscaler/enabled"         = "true"
-      "k8s.io/cluster-autoscaler/10xr-infra-demo" = "owned"
-    }
   },
   compute = {
     name           = "compute-node-group"
@@ -54,11 +48,6 @@ eks_node_groups = {
       "node-group" = "converse-compute"
     }
     taints = []
-    tags = {
-      "kubernetes.io/cluster/10xr-infra-demo"     = "owned"
-      "k8s.io/cluster-autoscaler/enabled"         = "true"
-      "k8s.io/cluster-autoscaler/10xr-infra-demo" = "owned"
-    }
   },
   spot = {
     name           = "spot-node-group"
@@ -74,11 +63,6 @@ eks_node_groups = {
       "node-group" = "converse-spot"
     }
     taints = []
-    tags = {
-      "kubernetes.io/cluster/10xr-infra-demo"     = "owned"
-      "k8s.io/cluster-autoscaler/enabled"         = "true"
-      "k8s.io/cluster-autoscaler/10xr-infra-demo" = "owned"
-    }
   }
 }
 
