@@ -725,16 +725,6 @@ resource "aws_iam_role_policy_attachment" "cloudwatch_logs_policy" {
   role       = aws_iam_role.eks_cluster.name
 }
 
-resource "aws_security_group_rule" "eks_nodes_dns" {
-  type              = "egress"
-  from_port         = 53
-  to_port           = 53
-  protocol          = "udp"
-  cidr_blocks       = ["0.0.0.0/0"]
-  security_group_id = aws_security_group.eks_nodes.id
-  description       = "Allow DNS queries"
-}
-
 resource "aws_iam_role_policy_attachment" "eks_nodes_additional" {
   policy_arn = aws_iam_policy.eks_nodes_additional.arn
   role       = aws_iam_role.eks_nodes.name
