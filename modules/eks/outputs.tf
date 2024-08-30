@@ -44,3 +44,15 @@ output "cluster_name" {
   description = "Name of the EKS cluster"
   value       = aws_eks_cluster.main.name
 }
+
+# Output the name of the created key pair
+output "eks_nodes_key_pair_name" {
+  value       = aws_key_pair.eks_nodes.key_name
+  description = "Name of the EKS nodes SSH key pair"
+}
+
+# Output the secret ARN where the private key is stored
+output "eks_nodes_ssh_private_key_secret_arn" {
+  value       = aws_secretsmanager_secret.eks_nodes_ssh_key.arn
+  description = "ARN of the secret containing the EKS nodes SSH private key"
+}

@@ -22,6 +22,33 @@ provider "helm" {
   }
 }
 
+# Generate a new key pair
+resource "tls_private_key" "eks_nodes" {
+  algorithm = "RSA"
+  rsa_bits  = 4096
+}
+
+# Create an AWS key pair using the generated public key
+resource "aws_key_pair" "eks_nodes" {
+  key_name   = "${var.project_name}-eks-nodes"
+  public_key = tls_private_key.eks_nodes.public_key_openssh
+
+  tags = var.tags
+}
+
+# Store the private key securely in AWS Secrets Manager
+resource "aws_secretsmanager_secret" "eks_nodes_ssh_key" {
+  name        = "${var.project_name}-eks-nodes-ssh-key"
+  description = "SSH private key for EKS nodes"
+
+  tags = var.tags
+}
+
+resource "aws_secretsmanager_secret_version" "eks_nodes_ssh_key" {
+  secret_id     = aws_secretsmanager_secret.eks_nodes_ssh_key.id
+  secret_string = tls_private_key.eks_nodes.private_key_pem
+}
+
 resource "aws_kms_key" "eks" {
   description             = "EKS Secret Encryption Key"
   deletion_window_in_days = 7
@@ -116,61 +143,64 @@ resource "aws_ssm_parameter" "cw_agent_config" {
   })
 }
 
-resource "aws_launch_template" "eks_nodes" {
-  for_each = var.node_groups
-
-  name_prefix = "${var.project_name}-${each.key}-lt"
-  #instance_type = each.value.instance_types[0]
-
-  vpc_security_group_ids = [var.eks_cluster_sg_id]
-
-  block_device_mappings {
-    device_name = "/dev/xvda"
-
-    ebs {
-      volume_size = each.value.disk_size
-      volume_type = "gp3"
-    }
-  }
-
-  user_data = base64encode(<<-EOF
-              MIME-Version: 1.0
-              Content-Type: multipart/mixed; boundary="==BOUNDARY=="
-
-              --==BOUNDARY==
-              Content-Type: text/x-shellscript; charset="us-ascii"
-
-              #!/bin/bash
-              nslookup google.com
-              /etc/eks/bootstrap.sh ${aws_eks_cluster.main.name} --b64-cluster-ca ${aws_eks_cluster.main.certificate_authority[0].data} --apiserver-endpoint ${aws_eks_cluster.main.endpoint}
-              yum install -y amazon-cloudwatch-agent
-              /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c ssm:${aws_ssm_parameter.cw_agent_config.name}
-              journalctl -xe
-              systemctl status sandbox-image.service
-
-              #cat /var/log/cloud-init.log | grep -i error
-              --==BOUNDARY==--
-              EOF
-  )
-
-  tag_specifications {
-    resource_type = "instance"
-
-    tags = merge(
-      var.tags,
-      {
-        "Name"                                                   = "${var.project_name}-${each.key}-node"
-        "kubernetes.io/cluster/${aws_eks_cluster.main.name}"     = "owned"
-        "k8s.io/cluster-autoscaler/${aws_eks_cluster.main.name}" = "owned"
-        "k8s.io/cluster-autoscaler/enabled"                      = "true"
-      }
-    )
-  }
-
-  lifecycle {
-    create_before_destroy = true
-  }
-}
+#
+# Moving to AWS Managed Nodes
+#
+# resource "aws_launch_template" "eks_nodes" {
+#   for_each = var.node_groups
+#
+#   name_prefix = "${var.project_name}-${each.key}-lt"
+#   #instance_type = each.value.instance_types[0]
+#
+#   vpc_security_group_ids = [var.eks_cluster_sg_id]
+#
+#   block_device_mappings {
+#     device_name = "/dev/xvda"
+#
+#     ebs {
+#       volume_size = each.value.disk_size
+#       volume_type = "gp3"
+#     }
+#   }
+#
+#   user_data = base64encode(<<-EOF
+#               MIME-Version: 1.0
+#               Content-Type: multipart/mixed; boundary="==BOUNDARY=="
+#
+#               --==BOUNDARY==
+#               Content-Type: text/x-shellscript; charset="us-ascii"
+#
+#               #!/bin/bash
+#               nslookup google.com
+#               /etc/eks/bootstrap.sh ${aws_eks_cluster.main.name} --b64-cluster-ca ${aws_eks_cluster.main.certificate_authority[0].data} --apiserver-endpoint ${aws_eks_cluster.main.endpoint}
+#               yum install -y amazon-cloudwatch-agent
+#               /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c ssm:${aws_ssm_parameter.cw_agent_config.name}
+#               journalctl -xe
+#               systemctl status sandbox-image.service
+#
+#               #cat /var/log/cloud-init.log | grep -i error
+#               --==BOUNDARY==--
+#               EOF
+#   )
+#
+#   tag_specifications {
+#     resource_type = "instance"
+#
+#     tags = merge(
+#       var.tags,
+#       {
+#         "Name"                                                   = "${var.project_name}-${each.key}-node"
+#         "kubernetes.io/cluster/${aws_eks_cluster.main.name}"     = "owned"
+#         "k8s.io/cluster-autoscaler/${aws_eks_cluster.main.name}" = "owned"
+#         "k8s.io/cluster-autoscaler/enabled"                      = "true"
+#       }
+#     )
+#   }
+#
+#   lifecycle {
+#     create_before_destroy = true
+#   }
+# }
 
 resource "aws_eks_node_group" "main" {
   for_each = var.node_groups
@@ -186,12 +216,14 @@ resource "aws_eks_node_group" "main" {
     min_size     = each.value.scaling_config.min_size
   }
 
-  ami_type = "AL2_x86_64"
-  #instance_types = each.value.instance_types
+  ami_type       = "AL2_x86_64"
+  instance_types = each.value.instance_types
+  # Add capacity_type
+  capacity_type = each.value.capacity_type
 
-  launch_template {
-    id      = aws_launch_template.eks_nodes[each.key].id
-    version = aws_launch_template.eks_nodes[each.key].latest_version
+  # Add remote access configuration if needed
+  remote_access {
+    ec2_ssh_key = aws_key_pair.eks_nodes.key_name
   }
 
   labels = merge(
@@ -200,9 +232,6 @@ resource "aws_eks_node_group" "main" {
     },
     each.value.labels
   )
-
-  # Add capacity_type here
-  capacity_type = each.value.capacity_type
 
   tags = merge(
     var.tags,
@@ -214,7 +243,10 @@ resource "aws_eks_node_group" "main" {
 
   # Ensure that IAM Role permissions are created before and deleted after EKS Node Group handling.
   # Otherwise, EKS will not be able to properly delete EC2 Instances and Elastic Network Interfaces.
-  depends_on = [aws_launch_template.eks_nodes]
+  depends_on = [
+    aws_iam_role_policy_attachment.eks_cloudwatch_policy,
+    aws_iam_role_policy_attachment.cloudwatch_agent_policy
+  ]
 }
 
 resource "aws_iam_openid_connect_provider" "eks" {
@@ -645,7 +677,7 @@ resource "kubernetes_config_map" "aws_auth" {
     )
     mapUsers = yamlencode(
       concat(
-          var.include_root_user ? [{
+        var.include_root_user ? [{
           userarn  = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
           username = "root"
           groups   = ["system:masters"]

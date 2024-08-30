@@ -59,3 +59,15 @@ output "alb_dns_name" {
 #   description = "The static IP addresses of the Global Accelerator"
 #   value       = module.networking.global_accelerator_ips
 # }
+
+# Output the name of the created key pair
+output "eks_nodes_key_pair_name" {
+  value       = module.eks.eks_nodes_key_pair_name
+  description = "Name of the EKS nodes SSH key pair"
+}
+
+# Output the secret ARN where the private key is stored
+output "eks_nodes_ssh_private_key_secret_arn" {
+  value       = module.eks.eks_nodes_ssh_private_key_secret_arn
+  description = "ARN of the secret containing the EKS nodes SSH private key"
+}
