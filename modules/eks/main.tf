@@ -682,6 +682,11 @@ resource "kubernetes_config_map" "aws_auth" {
           username = "root"
           groups   = ["system:masters"]
         }] : [],
+        [{
+          userarn  = data.aws_caller_identity.current.arn
+          username = "creator"
+          groups   = ["system:masters"]
+        }],
         var.map_additional_iam_users
       )
     )
