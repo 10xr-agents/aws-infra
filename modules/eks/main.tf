@@ -694,9 +694,9 @@ resource "kubernetes_config_map" "aws_auth" {
 
   depends_on = [aws_eks_cluster.main]
 
-  lifecycle {
-    ignore_changes = [data]
-  }
+#   lifecycle {
+#     ignore_changes = [data]
+#   }
 }
 
 # Add CoreDNS add-on
