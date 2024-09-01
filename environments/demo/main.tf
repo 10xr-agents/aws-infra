@@ -95,41 +95,6 @@ module "security" {
   enable_guardduty        = true
   enable_config           = false
 
-  # Add rules for ICE/UDP, ICE/TCP, TURN/TLS, TURN/UDP
-  #   additional_security_group_rules = [
-  #     {
-  #       type        = "ingress"
-  #       from_port   = 3478
-  #       to_port     = 3478
-  #       protocol    = "udp"
-  #       cidr_blocks = ["0.0.0.0/0"]
-  #       description = "TURN/UDP"
-  #     },
-  #     {
-  #       type        = "ingress"
-  #       from_port   = 3478
-  #       to_port     = 3478
-  #       protocol    = "tcp"
-  #       cidr_blocks = ["0.0.0.0/0"]
-  #       description = "TURN/TLS"
-  #     },
-  #     {
-  #       type        = "ingress"
-  #       from_port   = 49152
-  #       to_port     = 65535
-  #       protocol    = "udp"
-  #       cidr_blocks = ["0.0.0.0/0"]
-  #       description = "ICE/UDP port range"
-  #     },
-  #     {
-  #       type        = "ingress"
-  #       from_port   = 443
-  #       to_port     = 443
-  #       protocol    = "tcp"
-  #       cidr_blocks = ["0.0.0.0/0"]
-  #       description = "ICE/TCP"
-  #     }
-  #   ]
 }
 
 module "s3" {
@@ -153,24 +118,6 @@ module "networking" {
   sns_topic_arn         = aws_sns_topic.alerts.arn
   tags                  = var.tags
 
-  # Add NLB configuration
-  #   create_nlb            = true
-  #   nlb_internal          = false
-  #   nlb_subnet_ids        = module.vpc.public_subnet_ids
-  #   nlb_target_groups     = [
-  #     {
-  #       name        = "ice-udp-tg"
-  #       port        = 3478
-  #       protocol    = "UDP"
-  #       target_type = "ip"
-  #     },
-  #     {
-  #       name        = "turn-tls-tg"
-  #       port        = 3478
-  #       protocol    = "TCP"
-  #       target_type = "ip"
-  #     }
-  #   ]
   eks_cluster_sg_id = module.eks.cluster_security_group_id
 }
 
