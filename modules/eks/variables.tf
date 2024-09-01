@@ -97,7 +97,7 @@ variable "map_additional_iam_users" {
 variable "include_root_user" {
   description = "Whether to include the root user in the aws-auth ConfigMap"
   type        = bool
-  default     = false
+  default     = true
 }
 
 variable "tags" {
