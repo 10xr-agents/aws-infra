@@ -19,29 +19,29 @@ tags = {
 mongodb_connection_string = "mongodb+srv://converseDev:firstPassword1@10xr-demo.3njzs.mongodb.net/converse-server?retryWrites=true&w=majority&appName=10xR-demo"
 eks_cluster_version       = "1.30"
 eks_node_groups = {
-  general = {
-    name           = "general-node-group"
-    instance_types = ["t3.medium"]
-    capacity_type  = "ON_DEMAND"
-    disk_size      = 20
-    scaling_config = {
-      desired_size = 3
-      max_size     = 5
-      min_size     = 1
-    }
-    labels = {
-      "node-group" = "converse-general"
-    }
-    taints = []
-  },
+#   general = {
+#     name           = "general-node-group"
+#     instance_types = ["t3.medium"]
+#     capacity_type  = "ON_DEMAND"
+#     disk_size      = 20
+#     scaling_config = {
+#       desired_size = 3
+#       max_size     = 5
+#       min_size     = 1
+#     }
+#     labels = {
+#       "node-group" = "converse-general"
+#     }
+#     taints = []
+#   },
   compute = {
     name           = "compute-node-group"
-    instance_types = ["c5.large"]
+    instance_types = ["c5.2xlarge"]
     capacity_type  = "ON_DEMAND"
     disk_size      = 20
     scaling_config = {
       desired_size = 2
-      max_size     = 4
+      max_size     = 6
       min_size     = 1
     }
     labels = {
