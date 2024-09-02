@@ -238,6 +238,8 @@ resource "aws_eks_node_group" "main" {
     {
       "Name"                                               = "${var.project_name}-${each.key}-node-group"
       "kubernetes.io/cluster/${aws_eks_cluster.main.name}" = "owned"
+      "k8s.io/cluster-autoscaler/${aws_eks_cluster.main.name}" = "owned"
+      "k8s.io/cluster-autoscaler/enabled"                  = "true"
     }
   )
 
@@ -519,6 +521,7 @@ resource "helm_release" "cluster_autoscaler" {
   repository = "https://kubernetes.github.io/autoscaler"
   chart      = "cluster-autoscaler"
   namespace  = "kube-system"
+  version    = "9.37.0"  # Use the latest stable version
 
   set {
     name  = "autoDiscovery.clusterName"
@@ -535,8 +538,52 @@ resource "helm_release" "cluster_autoscaler" {
     value = aws_iam_role.cluster_autoscaler.arn
   }
 
-  depends_on = [aws_eks_node_group.main]
+  set {
+    name  = "rbac.serviceAccount.name"
+    value = "cluster-autoscaler"
+  }
+
+  set {
+    name  = "extraArgs.scale-down-delay-after-add"
+    value = "2m"
+  }
+
+  set {
+    name  = "extraArgs.scale-down-unneeded-time"
+    value = "2m"
+  }
+
+  set {
+    name  = "extraArgs.scan-interval"
+    value = "30s"
+  }
+
+  set {
+    name  = "extraArgs.v"
+    value = "4"  # Increase verbosity for debugging
+  }
+
+  depends_on = [aws_eks_node_group.main, kubernetes_config_map.aws_auth]
 }
+
+resource "null_resource" "wait_for_cluster_autoscaler" {
+  triggers = {
+    helm_release = helm_release.cluster_autoscaler.id
+  }
+
+  provisioner "local-exec" {
+    interpreter = ["/bin/bash", "-c"]
+    command     = <<EOT
+    KUBECONFIG_FILE=$(mktemp)
+    aws eks get-token --cluster-name ${aws_eks_cluster.main.name} | kubectl config view --raw -o yaml | sed 's/''/''/g' > $KUBECONFIG_FILE
+    kubectl --kubeconfig $KUBECONFIG_FILE wait --for=condition=available --timeout=300s deployment/cluster-autoscaler -n kube-system
+    rm $KUBECONFIG_FILE
+  EOT
+  }
+
+  depends_on = [helm_release.cluster_autoscaler]
+}
+
 
 resource "aws_iam_role" "cluster_autoscaler" {
   name = "${var.project_name}-cluster-autoscaler"
@@ -582,7 +629,30 @@ resource "aws_iam_policy" "cluster_autoscaler" {
           "autoscaling:DescribeTags",
           "autoscaling:SetDesiredCapacity",
           "autoscaling:TerminateInstanceInAutoScalingGroup",
-          "ec2:DescribeLaunchTemplateVersions"
+          "autoscaling:UpdateAutoScalingGroup",
+          "ec2:DescribeInstances",
+          "ec2:DescribeInstanceTypes",
+          "ec2:DescribeLaunchTemplates",
+          "ec2:DescribeLaunchTemplateVersions",
+          "ec2:DescribeImages",
+          "ec2:DescribeTags",
+          "ec2:DescribeInstanceTypeOfferings",
+          "ec2:GetInstanceTypesFromInstanceRequirements",
+          "ec2:DescribeSpotInstanceRequests",
+          "ec2:DescribeReservedInstances",
+          "ec2:DescribeReservedInstancesOfferings",
+          "ec2:DescribeReservedInstancesListings",
+          "ec2:DescribeCapacityReservations",
+          "ec2:DescribeFleetHistory",
+          "ec2:DescribeFleetInstances",
+          "ec2:DescribeFleetOfferings",
+          "ec2:DescribeInstanceRequirements",
+          "ec2:DescribeInstanceTypeOfferings",
+          "ec2:DescribeInstanceTypes",
+          "ec2:DescribeTags",
+          "ec2:DescribeAvailabilityZones",
+          "ec2:DescribeRegions",
+          "ec2:DescribeKeyPairs"
         ]
         Resource = "*"
       }
