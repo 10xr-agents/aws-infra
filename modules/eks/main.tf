@@ -652,7 +652,21 @@ resource "aws_iam_policy" "cluster_autoscaler" {
           "ec2:DescribeTags",
           "ec2:DescribeAvailabilityZones",
           "ec2:DescribeRegions",
-          "ec2:DescribeKeyPairs"
+          "ec2:DescribeKeyPairs",
+          "eks:DescribeCluster",
+          "eks:ListClusters",
+          "eks:DescribeNodegroup",
+          "eks:ListNodegroups",
+          "eks:ListUpdates",
+          "eks:AccessKubernetesApi",
+          "eks:ListFargateProfiles",
+          "eks:DescribeFargateProfile",
+          "eks:ListAddons",
+          "eks:DescribeAddon",
+          "eks:ListIdentityProviderConfigs",
+          "eks:DescribeIdentityProviderConfig",
+          "iam:ListRoles",
+          "iam:GetRole"
         ]
         Resource = "*"
       }
