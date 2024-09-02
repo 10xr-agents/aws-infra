@@ -815,5 +815,49 @@ resource "aws_eks_addon" "vpc_cni" {
   addon_version = "v1.18.3-eksbuild.2"
 }
 
+# Create IAM role for EBS CSI Driver
+data "aws_iam_policy_document" "ebs_csi_assume_role_policy" {
+  statement {
+    actions = ["sts:AssumeRoleWithWebIdentity"]
+    effect  = "Allow"
+
+    condition {
+      test     = "StringEquals"
+      variable = "${replace(aws_iam_openid_connect_provider.eks.url, "https://", "")}:sub"
+      values   = ["system:serviceaccount:kube-system:ebs-csi-controller-sa"]
+    }
+
+    principals {
+      identifiers = [aws_iam_openid_connect_provider.eks.arn]
+      type        = "Federated"
+    }
+  }
+}
+
+resource "aws_iam_role" "ebs_csi_driver" {
+  assume_role_policy = data.aws_iam_policy_document.ebs_csi_assume_role_policy.json
+  name               = "ebs-csi-driver-role"
+}
+
+resource "aws_iam_role_policy_attachment" "ebs_csi_driver" {
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
+  role       = aws_iam_role.ebs_csi_driver.name
+}
+
+# Enable EBS CSI Driver add-on
+resource "aws_eks_addon" "ebs_csi_driver" {
+  cluster_name             = aws_eks_cluster.main.name
+  addon_name               = "aws-ebs-csi-driver"
+  addon_version            = "v1.34.0-eksbuild.1"  # Use the latest version available
+  service_account_role_arn = aws_iam_role.ebs_csi_driver.arn
+
+  tags = {
+    "eks_addon" = "ebs-csi-driver"
+    "terraform" = "true"
+  }
+
+  depends_on = [aws_iam_role_policy_attachment.ebs_csi_driver]
+}
+
 # Get current region
 data "aws_region" "current" {}
