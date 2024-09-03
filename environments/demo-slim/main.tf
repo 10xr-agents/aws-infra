@@ -444,6 +444,8 @@ resource "aws_autoscaling_group" "on_demand" {
     value               = true
     propagate_at_launch = true
   }
+
+  protect_from_scale_in = true
 }
 
 resource "aws_autoscaling_group" "spot" {
@@ -463,6 +465,38 @@ resource "aws_autoscaling_group" "spot" {
     value               = true
     propagate_at_launch = true
   }
+
+  protect_from_scale_in = true
+}
+
+resource "aws_iam_role_policy_attachment" "ecs_autoscaling" {
+  role       = aws_iam_role.ecs_instance_role.name
+  policy_arn = aws_iam_policy.ecs_autoscaling.arn
+}
+
+resource "aws_iam_policy" "ecs_autoscaling" {
+  name        = "${var.project_name}-ecs-autoscaling"
+  path        = "/"
+  description = "ECS autoscaling policy"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "autoscaling:CompleteLifecycleAction",
+          "autoscaling:DeleteLifecycleHook",
+          "autoscaling:DescribeAutoScalingGroups",
+          "autoscaling:DescribeLifecycleHooks",
+          "autoscaling:PutLifecycleHook",
+          "autoscaling:RecordLifecycleActionHeartbeat",
+          "autoscaling:SetInstanceProtection"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
 }
 
 # Launch Templates
@@ -649,3 +683,5 @@ data "aws_elb_service_account" "main" {}
 data "aws_availability_zones" "available" {
   state = "available"
 }
+
+data "aws_caller_identity" "current" {}
