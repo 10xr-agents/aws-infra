@@ -415,11 +415,6 @@ resource "aws_iam_policy" "ecs_task_policy" {
           "sts:AssumeRole"
         ]
         Resource = "*"
-      },
-      {
-        Effect = "Allow"
-        Action = "sts:AssumeRole"
-        Resource = aws_iam_role.ecs_task_role.arn
       }
       ],
       [for policy_arn in var.services[count.index].additional_policies :
@@ -765,6 +760,7 @@ resource "aws_s3_bucket_public_access_block" "federated_data" {
 
 # S3 Bucket Policy
 resource "aws_s3_bucket_policy" "federated_data" {
+  count      = length(var.services)
   bucket = aws_s3_bucket.federated_data.id
 
   policy = jsonencode({
@@ -786,7 +782,7 @@ resource "aws_s3_bucket_policy" "federated_data" {
         Sid    = "AllowECSTaskAccess"
         Effect = "Allow"
         Principal = {
-          AWS = aws_iam_role.ecs_task_role.arn
+          AWS = aws_iam_role.ecs_task_role[count.index].arn
         }
         Action = ["s3:GetObject", "s3:PutObject", "s3:ListBucket"]
         Resource = [
@@ -904,9 +900,10 @@ resource "mongodbatlas_project_ip_access_list" "ip_access_list" {
 
 # Create a MongoDB Atlas database user with AWS IAM authentication
 resource "mongodbatlas_database_user" "aws_iam_user" {
+  count      = length(var.services)
   project_id         = var.mongodb_atlas_project_id
   auth_database_name = "$external"
-  username           = aws_iam_role.ecs_task_role.arn
+  username           = aws_iam_role.ecs_task_role[count.index].arn
   aws_iam_type       = "ROLE"
 
   roles {
