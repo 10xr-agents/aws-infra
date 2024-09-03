@@ -985,24 +985,24 @@ resource "aws_iam_role_policy_attachment" "mongodb_atlas_ecs_policy" {
 # }
 
 # 4. Create a MongoDB Atlas database user with AWS IAM authentication
-# resource "mongodbatlas_database_user" "aws_iam_user" {
-#   project_id         = var.mongodb_atlas_project_id
-#   auth_database_name = "$external"
-#   username           = aws_iam_role.mongodb_atlas_access.arn
-#   aws_iam_type       = "ROLE"
-#
-#   roles {
-#     role_name     = "dbAdmin"
-#     database_name = var.mongodb_database_name
-#   }
-#
-#   roles {
-#     role_name     = "readAnyDatabase"
-#     database_name = "admin"
-#   }
-#
-#   scopes {
-#     name = mongodbatlas_cluster.cluster.name
-#     type = "CLUSTER"
-#   }
-# }
+resource "mongodbatlas_database_user" "aws_iam_user" {
+  project_id         = var.mongodb_atlas_project_id
+  auth_database_name = "$external"
+  username           = aws_iam_role.mongodb_atlas_access.arn
+  aws_iam_type       = "ROLE"
+
+  roles {
+    role_name     = "dbAdmin"
+    database_name = var.mongodb_database_name
+  }
+
+  roles {
+    role_name     = "readAnyDatabase"
+    database_name = "admin"
+  }
+
+  scopes {
+    name = mongodbatlas_cluster.cluster.name
+    type = "CLUSTER"
+  }
+}
