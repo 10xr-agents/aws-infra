@@ -1,11 +1,11 @@
 aws_region          = "us-east-1"
-project_name        = "my-ecs-project"
+project_name        = "10xr-ecs"
 vpc_cidr            = "10.0.0.0/16"
 public_subnet_cidrs = ["10.0.1.0/24", "10.0.2.0/24"]
 
 services = [
   {
-    name          = "converse-server"
+    name          = "cnvrs-srv"
     ecr_repo      = "761018882607.dkr.ecr.us-east-1.amazonaws.com/10xr/converse-server:0.0.1-demo"
     cpu           = 1000
     memory        = 2048
@@ -49,7 +49,7 @@ asg_spot_max_size         = 5
 asg_spot_desired_capacity = 2
 
 ecs_cluster_settings = {
-  container_insights = "enabled"
+  containerInsights = "enabled"
 }
 
 enable_service_discovery = true
