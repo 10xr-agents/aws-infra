@@ -17,7 +17,7 @@ services = [
       "ENV" = "production"
     }
     secrets = {
-      "DB_PASSWORD" = "arn:aws:ssm:us-east-1:your-account-id:parameter/service1/db-password"
+      # "DB_PASSWORD" = "arn:aws:ssm:us-east-1:your-account-id:parameter/service1/db-password"
     }
     additional_policies = ["arn:aws:iam::aws:policy/AmazonS3FullAccess"]
   },

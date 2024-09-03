@@ -152,6 +152,7 @@ resource "aws_ecs_capacity_provider" "on_demand" {
   auto_scaling_group_provider {
     auto_scaling_group_arn = aws_autoscaling_group.on_demand.arn
     managed_termination_protection = "ENABLED"
+    protect_from_scale_in = true
 
     managed_scaling {
       maximum_scaling_step_size = 1000
@@ -168,6 +169,7 @@ resource "aws_ecs_capacity_provider" "spot" {
   auto_scaling_group_provider {
     auto_scaling_group_arn = aws_autoscaling_group.spot.arn
     managed_termination_protection = "ENABLED"
+    protect_from_scale_in = true
 
     managed_scaling {
       maximum_scaling_step_size = 1000
