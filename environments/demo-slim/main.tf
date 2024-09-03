@@ -737,6 +737,15 @@ resource "mongodbatlas_cluster" "cluster" {
   provider_instance_size_name = "M30"
 }
 
+resource "mongodbatlas_aws_iam_role" "iam_role" {
+  project_id           = var.mongodb_atlas_project_id
+  cluster_name         = mongodbatlas_cluster.cluster.name
+  role_name            = aws_iam_role.mongodb_atlas_access.name
+  aws_account_id       = data.aws_caller_identity.current.account_id
+  iam_assumed_role_arn = aws_iam_role.mongodb_atlas_access.arn
+}
+
+
 # VPC Peering
 resource "mongodbatlas_network_peering" "peering" {
   project_id             = var.mongodb_atlas_project_id
@@ -822,7 +831,6 @@ resource "mongodbatlas_federated_database_instance" "main" {
   cloud_provider_config {
     aws {
       role_id              = aws_iam_role.mongodb_atlas_access.unique_id
-      iam_assumed_role_arn = aws_iam_role.mongodb_atlas_access.arn
       test_s3_bucket       = ""
     }
   }
