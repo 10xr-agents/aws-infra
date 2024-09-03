@@ -243,7 +243,7 @@ resource "aws_ecs_task_definition" "service" {
       environment = concat([
         {
           name  = "SPRING_DATA_MONGODB_URI"
-          value = "mongodb+srv://${mongodbatlas_cluster.cluster.connection_strings[0].standard_srv}/${var.mongodb_database_name}?authMechanism=MONGODB-AWS&authSource=$external"
+          value = "${mongodbatlas_cluster.cluster.connection_strings[0].standard_srv}/${var.mongodb_database_name}?authMechanism=MONGODB-AWS&authSource=$external"
         }
         ], [
         for key, value in var.services[count.index].environment_variables :
@@ -788,6 +788,26 @@ resource "aws_iam_role" "mongodb_atlas_access" {
   })
 }
 
+resource "aws_iam_policy" "mongodb_atlas_access" {
+  name        = "mongodb-atlas-access-policy"
+  path        = "/"
+  description = "IAM policy for MongoDB Atlas access"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "sts:GetCallerIdentity",
+          "sts:AssumeRole"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}
+
 # 2. Attach necessary policies to the IAM role
 resource "aws_iam_role_policy_attachment" "mongodb_atlas_access" {
   role       = aws_iam_role.mongodb_atlas_access.name
@@ -813,10 +833,16 @@ resource "mongodbatlas_database_user" "aws_iam_user" {
   project_id         = var.mongodb_atlas_project_id
   auth_database_name = "$external"
   username           = aws_iam_role.mongodb_atlas_access.arn
+  aws_iam_type       = "ROLE"
 
   roles {
     role_name     = "readWrite"
     database_name = var.mongodb_database_name
+  }
+
+  roles {
+    role_name     = "readAnyDatabase"
+    database_name = "admin"
   }
 
   scopes {
