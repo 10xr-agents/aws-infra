@@ -21,12 +21,17 @@ variable "public_subnet_cidrs" {
 variable "services" {
   description = "List of services to deploy"
   type = list(object({
-    name          = string
-    ecr_repo      = string
-    cpu           = number
-    memory        = number
-    desired_count = number
-    compute_type  = string  # New field: "on_demand" or "spot"
+    name                   = string
+    ecr_repo               = string
+    cpu                    = number
+    memory                 = number
+    desired_count          = number
+    compute_type           = string
+    port                   = number
+    health_check_path      = string
+    environment_variables  = map(string)
+    secrets                = map(string)
+    additional_policies    = list(string)
   }))
 }
 
@@ -68,4 +73,28 @@ variable "asg_spot_max_size" {
 variable "asg_spot_desired_capacity" {
   description = "Desired number of spot EC2 instances in the ASG"
   type        = number
+}
+
+variable "ecs_cluster_settings" {
+  description = "Map of ECS cluster settings"
+  type        = map(string)
+  default     = {}
+}
+
+variable "enable_service_discovery" {
+  description = "Whether to enable Service Discovery"
+  type        = bool
+  default     = false
+}
+
+variable "service_discovery_namespace" {
+  description = "The namespace to use for Service Discovery"
+  type        = string
+  default     = "example.local"
+}
+
+variable "enable_ecs_exec" {
+  description = "Whether to enable ECS Exec for the services"
+  type        = bool
+  default     = false
 }

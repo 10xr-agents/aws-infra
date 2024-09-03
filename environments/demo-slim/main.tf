@@ -104,6 +104,22 @@ resource "aws_security_group" "ecs_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
+  ingress {
+    from_port   = 0
+    to_port     = 65535
+    protocol    = "tcp"
+    self        = true
+    description = "Allow internal communication between services"
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 65535
+    protocol    = "tcp"
+    self        = true
+    description = "Allow internal communication between services"
+  }
+
   egress {
     from_port   = 0
     to_port     = 0
@@ -120,9 +136,12 @@ resource "aws_security_group" "ecs_sg" {
 resource "aws_ecs_cluster" "main" {
   name = "${var.project_name}-cluster"
 
-  setting {
-    name  = "containerInsights"
-    value = "enabled"
+  dynamic "setting" {
+    for_each = var.ecs_cluster_settings
+    content {
+      name  = setting.key
+      value = setting.value
+    }
   }
 }
 
@@ -172,6 +191,7 @@ resource "aws_ecs_cluster_capacity_providers" "main" {
 }
 
 # ECS Task Definitions
+# ECS Task Definitions
 resource "aws_ecs_task_definition" "service" {
   count                    = length(var.services)
   family                   = "${var.project_name}-${var.services[count.index].name}"
@@ -180,15 +200,30 @@ resource "aws_ecs_task_definition" "service" {
   cpu                      = var.services[count.index].cpu
   memory                   = var.services[count.index].memory
   execution_role_arn       = aws_iam_role.ecs_execution_role.arn
+  task_role_arn            = aws_iam_role.ecs_task_role[count.index].arn
 
   container_definitions = jsonencode([
     {
       name  = var.services[count.index].name
-      image = "${var.services[count.index].ecr_repo}:latest"
+      image = var.services[count.index].ecr_repo
       portMappings = [
         {
-          containerPort = 80
-          hostPort      = 80
+          containerPort = var.services[count.index].port
+          hostPort      = var.services[count.index].port
+        }
+      ]
+      environment = [
+        for key, value in var.services[count.index].environment_variables :
+        {
+          name  = key
+          value = value
+        }
+      ]
+      secrets = [
+        for key, value in var.services[count.index].secrets :
+        {
+          name      = key
+          valueFrom = value
         }
       ]
       logConfiguration = {
@@ -220,7 +255,7 @@ resource "aws_ecs_service" "service" {
   load_balancer {
     target_group_arn = aws_lb_target_group.service[count.index].arn
     container_name   = var.services[count.index].name
-    container_port   = 80
+    container_port   = var.services[count.index].port
   }
 
   capacity_provider_strategy {
@@ -229,7 +264,96 @@ resource "aws_ecs_service" "service" {
     base              = 1
   }
 
+  dynamic "service_registries" {
+    for_each = var.enable_service_discovery ? [1] : []
+    content {
+      registry_arn = aws_service_discovery_service.service[count.index].arn
+    }
+  }
+
+  enable_execute_command = var.enable_ecs_exec
+
   depends_on = [aws_lb_listener.front_end]
+}
+
+# Service Discovery
+resource "aws_service_discovery_private_dns_namespace" "main" {
+  count = var.enable_service_discovery ? 1 : 0
+  name  = var.service_discovery_namespace
+  description = "Service Discovery namespace for ECS services"
+  vpc   = aws_vpc.main.id
+}
+
+resource "aws_service_discovery_service" "service" {
+  count = var.enable_service_discovery ? length(var.services) : 0
+  name  = var.services[count.index].name
+
+  dns_config {
+    namespace_id = aws_service_discovery_private_dns_namespace.main[0].id
+    dns_records {
+      ttl  = 10
+      type = "A"
+    }
+    routing_policy = "MULTIVALUE"
+  }
+
+  health_check_custom_config {
+    failure_threshold = 1
+  }
+}
+
+# IAM Roles
+resource "aws_iam_role" "ecs_task_role" {
+  count = length(var.services)
+  name  = "${var.project_name}-${var.services[count.index].name}-task-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "ecs-tasks.amazonaws.com"
+        }
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "ecs_task_role_policy" {
+  count      = length(var.services)
+  role       = aws_iam_role.ecs_task_role[count.index].name
+  policy_arn = aws_iam_policy.ecs_task_policy[count.index].arn
+}
+
+resource "aws_iam_policy" "ecs_task_policy" {
+  count       = length(var.services)
+  name        = "${var.project_name}-${var.services[count.index].name}-task-policy"
+  path        = "/"
+  description = "IAM policy for ECS task"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = concat([
+      {
+        Effect = "Allow"
+        Action = [
+          "ssm:GetParameters",
+          "secretsmanager:GetSecretValue",
+          "kms:Decrypt"
+        ]
+        Resource = "*"
+      }
+    ],
+      [for policy_arn in var.services[count.index].additional_policies :
+        {
+          Effect = "Allow"
+          Action = "*"
+          Resource = "*"
+        }
+      ])
+  })
 }
 
 # Application Load Balancer
