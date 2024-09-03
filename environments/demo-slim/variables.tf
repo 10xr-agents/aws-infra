@@ -149,3 +149,9 @@ variable "mongodb_atlas_cidr_block" {
   type        = string
   default     = "192.168.248.0/21"
 }
+
+variable "mongodb_database_name" {
+  description = "Database used from MongoDB Atlas cluster"
+  type        = string
+  default     = "converse-server"
+}

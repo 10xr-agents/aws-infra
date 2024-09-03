@@ -243,7 +243,7 @@ resource "aws_ecs_task_definition" "service" {
       environment = concat([
         {
           name  = "SPRING_DATA_MONGODB_URI"
-          value = mongodbatlas_cluster.cluster.mongo_uri_with_options
+          value = "mongodb+srv://${mongodbatlas_cluster.cluster.connection_strings[0].standard_srv}/${var.mongodb_database_name}?authMechanism=MONGODB-AWS&authSource=$external"
         }
         ], [
         for key, value in var.services[count.index].environment_variables :
@@ -766,4 +766,61 @@ resource "aws_security_group_rule" "allow_mongodb_atlas" {
   protocol          = "tcp"
   cidr_blocks       = [var.mongodb_atlas_cidr_block]
   security_group_id = aws_security_group.ecs_sg.id
+}
+
+# MongoDB Atlas IAM Authentication Setup
+
+# 1. Create an IAM role for MongoDB Atlas access
+resource "aws_iam_role" "mongodb_atlas_access" {
+  name = "mongodb-atlas-access-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "ecs-tasks.amazonaws.com"
+        }
+      }
+    ]
+  })
+}
+
+# 2. Attach necessary policies to the IAM role
+resource "aws_iam_role_policy_attachment" "mongodb_atlas_access" {
+  role       = aws_iam_role.mongodb_atlas_access.name
+  policy_arn = "arn:aws:iam::aws:policy/AWSClientVPNServiceRolePolicy" # This policy includes sts:GetCallerIdentity
+}
+
+# 3. Create a MongoDB Atlas federated database instance
+resource "mongodbatlas_federated_database_instance" "main" {
+  project_id = var.mongodb_atlas_project_id
+  name       = "federated-instance"
+
+  cloud_provider_config {
+    aws {
+      role_id              = aws_iam_role.mongodb_atlas_access.unique_id
+      iam_assumed_role_arn = aws_iam_role.mongodb_atlas_access.arn
+      test_s3_bucket       = ""
+    }
+  }
+}
+
+# 4. Create a MongoDB Atlas database user with AWS IAM authentication
+resource "mongodbatlas_database_user" "aws_iam_user" {
+  project_id         = var.mongodb_atlas_project_id
+  auth_database_name = "$external"
+  username           = aws_iam_role.mongodb_atlas_access.arn
+
+  roles {
+    role_name     = "readWrite"
+    database_name = var.mongodb_database_name
+  }
+
+  scopes {
+    name = mongodbatlas_cluster.cluster.name
+    type = "CLUSTER"
+  }
 }
