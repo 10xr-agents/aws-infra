@@ -861,7 +861,6 @@ resource "aws_iam_role" "mongodb_atlas_access" {
           Service = "ecs-tasks.amazonaws.com" # Adjust based on what service needs access
         },
         Action   = [
-          "sts:GetCallerIdentity",
           "sts:AssumeRole"
         ]
       }
