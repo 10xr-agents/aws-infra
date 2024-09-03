@@ -892,8 +892,9 @@ resource "aws_iam_role_policy_attachment" "mongodb_atlas_access" {
   policy_arn = aws_iam_policy.mongodb_atlas_access.arn
 }
 
-resource "aws_iam_role_policy_attachment" "mongodb_atlas_ecs_access" {
-  role       = aws_iam_role.ecs_task_role.arn
+resource "aws_iam_role_policy_attachment" "mongodb_atlas_ecs_policy" {
+  count      = length(var.services)
+  role       = aws_iam_role.ecs_task_role[count.index].name
   policy_arn = aws_iam_policy.mongodb_atlas_access.arn
 }
 
