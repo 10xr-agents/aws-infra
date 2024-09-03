@@ -249,7 +249,7 @@ resource "aws_ecs_service" "service" {
   network_configuration {
     subnets         = aws_subnet.public[*].id
     security_groups = [aws_security_group.ecs_sg.id]
-    assign_public_ip = true
+    # assign_public_ip = true
   }
 
   load_balancer {
@@ -661,7 +661,7 @@ resource "aws_cloudwatch_log_resource_policy" "root_access" {
       {
         Effect = "Allow"
         Principal = {
-          AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
+          AWS = data.aws_caller_identity.current.account_id
         }
         Action = [
           "logs:CreateLogGroup",
