@@ -113,3 +113,28 @@ variable "asg_desired_capacity" {
   type        = number
   default     = 1
 }
+
+variable "mongodb_atlas_public_key" {
+  description = "MongoDB Atlas public key"
+  type        = string
+}
+
+variable "mongodb_atlas_private_key" {
+  description = "MongoDB Atlas private key"
+  type        = string
+}
+
+variable "mongodb_atlas_project_name" {
+  description = "MongoDB Atlas project name"
+  type        = string
+}
+
+variable "mongodb_atlas_org_id" {
+  description = "MongoDB Atlas organization ID"
+  type        = string
+}
+
+variable "mongodb_atlas_region" {
+  description = "MongoDB Atlas region"
+  type        = string
+}

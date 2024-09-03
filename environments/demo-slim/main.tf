@@ -166,13 +166,18 @@ resource "aws_ecs_task_definition" "service" {
           hostPort      = var.services[count.index].port
         }
       ]
-      environment = [
+      environment = concat([
+        {
+        name  = "SPRING_DATA_MONGODB_URI"
+        value = "mongodb://${mongodbatlas_cluster.cluster.mongo_uri_with_options}"
+        }
+      ], [
         for key, value in var.services[count.index].environment_variables :
         {
           name  = key
           value = value
         }
-      ]
+      ])
       secrets = [
         for key, value in var.services[count.index].secrets :
         {
@@ -628,3 +633,80 @@ data "aws_availability_zones" "available" {
 }
 
 data "aws_caller_identity" "current" {}
+
+#mongo atlas setup
+
+terraform {
+  required_providers {
+    mongodbatlas = {
+      source = "mongodb/mongodbatlas"
+      version = "1.10.0"
+    }
+  }
+}
+
+provider "mongodbatlas" {
+  public_key  = var.mongodb_atlas_public_key
+  private_key = var.mongodb_atlas_private_key
+}
+
+resource "mongodbatlas_project" "project" {
+  name   = var.mongodb_atlas_project_name
+  org_id = var.mongodb_atlas_org_id
+}
+
+resource "mongodbatlas_cluster" "cluster" {
+  project_id             = mongodbatlas_project.project.id
+  name                   = "my-cluster"
+  mongo_db_major_version = "5.0"
+  cluster_type           = "REPLICASET"
+  replication_specs {
+    num_shards = 1
+    regions_config {
+      region_name     = var.mongodb_atlas_region
+      electable_nodes = 3
+      priority        = 7
+      read_only_nodes = 0
+    }
+  }
+  provider_name               = "AWS"
+  provider_instance_size_name = "M10"
+}
+
+# VPC Peering
+resource "mongodbatlas_network_peering" "peering" {
+  project_id     = mongodbatlas_project.project.id
+  container_id   = mongodbatlas_cluster.cluster.container_id
+  provider_name  = "AWS"
+  route_table_cidr_block = var.vpc_cidr
+  vpc_id         = aws_vpc.main.id
+  aws_account_id = data.aws_caller_identity.current.account_id
+  # region_name    = var.aws_region
+}
+
+resource "aws_vpc_peering_connection_accepter" "peer" {
+  vpc_peering_connection_id = mongodbatlas_network_peering.peering.connection_id
+  auto_accept               = true
+}
+
+resource "aws_route" "mongodb_atlas_route" {
+  count                     = length(aws_route_table.public)
+  route_table_id            = aws_route_table.public[count.index].id
+  destination_cidr_block    = mongodbatlas_cluster.cluster.mongo_uri_updated
+  vpc_peering_connection_id = aws_vpc_peering_connection_accepter.peer.vpc_peering_connection_id
+}
+
+resource "mongodbatlas_project_ip_access_list" "ip_access_list" {
+  project_id = mongodbatlas_project.project.id
+  cidr_block = var.vpc_cidr
+  comment    = "CIDR block for AWS VPC"
+}
+
+resource "aws_security_group_rule" "allow_mongodb_atlas" {
+  type        = "egress"
+  from_port   = 27017
+  to_port     = 27017
+  protocol    = "tcp"
+  cidr_blocks = [mongodbatlas_cluster.cluster.mongo_uri_updated]
+  security_group_id = aws_security_group.ecs_sg.id
+}

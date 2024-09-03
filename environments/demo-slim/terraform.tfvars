@@ -14,7 +14,8 @@ services = [
     port          = 8080
     health_check_path = "/actuator/health"
     environment_variables = {
-      "ENV" = "production"
+      "ENV" = "demo"
+      "SPRING_PROFILES_ACTIVE" = "demo"
     }
     secrets = {}
     additional_policies = ["arn:aws:iam::aws:policy/AmazonS3FullAccess"]
@@ -74,3 +75,7 @@ enable_service_discovery = true
 service_discovery_namespace = "10xr.internal"
 
 enable_ecs_exec = true
+
+mongodb_atlas_project_name="10xR"
+mongodb_atlas_org_id="66837b4ad261004facc7fbac"
+mongodb_atlas_region="us-east-1"
