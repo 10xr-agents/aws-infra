@@ -178,7 +178,7 @@ resource "aws_ecs_task_definition" "service" {
       environment = concat([
         {
           name  = "SPRING_DATA_MONGODB_URI"
-          value = "mongodb://${mongodbatlas_cluster.cluster.mongo_uri_with_options}"
+          value = mongodbatlas_cluster.cluster.mongo_uri_with_options
         }
         ], [
         for key, value in var.services[count.index].environment_variables :
