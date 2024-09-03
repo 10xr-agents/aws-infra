@@ -907,7 +907,7 @@ resource "mongodbatlas_federated_database_instance" "main" {
 
   cloud_provider_config {
     aws {
-      role_id        = aws_iam_role.mongodb_atlas_access.id
+      role_id        = aws_iam_role.mongodb_atlas_access.arn
       test_s3_bucket = aws_s3_bucket.federated_data.id
     }
   }
