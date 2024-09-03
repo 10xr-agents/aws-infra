@@ -652,7 +652,7 @@ provider "mongodbatlas" {
 
 resource "mongodbatlas_cluster" "cluster" {
   project_id             = var.mongodb_atlas_project_id
-  name                   = "10xr_demo"
+  name                   = "10xr-demo"
   mongo_db_major_version = "7.0"
   cluster_type           = "REPLICASET"
   replication_specs {
