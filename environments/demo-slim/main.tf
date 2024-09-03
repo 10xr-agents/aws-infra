@@ -1,0 +1,491 @@
+# Provider configuration
+provider "aws" {
+  region = var.aws_region
+}
+
+# VPC
+resource "aws_vpc" "main" {
+  cidr_block           = var.vpc_cidr
+  enable_dns_hostnames = true
+  enable_dns_support   = true
+
+  tags = {
+    Name = "${var.project_name}-vpc"
+  }
+}
+
+# Internet Gateway
+resource "aws_internet_gateway" "main" {
+  vpc_id = aws_vpc.main.id
+
+  tags = {
+    Name = "${var.project_name}-igw"
+  }
+}
+
+# Subnets
+resource "aws_subnet" "public" {
+  count             = 2
+  vpc_id            = aws_vpc.main.id
+  cidr_block        = var.public_subnet_cidrs[count.index]
+  availability_zone = data.aws_availability_zones.available.names[count.index]
+
+  tags = {
+    Name = "${var.project_name}-public-subnet-${count.index + 1}"
+  }
+}
+
+# Route Table
+resource "aws_route_table" "public" {
+  vpc_id = aws_vpc.main.id
+
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.main.id
+  }
+
+  tags = {
+    Name = "${var.project_name}-public-rt"
+  }
+}
+
+# Route Table Association
+resource "aws_route_table_association" "public" {
+  count          = 2
+  subnet_id      = aws_subnet.public[count.index].id
+  route_table_id = aws_route_table.public.id
+}
+
+# Network ACL
+resource "aws_network_acl" "main" {
+  vpc_id     = aws_vpc.main.id
+  subnet_ids = aws_subnet.public[*].id
+
+  egress {
+    protocol   = "-1"
+    rule_no    = 100
+    action     = "allow"
+    cidr_block = "0.0.0.0/0"
+    from_port  = 0
+    to_port    = 0
+  }
+
+  ingress {
+    protocol   = "-1"
+    rule_no    = 100
+    action     = "allow"
+    cidr_block = "0.0.0.0/0"
+    from_port  = 0
+    to_port    = 0
+  }
+
+  tags = {
+    Name = "${var.project_name}-nacl"
+  }
+}
+
+# Security Group
+resource "aws_security_group" "ecs_sg" {
+  name        = "${var.project_name}-ecs-sg"
+  description = "Security group for ECS cluster and ALB"
+  vpc_id      = aws_vpc.main.id
+
+  ingress {
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name = "${var.project_name}-ecs-sg"
+  }
+}
+
+# ECS Cluster
+resource "aws_ecs_cluster" "main" {
+  name = "${var.project_name}-cluster"
+
+  setting {
+    name  = "containerInsights"
+    value = "enabled"
+  }
+}
+
+# ECS Capacity Providers
+resource "aws_ecs_capacity_provider" "on_demand" {
+  name = "${var.project_name}-on-demand"
+
+  auto_scaling_group_provider {
+    auto_scaling_group_arn = aws_autoscaling_group.on_demand.arn
+    managed_termination_protection = "ENABLED"
+
+    managed_scaling {
+      maximum_scaling_step_size = 1000
+      minimum_scaling_step_size = 1
+      status                    = "ENABLED"
+      target_capacity           = 100
+    }
+  }
+}
+
+resource "aws_ecs_capacity_provider" "spot" {
+  name = "${var.project_name}-spot"
+
+  auto_scaling_group_provider {
+    auto_scaling_group_arn = aws_autoscaling_group.spot.arn
+    managed_termination_protection = "ENABLED"
+
+    managed_scaling {
+      maximum_scaling_step_size = 1000
+      minimum_scaling_step_size = 1
+      status                    = "ENABLED"
+      target_capacity           = 100
+    }
+  }
+}
+
+resource "aws_ecs_cluster_capacity_providers" "main" {
+  cluster_name = aws_ecs_cluster.main.name
+
+  capacity_providers = [aws_ecs_capacity_provider.on_demand.name, aws_ecs_capacity_provider.spot.name]
+
+  default_capacity_provider_strategy {
+    base              = 1
+    weight            = 1
+    capacity_provider = aws_ecs_capacity_provider.on_demand.name
+  }
+}
+
+# ECS Task Definitions
+resource "aws_ecs_task_definition" "service" {
+  count                    = length(var.services)
+  family                   = "${var.project_name}-${var.services[count.index].name}"
+  network_mode             = "awsvpc"
+  requires_compatibilities = ["EC2"]
+  cpu                      = var.services[count.index].cpu
+  memory                   = var.services[count.index].memory
+  execution_role_arn       = aws_iam_role.ecs_execution_role.arn
+
+  container_definitions = jsonencode([
+    {
+      name  = var.services[count.index].name
+      image = "${var.services[count.index].ecr_repo}:latest"
+      portMappings = [
+        {
+          containerPort = 80
+          hostPort      = 80
+        }
+      ]
+      logConfiguration = {
+        logDriver = "awslogs"
+        options = {
+          awslogs-group         = aws_cloudwatch_log_group.ecs_logs.name
+          awslogs-region        = var.aws_region
+          awslogs-stream-prefix = var.services[count.index].name
+        }
+      }
+    }
+  ])
+}
+
+# ECS Services
+resource "aws_ecs_service" "service" {
+  count           = length(var.services)
+  name            = "${var.project_name}-${var.services[count.index].name}"
+  cluster         = aws_ecs_cluster.main.id
+  task_definition = aws_ecs_task_definition.service[count.index].arn
+  desired_count   = var.services[count.index].desired_count
+
+  network_configuration {
+    subnets         = aws_subnet.public[*].id
+    security_groups = [aws_security_group.ecs_sg.id]
+    assign_public_ip = true
+  }
+
+  load_balancer {
+    target_group_arn = aws_lb_target_group.service[count.index].arn
+    container_name   = var.services[count.index].name
+    container_port   = 80
+  }
+
+  capacity_provider_strategy {
+    capacity_provider = var.services[count.index].compute_type == "on_demand" ? aws_ecs_capacity_provider.on_demand.name : aws_ecs_capacity_provider.spot.name
+    weight            = 1
+    base              = 1
+  }
+
+  depends_on = [aws_lb_listener.front_end]
+}
+
+# Application Load Balancer
+resource "aws_lb" "main" {
+  name               = "${var.project_name}-alb"
+  internal           = false
+  load_balancer_type = "application"
+  security_groups    = [aws_security_group.ecs_sg.id]
+  subnets            = aws_subnet.public[*].id
+
+  enable_deletion_protection = false
+
+  access_logs {
+    bucket  = aws_s3_bucket.alb_logs.bucket
+    prefix  = "alb-logs"
+    enabled = true
+  }
+
+  tags = {
+    Name = "${var.project_name}-alb"
+  }
+}
+
+resource "aws_lb_target_group" "service" {
+  count       = length(var.services)
+  name        = "${var.project_name}-tg-${var.services[count.index].name}"
+  port        = 80
+  protocol    = "HTTP"
+  vpc_id      = aws_vpc.main.id
+  target_type = "ip"
+
+  health_check {
+    path                = "/health"
+    healthy_threshold   = 2
+    unhealthy_threshold = 10
+    timeout             = 60
+    interval            = 300
+    matcher             = "200,301,302"
+  }
+}
+
+resource "aws_lb_listener" "front_end" {
+  load_balancer_arn = aws_lb.main.arn
+  port              = 80
+  protocol          = "HTTP"
+
+  default_action {
+    type = "fixed-response"
+    fixed_response {
+      content_type = "text/plain"
+      message_body = "Not Found"
+      status_code  = "404"
+    }
+  }
+}
+
+resource "aws_lb_listener_rule" "service" {
+  count        = length(var.services)
+  listener_arn = aws_lb_listener.front_end.arn
+
+  action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.service[count.index].arn
+  }
+
+  condition {
+    path_pattern {
+      values = ["/${var.services[count.index].name}*"]
+    }
+  }
+}
+
+# Auto Scaling Groups
+resource "aws_autoscaling_group" "on_demand" {
+  name                = "${var.project_name}-asg-on-demand"
+  vpc_zone_identifier = aws_subnet.public[*].id
+  min_size            = var.asg_on_demand_min_size
+  max_size            = var.asg_on_demand_max_size
+  desired_capacity    = var.asg_on_demand_desired_capacity
+
+  launch_template {
+    id      = aws_launch_template.on_demand.id
+    version = "$Latest"
+  }
+
+  tag {
+    key                 = "AmazonECSManaged"
+    value               = true
+    propagate_at_launch = true
+  }
+}
+
+resource "aws_autoscaling_group" "spot" {
+  name                = "${var.project_name}-asg-spot"
+  vpc_zone_identifier = aws_subnet.public[*].id
+  min_size            = var.asg_spot_min_size
+  max_size            = var.asg_spot_max_size
+  desired_capacity    = var.asg_spot_desired_capacity
+
+  launch_template {
+    id      = aws_launch_template.spot.id
+    version = "$Latest"
+  }
+
+  tag {
+    key                 = "AmazonECSManaged"
+    value               = true
+    propagate_at_launch = true
+  }
+}
+
+# Launch Templates
+data "aws_ssm_parameter" "ecs_optimized_ami" {
+  name = "/aws/service/ecs/optimized-ami/amazon-linux-2/recommended/image_id"
+}
+
+resource "aws_launch_template" "on_demand" {
+  name_prefix   = "${var.project_name}-lt-on-demand"
+  image_id      = data.aws_ssm_parameter.ecs_optimized_ami.value
+  instance_type = var.instance_type_on_demand
+
+  iam_instance_profile {
+    name = aws_iam_instance_profile.ecs_instance_profile.name
+  }
+
+  vpc_security_group_ids = [aws_security_group.ecs_sg.id]
+
+  user_data = base64encode(<<-EOF
+              #!/bin/bash
+              echo ECS_CLUSTER=${aws_ecs_cluster.main.name} >> /etc/ecs/ecs.config
+              EOF
+  )
+
+  tag_specifications {
+    resource_type = "instance"
+    tags = {
+      Name = "${var.project_name}-ecs-instance-on-demand"
+    }
+  }
+}
+
+resource "aws_launch_template" "spot" {
+  name_prefix   = "${var.project_name}-lt-spot"
+  image_id      = data.aws_ssm_parameter.ecs_optimized_ami.value
+  instance_type = var.instance_type_spot
+
+  iam_instance_profile {
+    name = aws_iam_instance_profile.ecs_instance_profile.name
+  }
+
+  vpc_security_group_ids = [aws_security_group.ecs_sg.id]
+
+  instance_market_options {
+    market_type = "spot"
+  }
+
+  user_data = base64encode(<<-EOF
+              #!/bin/bash
+              echo ECS_CLUSTER=${aws_ecs_cluster.main.name} >> /etc/ecs/ecs.config
+              EOF
+  )
+
+  tag_specifications {
+    resource_type = "instance"
+    tags = {
+      Name = "${var.project_name}-ecs-instance-spot"
+    }
+  }
+}
+
+# ECS Task Execution Role
+resource "aws_iam_role" "ecs_execution_role" {
+  name = "${var.project_name}-ecs-execution-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "ecs-tasks.amazonaws.com"
+        }
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "ecs_execution_role_policy" {
+  role       = aws_iam_role.ecs_execution_role.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
+}
+
+# ECS Instance Role
+resource "aws_iam_role" "ecs_instance_role" {
+  name = "${var.project_name}-ecs-instance-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "ec2.amazonaws.com"
+        }
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "ecs_instance_role_policy" {
+  role       = aws_iam_role.ecs_instance_role.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceforEC2Role"
+}
+
+# ECS Instance Profile
+resource "aws_iam_instance_profile" "ecs_instance_profile" {
+  name = "${var.project_name}-ecs-instance-profile"
+  role = aws_iam_role.ecs_instance_role.name
+}
+
+# CloudWatch Log Group
+resource "aws_cloudwatch_log_group" "ecs_logs" {
+  name              = "/ecs/${var.project_name}"
+  retention_in_days = 30
+}
+
+# S3 Bucket for ALB Logs
+resource "aws_s3_bucket" "alb_logs" {
+  bucket = "${var.project_name}-alb-logs"
+
+  force_destroy = true
+}
+
+resource "aws_s3_bucket_policy" "alb_logs" {
+  bucket = aws_s3_bucket.alb_logs.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Principal = {
+          AWS = "arn:aws:iam::${data.aws_elb_service_account.main.id}:root"
+        }
+        Action   = "s3:PutObject"
+        Resource = "${aws_s3_bucket.alb_logs.arn}/*"
+      }
+    ]
+  })
+}
+
+data "aws_elb_service_account" "main" {}
+
+# Data source to get availability zones
+data "aws_availability_zones" "available" {
+  state = "available"
+}
