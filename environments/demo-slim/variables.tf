@@ -134,6 +134,11 @@ variable "mongodb_atlas_org_id" {
   type        = string
 }
 
+variable "mongodb_atlas_project_id" {
+  description = "MongoDB Atlas Project ID"
+  type        = string
+}
+
 variable "mongodb_atlas_region" {
   description = "MongoDB Atlas region"
   type        = string

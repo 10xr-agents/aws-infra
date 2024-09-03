@@ -1,3 +1,12 @@
+terraform {
+  required_providers {
+    mongodbatlas = {
+      source = "mongodb/mongodbatlas"
+      version = "1.10.0"
+    }
+  }
+}
+
 # Provider configuration
 provider "aws" {
   region = var.aws_region
@@ -636,29 +645,15 @@ data "aws_caller_identity" "current" {}
 
 #mongo atlas setup
 
-terraform {
-  required_providers {
-    mongodbatlas = {
-      source = "mongodb/mongodbatlas"
-      version = "1.10.0"
-    }
-  }
-}
-
 provider "mongodbatlas" {
   public_key  = var.mongodb_atlas_public_key
   private_key = var.mongodb_atlas_private_key
 }
 
-resource "mongodbatlas_project" "project" {
-  name   = var.mongodb_atlas_project_name
-  org_id = var.mongodb_atlas_org_id
-}
-
 resource "mongodbatlas_cluster" "cluster" {
-  project_id             = mongodbatlas_project.project.id
-  name                   = "my-cluster"
-  mongo_db_major_version = "5.0"
+  project_id             = var.mongodb_atlas_project_id
+  name                   = "10xr_demo"
+  mongo_db_major_version = "7.0"
   cluster_type           = "REPLICASET"
   replication_specs {
     num_shards = 1
@@ -670,12 +665,12 @@ resource "mongodbatlas_cluster" "cluster" {
     }
   }
   provider_name               = "AWS"
-  provider_instance_size_name = "M10"
+  provider_instance_size_name = "M30"
 }
 
 # VPC Peering
 resource "mongodbatlas_network_peering" "peering" {
-  project_id     = mongodbatlas_project.project.id
+  project_id     = var.mongodb_atlas_project_id
   container_id   = mongodbatlas_cluster.cluster.container_id
   provider_name  = "AWS"
   route_table_cidr_block = var.vpc_cidr
@@ -696,7 +691,7 @@ resource "aws_route" "mongodb_atlas_route" {
 }
 
 resource "mongodbatlas_project_ip_access_list" "ip_access_list" {
-  project_id = mongodbatlas_project.project.id
+  project_id = var.mongodb_atlas_project_id
   cidr_block = var.vpc_cidr
   comment    = "CIDR block for AWS VPC"
 }
