@@ -153,6 +153,26 @@ resource "aws_network_acl" "main" {
     to_port    = 65535
   }
 
+  # Allow ephemeral ports for outbound connections
+  egress {
+    protocol   = "tcp"
+    rule_no    = 400
+    action     = "allow"
+    cidr_block = var.mongodb_atlas_cidr_block
+    from_port  = 27017
+    to_port    = 27017
+  }
+
+  # Allow ephemeral ports for inbound connections
+  ingress {
+    protocol   = "tcp"
+    rule_no    = 400
+    action     = "allow"
+    cidr_block = var.mongodb_atlas_cidr_block
+    from_port  = 27017
+    to_port    = 27017
+  }
+
   tags = {
     Name = "${var.project_name}-nacl"
   }
@@ -176,6 +196,20 @@ resource "aws_security_group" "ecs_sg" {
     to_port     = 443
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    from_port   = 0
+    to_port     = 65535
+    protocol    = "tcp"
+    cidr_blocks = [ var.mongodb_atlas_cidr_block ]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 65535
+    protocol    = "tcp"
+    cidr_blocks = [ var.mongodb_atlas_cidr_block ]
   }
 
   ingress {
@@ -843,37 +877,14 @@ resource "mongodbatlas_project_ip_access_list" "ip_access_list" {
   comment    = "CIDR block for AWS VPC"
 }
 
-resource "aws_security_group_rule" "allow_mongodb_atlas" {
-  type              = "egress"
-  from_port         = 27017
-  to_port           = 27017
-  protocol          = "tcp"
-  cidr_blocks       = [var.mongodb_atlas_cidr_block]
-  security_group_id = aws_security_group.ecs_sg.id
-}
-
-# Update NACL
-resource "aws_network_acl_rule" "allow_mongodb_atlas_egress" {
-  network_acl_id = aws_network_acl.main.id
-  rule_number    = 900
-  egress         = true
-  protocol       = "tcp"
-  rule_action    = "allow"
-  cidr_block     = var.mongodb_atlas_cidr_block
-  from_port      = 27017
-  to_port        = 27017
-}
-
-resource "aws_network_acl_rule" "allow_mongodb_atlas_ingress" {
-  network_acl_id = aws_network_acl.main.id
-  rule_number    = 901
-  egress         = false
-  protocol       = "tcp"
-  rule_action    = "allow"
-  cidr_block     = var.mongodb_atlas_cidr_block
-  from_port      = 1024
-  to_port        = 65535
-}
+# resource "aws_security_group_rule" "allow_mongodb_atlas" {
+#   type              = "egress"
+#   from_port         = 27017
+#   to_port           = 27017
+#   protocol          = "tcp"
+#   cidr_blocks       = [var.mongodb_atlas_cidr_block]
+#   security_group_id = aws_security_group.ecs_sg.id
+# }
 
 # MongoDB Atlas IAM Authentication Setup
 
@@ -974,24 +985,24 @@ resource "aws_iam_role_policy_attachment" "mongodb_atlas_ecs_policy" {
 # }
 
 # 4. Create a MongoDB Atlas database user with AWS IAM authentication
-resource "mongodbatlas_database_user" "aws_iam_user" {
-  project_id         = var.mongodb_atlas_project_id
-  auth_database_name = "$external"
-  username           = aws_iam_role.mongodb_atlas_access.arn
-  aws_iam_type       = "ROLE"
-
-  roles {
-    role_name     = "dbAdmin"
-    database_name = var.mongodb_database_name
-  }
-
-  roles {
-    role_name     = "readAnyDatabase"
-    database_name = "admin"
-  }
-
-  scopes {
-    name = mongodbatlas_cluster.cluster.name
-    type = "CLUSTER"
-  }
-}
+# resource "mongodbatlas_database_user" "aws_iam_user" {
+#   project_id         = var.mongodb_atlas_project_id
+#   auth_database_name = "$external"
+#   username           = aws_iam_role.mongodb_atlas_access.arn
+#   aws_iam_type       = "ROLE"
+#
+#   roles {
+#     role_name     = "dbAdmin"
+#     database_name = var.mongodb_database_name
+#   }
+#
+#   roles {
+#     role_name     = "readAnyDatabase"
+#     database_name = "admin"
+#   }
+#
+#   scopes {
+#     name = mongodbatlas_cluster.cluster.name
+#     type = "CLUSTER"
+#   }
+# }
