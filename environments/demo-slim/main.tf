@@ -75,22 +75,82 @@ resource "aws_network_acl" "main" {
   vpc_id     = aws_vpc.main.id
   subnet_ids = aws_subnet.public[*].id
 
+  # Outbound rule for MongoDB Atlas
   egress {
-    protocol   = "-1"
+    protocol   = "tcp"
     rule_no    = 100
     action     = "allow"
-    cidr_block = "0.0.0.0/0"
+    cidr_block = var.mongodb_atlas_cidr_block
     from_port  = 0
-    to_port    = 0
+    to_port    = 65535
+  }
+
+  # Inbound rule for MongoDB Atlas
+  ingress {
+    protocol   = "tcp"
+    rule_no    = 100
+    action     = "allow"
+    cidr_block = var.mongodb_atlas_cidr_block
+    from_port  = 0
+    to_port    = 65535
+  }
+
+  # Outbound rule for internet access (for updates, etc.)
+  egress {
+    protocol   = "tcp"
+    rule_no    = 200
+    action     = "allow"
+    cidr_block = "0.0.0.0/0"
+    from_port  = 80
+    to_port    = 80
+  }
+
+  egress {
+    protocol   = "tcp"
+    rule_no    = 201
+    action     = "allow"
+    cidr_block = "0.0.0.0/0"
+    from_port  = 443
+    to_port    = 443
+  }
+
+  # Inbound rule for internet access (for ALB)
+  ingress {
+    protocol   = "tcp"
+    rule_no    = 200
+    action     = "allow"
+    cidr_block = "0.0.0.0/0"
+    from_port  = 80
+    to_port    = 80
   }
 
   ingress {
-    protocol   = "-1"
-    rule_no    = 100
+    protocol   = "tcp"
+    rule_no    = 201
     action     = "allow"
     cidr_block = "0.0.0.0/0"
-    from_port  = 0
-    to_port    = 0
+    from_port  = 443
+    to_port    = 443
+  }
+
+  # Allow ephemeral ports for outbound connections
+  egress {
+    protocol   = "tcp"
+    rule_no    = 300
+    action     = "allow"
+    cidr_block = "0.0.0.0/0"
+    from_port  = 1024
+    to_port    = 65535
+  }
+
+  # Allow ephemeral ports for inbound connections
+  ingress {
+    protocol   = "tcp"
+    rule_no    = 300
+    action     = "allow"
+    cidr_block = "0.0.0.0/0"
+    from_port  = 1024
+    to_port    = 65535
   }
 
   tags = {
@@ -693,11 +753,11 @@ resource "aws_vpc_peering_connection_accepter" "peer" {
   auto_accept               = true
 }
 
-# resource "mongodbatlas_project_ip_access_list" "ip_access_list" {
-#   project_id = var.mongodb_atlas_project_id
-#   cidr_block = var.vpc_cidr
-#   comment    = "CIDR block for AWS VPC"
-# }
+resource "mongodbatlas_project_ip_access_list" "ip_access_list" {
+  project_id = var.mongodb_atlas_project_id
+  cidr_block = var.vpc_cidr
+  comment    = "CIDR block for AWS VPC"
+}
 
 resource "aws_security_group_rule" "allow_mongodb_atlas" {
   type              = "egress"
