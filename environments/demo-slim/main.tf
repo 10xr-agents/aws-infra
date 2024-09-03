@@ -691,7 +691,7 @@ resource "aws_vpc_peering_connection_accepter" "peer" {
 
 resource "aws_route" "mongodb_atlas_route" {
   route_table_id            = aws_route_table.public.id
-  destination_cidr_block    = mongodbatlas_cluster.cluster.mongo_uri_updated
+  destination_cidr_block    = aws_security_group_rule.allow_mongodb_atlas.cidr_blocks
   vpc_peering_connection_id = aws_vpc_peering_connection_accepter.peer.vpc_peering_connection_id
 }
 
@@ -706,6 +706,6 @@ resource "aws_security_group_rule" "allow_mongodb_atlas" {
   from_port         = 27017
   to_port           = 27017
   protocol          = "tcp"
-  cidr_blocks       = [aws_security_group_rule.allow_mongodb_atlas.cidr_blocks]
+  cidr_blocks       = aws_security_group_rule.allow_mongodb_atlas.cidr_blocks
   security_group_id = aws_security_group.ecs_sg.id
 }
