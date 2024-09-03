@@ -152,7 +152,6 @@ resource "aws_ecs_capacity_provider" "on_demand" {
   auto_scaling_group_provider {
     auto_scaling_group_arn = aws_autoscaling_group.on_demand.arn
     managed_termination_protection = "ENABLED"
-    protect_from_scale_in = true
 
     managed_scaling {
       maximum_scaling_step_size = 1000
@@ -169,7 +168,6 @@ resource "aws_ecs_capacity_provider" "spot" {
   auto_scaling_group_provider {
     auto_scaling_group_arn = aws_autoscaling_group.spot.arn
     managed_termination_protection = "ENABLED"
-    protect_from_scale_in = true
 
     managed_scaling {
       maximum_scaling_step_size = 1000
@@ -604,6 +602,42 @@ resource "aws_s3_bucket_policy" "alb_logs" {
         }
         Action   = "s3:PutObject"
         Resource = "${aws_s3_bucket.alb_logs.arn}/*"
+      },
+      {
+        Effect = "Allow"
+        Principal = {
+          AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
+        }
+        Action   = ["s3:GetBucketLocation", "s3:ListBucket", "s3:GetObject"]
+        Resource = [
+          aws_s3_bucket.alb_logs.arn,
+          "${aws_s3_bucket.alb_logs.arn}/*"
+        ]
+      }
+    ]
+  })
+}
+
+resource "aws_cloudwatch_log_resource_policy" "root_access" {
+  policy_name = "${var.project_name}-root-access-policy"
+
+  policy_document = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Principal = {
+          AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
+        }
+        Action = [
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents",
+          "logs:DescribeLogGroups",
+          "logs:DescribeLogStreams",
+          "logs:GetLogEvents"
+        ]
+        Resource = "${aws_cloudwatch_log_group.ecs_logs.arn}:*"
       }
     ]
   })
