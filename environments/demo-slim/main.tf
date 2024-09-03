@@ -145,58 +145,12 @@ resource "aws_ecs_cluster" "main" {
   }
 }
 
-# ECS Capacity Providers
-resource "aws_ecs_capacity_provider" "on_demand" {
-  name = "${var.project_name}-on-demand"
-
-  auto_scaling_group_provider {
-    auto_scaling_group_arn = aws_autoscaling_group.on_demand.arn
-    managed_termination_protection = "ENABLED"
-
-    managed_scaling {
-      maximum_scaling_step_size = 1000
-      minimum_scaling_step_size = 1
-      status                    = "ENABLED"
-      target_capacity           = 100
-    }
-  }
-}
-
-resource "aws_ecs_capacity_provider" "spot" {
-  name = "${var.project_name}-spot"
-
-  auto_scaling_group_provider {
-    auto_scaling_group_arn = aws_autoscaling_group.spot.arn
-    managed_termination_protection = "ENABLED"
-
-    managed_scaling {
-      maximum_scaling_step_size = 1000
-      minimum_scaling_step_size = 1
-      status                    = "ENABLED"
-      target_capacity           = 100
-    }
-  }
-}
-
-resource "aws_ecs_cluster_capacity_providers" "main" {
-  cluster_name = aws_ecs_cluster.main.name
-
-  capacity_providers = [aws_ecs_capacity_provider.on_demand.name, aws_ecs_capacity_provider.spot.name]
-
-  default_capacity_provider_strategy {
-    base              = 1
-    weight            = 1
-    capacity_provider = aws_ecs_capacity_provider.on_demand.name
-  }
-}
-
-# ECS Task Definitions
 # ECS Task Definitions
 resource "aws_ecs_task_definition" "service" {
   count                    = length(var.services)
   family                   = "${var.project_name}-${var.services[count.index].name}"
   network_mode             = "awsvpc"
-  requires_compatibilities = ["EC2"]
+  requires_compatibilities = ["FARGATE"]
   cpu                      = var.services[count.index].cpu
   memory                   = var.services[count.index].memory
   execution_role_arn       = aws_iam_role.ecs_execution_role.arn
@@ -249,7 +203,7 @@ resource "aws_ecs_service" "service" {
   network_configuration {
     subnets         = aws_subnet.public[*].id
     security_groups = [aws_security_group.ecs_sg.id]
-    # assign_public_ip = true
+    assign_public_ip = true
   }
 
   load_balancer {
@@ -258,10 +212,13 @@ resource "aws_ecs_service" "service" {
     container_port   = var.services[count.index].port
   }
 
-  capacity_provider_strategy {
-    capacity_provider = var.services[count.index].compute_type == "on_demand" ? aws_ecs_capacity_provider.on_demand.name : aws_ecs_capacity_provider.spot.name
-    weight            = 1
-    base              = 1
+  dynamic "capacity_provider_strategy" {
+    for_each = var.services[count.index].capacity_provider_strategy
+    content {
+      capacity_provider = capacity_provider_strategy.value.capacity_provider
+      weight            = capacity_provider_strategy.value.weight
+      base              = capacity_provider_strategy.value.base
+    }
   }
 
   dynamic "service_registries" {
@@ -426,88 +383,39 @@ resource "aws_lb_listener_rule" "service" {
   }
 }
 
-# Auto Scaling Groups
-resource "aws_autoscaling_group" "on_demand" {
-  name                = "${var.project_name}-asg-on-demand"
-  vpc_zone_identifier = aws_subnet.public[*].id
-  min_size            = var.asg_on_demand_min_size
-  max_size            = var.asg_on_demand_max_size
-  desired_capacity    = var.asg_on_demand_desired_capacity
-
-  launch_template {
-    id      = aws_launch_template.on_demand.id
-    version = "$Latest"
-  }
-
-  tag {
-    key                 = "AmazonECSManaged"
-    value               = true
-    propagate_at_launch = true
-  }
-
-  protect_from_scale_in = true
-}
-
-resource "aws_autoscaling_group" "spot" {
-  name                = "${var.project_name}-asg-spot"
-  vpc_zone_identifier = aws_subnet.public[*].id
-  min_size            = var.asg_spot_min_size
-  max_size            = var.asg_spot_max_size
-  desired_capacity    = var.asg_spot_desired_capacity
-
-  launch_template {
-    id      = aws_launch_template.spot.id
-    version = "$Latest"
-  }
-
-  tag {
-    key                 = "AmazonECSManaged"
-    value               = true
-    propagate_at_launch = true
-  }
-
-  protect_from_scale_in = true
-}
-
-resource "aws_iam_role_policy_attachment" "ecs_autoscaling" {
-  role       = aws_iam_role.ecs_instance_role.name
-  policy_arn = aws_iam_policy.ecs_autoscaling.arn
-}
-
-resource "aws_iam_policy" "ecs_autoscaling" {
-  name        = "${var.project_name}-ecs-autoscaling"
-  path        = "/"
-  description = "ECS autoscaling policy"
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Action = [
-          "autoscaling:CompleteLifecycleAction",
-          "autoscaling:DeleteLifecycleHook",
-          "autoscaling:DescribeAutoScalingGroups",
-          "autoscaling:DescribeLifecycleHooks",
-          "autoscaling:PutLifecycleHook",
-          "autoscaling:RecordLifecycleActionHeartbeat",
-          "autoscaling:SetInstanceProtection"
-        ]
-        Resource = "*"
-      }
-    ]
-  })
-}
-
-# Launch Templates
 data "aws_ssm_parameter" "ecs_optimized_ami" {
   name = "/aws/service/ecs/optimized-ami/amazon-linux-2/recommended/image_id"
 }
 
+# Auto Scaling Groups
+resource "aws_autoscaling_group" "ecs_asg" {
+  for_each = toset(["on_demand", "spot"])
+
+  name                = "${var.project_name}-asg-${each.key}"
+  vpc_zone_identifier = aws_subnet.public[*].id
+  min_size            = var.asg_min_size
+  max_size            = var.asg_max_size
+  desired_capacity    = var.asg_desired_capacity
+
+  launch_template {
+    id      = each.key == "on_demand" ? aws_launch_template.on_demand.id : aws_launch_template.spot.id
+    version = "$Latest"
+  }
+
+  tag {
+    key                 = "AmazonECSManaged"
+    value               = true
+    propagate_at_launch = true
+  }
+
+  protect_from_scale_in = true
+}
+
+# Launch Templates
 resource "aws_launch_template" "on_demand" {
   name_prefix   = "${var.project_name}-lt-on-demand"
   image_id      = data.aws_ssm_parameter.ecs_optimized_ami.value
-  instance_type = var.instance_type_on_demand
+  instance_type = var.instance_types["medium"]  # Default to medium, can be adjusted
 
   iam_instance_profile {
     name = aws_iam_instance_profile.ecs_instance_profile.name
@@ -532,7 +440,7 @@ resource "aws_launch_template" "on_demand" {
 resource "aws_launch_template" "spot" {
   name_prefix   = "${var.project_name}-lt-spot"
   image_id      = data.aws_ssm_parameter.ecs_optimized_ami.value
-  instance_type = var.instance_type_spot
+  instance_type = var.instance_types["medium"]  # Default to medium, can be adjusted
 
   iam_instance_profile {
     name = aws_iam_instance_profile.ecs_instance_profile.name
@@ -555,6 +463,41 @@ resource "aws_launch_template" "spot" {
     tags = {
       Name = "${var.project_name}-ecs-instance-spot"
     }
+  }
+}
+
+# ECS Capacity Providers
+resource "aws_ecs_capacity_provider" "ec2" {
+  for_each = toset(["on_demand", "spot"])
+
+  name = "${var.project_name}-${each.key}"
+
+  auto_scaling_group_provider {
+    auto_scaling_group_arn         = aws_autoscaling_group.ecs_asg[each.key].arn
+    managed_termination_protection = "ENABLED"
+
+    managed_scaling {
+      maximum_scaling_step_size = 1000
+      minimum_scaling_step_size = 1
+      status                    = "ENABLED"
+      target_capacity           = 100
+    }
+  }
+}
+
+# Update ECS Cluster to use both EC2 and Fargate capacity providers
+resource "aws_ecs_cluster_capacity_providers" "cluster_capacity_providers" {
+  cluster_name = aws_ecs_cluster.main.name
+
+  capacity_providers = concat(
+    ["FARGATE", "FARGATE_SPOT"],
+    [for cp in aws_ecs_capacity_provider.ec2 : cp.name]
+  )
+
+  default_capacity_provider_strategy {
+    capacity_provider = var.capacity_provider_strategy[0].capacity_provider
+    weight            = var.capacity_provider_strategy[0].weight
+    base              = var.capacity_provider_strategy[0].base
   }
 }
 

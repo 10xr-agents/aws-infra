@@ -32,6 +32,7 @@ output "ecs_services" {
       desired_count    = service.desired_count
       task_definition  = service.task_definition
       load_balancer    = service.load_balancer
+      capacity_provider_strategy = service.capacity_provider_strategy
     }
   ]
 }
@@ -62,14 +63,30 @@ output "ecs_security_group_id" {
   value       = aws_security_group.ecs_sg.id
 }
 
-output "on_demand_asg_name" {
-  description = "Name of the On-Demand Auto Scaling Group"
-  value       = aws_autoscaling_group.on_demand.name
+output "ecs_capacity_providers" {
+  description = "Names of the ECS capacity providers"
+  value = {
+    ec2_on_demand = aws_ecs_capacity_provider.ec2["on_demand"].name
+    ec2_spot      = aws_ecs_capacity_provider.ec2["spot"].name
+    fargate       = "FARGATE"
+    fargate_spot  = "FARGATE_SPOT"
+  }
 }
 
-output "spot_asg_name" {
-  description = "Name of the Spot Auto Scaling Group"
-  value       = aws_autoscaling_group.spot.name
+output "auto_scaling_groups" {
+  description = "Names of the Auto Scaling Groups"
+  value = {
+    on_demand = aws_autoscaling_group.ecs_asg["on_demand"].name
+    spot      = aws_autoscaling_group.ecs_asg["spot"].name
+  }
+}
+
+output "launch_template_ids" {
+  description = "IDs of the Launch Templates"
+  value = {
+    on_demand = aws_launch_template.on_demand.id
+    spot      = aws_launch_template.spot.id
+  }
 }
 
 output "service_discovery_namespace" {
@@ -91,4 +108,14 @@ output "ecs_task_role_arns" {
     for i, role in aws_iam_role.ecs_task_role :
     var.services[i].name => role.arn
   }
+}
+
+output "ecs_execution_role_arn" {
+  description = "ARN of the ECS execution role"
+  value       = aws_iam_role.ecs_execution_role.arn
+}
+
+output "ecs_instance_profile_name" {
+  description = "Name of the ECS instance profile"
+  value       = aws_iam_instance_profile.ecs_instance_profile.name
 }

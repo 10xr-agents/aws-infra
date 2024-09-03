@@ -26,53 +26,50 @@ variable "services" {
     cpu                    = number
     memory                 = number
     desired_count          = number
-    compute_type           = string
+    instance_type          = string
     port                   = number
     health_check_path      = string
     environment_variables  = map(string)
     secrets                = map(string)
     additional_policies    = list(string)
+    capacity_provider_strategy = list(object({
+      capacity_provider = string
+      weight            = number
+      base              = number
+    }))
   }))
 }
 
-variable "instance_type_on_demand" {
-  description = "EC2 instance type for on-demand instances in ECS cluster"
-  type        = string
+variable "capacity_provider_strategy" {
+  description = "Default capacity provider strategy"
+  type = list(object({
+    capacity_provider = string
+    weight            = number
+    base              = number
+  }))
+  default = [
+    {
+      capacity_provider = "FARGATE_SPOT"
+      weight            = 3
+      base              = 0
+    },
+    {
+      capacity_provider = "FARGATE"
+      weight            = 1
+      base              = 1
+    }
+  ]
 }
 
-variable "instance_type_spot" {
-  description = "EC2 instance type for spot instances in ECS cluster"
-  type        = string
-}
-
-variable "asg_on_demand_min_size" {
-  description = "Minimum number of on-demand EC2 instances in the ASG"
-  type        = number
-}
-
-variable "asg_on_demand_max_size" {
-  description = "Maximum number of on-demand EC2 instances in the ASG"
-  type        = number
-}
-
-variable "asg_on_demand_desired_capacity" {
-  description = "Desired number of on-demand EC2 instances in the ASG"
-  type        = number
-}
-
-variable "asg_spot_min_size" {
-  description = "Minimum number of spot EC2 instances in the ASG"
-  type        = number
-}
-
-variable "asg_spot_max_size" {
-  description = "Maximum number of spot EC2 instances in the ASG"
-  type        = number
-}
-
-variable "asg_spot_desired_capacity" {
-  description = "Desired number of spot EC2 instances in the ASG"
-  type        = number
+variable "instance_types" {
+  description = "Map of instance types for different capacities"
+  type = map(string)
+  default = {
+    "small"  = "t3.small"
+    "medium" = "t3.medium"
+    "large"  = "c5.large"
+    "xlarge" = "c5.xlarge"
+  }
 }
 
 variable "ecs_cluster_settings" {
@@ -97,4 +94,22 @@ variable "enable_ecs_exec" {
   description = "Whether to enable ECS Exec for the services"
   type        = bool
   default     = false
+}
+
+variable "asg_min_size" {
+  description = "Minimum size for the Auto Scaling Group"
+  type        = number
+  default     = 1
+}
+
+variable "asg_max_size" {
+  description = "Maximum size for the Auto Scaling Group"
+  type        = number
+  default     = 10
+}
+
+variable "asg_desired_capacity" {
+  description = "Desired capacity for the Auto Scaling Group"
+  type        = number
+  default     = 1
 }

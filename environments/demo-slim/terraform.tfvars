@@ -7,46 +7,64 @@ services = [
   {
     name          = "cnvrs-srv"
     ecr_repo      = "761018882607.dkr.ecr.us-east-1.amazonaws.com/10xr/converse-server:0.0.1-demo"
-    cpu           = 1000
+    cpu           = 1024
     memory        = 2048
     desired_count = 2
-    compute_type  = "on_demand"
-    port          = 80
-    health_check_path = "/health"
+    instance_type = "medium"
+    port          = 8080
+    health_check_path = "/actuator/health"
     environment_variables = {
       "ENV" = "production"
     }
-    secrets = {
-      # "DB_PASSWORD" = "arn:aws:ssm:us-east-1:your-account-id:parameter/service1/db-password"
-    }
+    secrets = {}
     additional_policies = ["arn:aws:iam::aws:policy/AmazonS3FullAccess"]
+    capacity_provider_strategy = [
+      {
+        capacity_provider = "FARGATE_SPOT"
+        weight            = 3
+        base              = 0
+      },
+      {
+        capacity_provider = "FARGATE"
+        weight            = 1
+        base              = 1
+      }
+    ]
   },
 #   {
-#     name          = "service2"
-#     ecr_repo      = "your-account-id.dkr.ecr.us-east-1.amazonaws.com/service2"
-#     cpu           = 256
-#     memory        = 512
-#     desired_count = 2
-#     compute_type  = "on_demand"
+#     name          = "high-performance-service"
+#     ecr_repo      = "761018882607.dkr.ecr.us-east-1.amazonaws.com/10xr/high-performance:latest"
+#     cpu           = 4096
+#     memory        = 8192
+#     desired_count = 1
+#     instance_type = "xlarge"
 #     port          = 8080
 #     health_check_path = "/status"
-#     environment_variables = {}
+#     environment_variables = {
+#       "ENV" = "production"
+#     }
 #     secrets = {}
 #     additional_policies = []
-#   },
-  # ... other services
+#     capacity_provider_strategy = [
+#       {
+#         capacity_provider = "FARGATE"
+#         weight            = 1
+#         base              = 1
+#       }
+#     ]
+#   }
 ]
 
-instance_type_on_demand = "t3.medium"
-instance_type_spot      = "c5.2xlarge"
+instance_types = {
+  "small"  = "t3.small"
+  "medium" = "t3.medium"
+  "large"  = "c5.large"
+  "xlarge" = "c5.xlarge"
+}
 
-asg_on_demand_min_size         = 1
-asg_on_demand_max_size         = 5
-asg_on_demand_desired_capacity = 3
-
-asg_spot_min_size         = 1
-asg_spot_max_size         = 5
-asg_spot_desired_capacity = 2
+asg_min_size         = 1
+asg_max_size         = 10
+asg_desired_capacity = 1
 
 ecs_cluster_settings = {
   containerInsights = "enabled"
