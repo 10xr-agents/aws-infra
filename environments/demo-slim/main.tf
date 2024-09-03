@@ -2,7 +2,7 @@ terraform {
   required_providers {
     mongodbatlas = {
       source = "mongodb/mongodbatlas"
-      version = "1.10.0"
+      version = "1.18.1"
     }
   }
 }
@@ -664,6 +664,10 @@ resource "mongodbatlas_cluster" "cluster" {
       read_only_nodes = 0
     }
   }
+  cloud_backup = true
+  auto_scaling_disk_gb_enabled = true
+
+  # Provider Settings "block"
   provider_name               = "AWS"
   provider_instance_size_name = "M30"
 }
