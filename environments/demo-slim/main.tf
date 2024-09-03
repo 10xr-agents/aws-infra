@@ -710,7 +710,7 @@ data "aws_caller_identity" "current" {}
 
 # S3 Bucket Configuration
 resource "aws_s3_bucket" "federated_data" {
-  bucket = "${var.project_name}-federated"
+  bucket        = "${var.project_name}-federated"
   force_destroy = true
 }
 
@@ -731,24 +731,24 @@ resource "aws_s3_bucket_policy" "federated_data" {
     Version = "2012-10-17"
     Statement = [
       {
-        Sid       = "AllowECSAccess"
-        Effect    = "Allow"
+        Sid    = "AllowECSAccess"
+        Effect = "Allow"
         Principal = {
           Service = "ecs.amazonaws.com"
         }
-        Action   = ["s3:GetObject", "s3:PutObject", "s3:ListBucket"]
+        Action = ["s3:GetObject", "s3:PutObject", "s3:ListBucket"]
         Resource = [
           aws_s3_bucket.federated_data.arn,
           "${aws_s3_bucket.federated_data.arn}/*"
         ]
       },
       {
-        Sid       = "AllowECSTaskAccess"
-        Effect    = "Allow"
+        Sid    = "AllowECSTaskAccess"
+        Effect = "Allow"
         Principal = {
           AWS = aws_iam_role.mongodb_atlas_access.arn
         }
-        Action   = ["s3:GetObject", "s3:PutObject", "s3:ListBucket"]
+        Action = ["s3:GetObject", "s3:PutObject", "s3:ListBucket"]
         Resource = [
           aws_s3_bucket.federated_data.arn,
           "${aws_s3_bucket.federated_data.arn}/*"
@@ -759,7 +759,7 @@ resource "aws_s3_bucket_policy" "federated_data" {
         Effect    = "Allow"
         Principal = "*"
         Action    = ["s3:GetObject", "s3:ListBucket"]
-        Resource  = [
+        Resource = [
           aws_s3_bucket.federated_data.arn,
           "${aws_s3_bucket.federated_data.arn}/*"
         ]
@@ -770,12 +770,12 @@ resource "aws_s3_bucket_policy" "federated_data" {
         }
       },
       {
-        Sid       = "AllowRootAccess"
-        Effect    = "Allow"
+        Sid    = "AllowRootAccess"
+        Effect = "Allow"
         Principal = {
           AWS = data.aws_caller_identity.current.account_id
         }
-        Action   = "s3:*"
+        Action = "s3:*"
         Resource = [
           aws_s3_bucket.federated_data.arn,
           "${aws_s3_bucket.federated_data.arn}/*"
@@ -856,11 +856,11 @@ resource "aws_iam_role" "mongodb_atlas_access" {
     Version = "2012-10-17"
     Statement = [
       {
-        Effect   = "Allow",
+        Effect = "Allow",
         Principal = {
           Service = "ecs-tasks.amazonaws.com" # Adjust based on what service needs access
         },
-        Action   = [
+        Action = [
           "sts:AssumeRole"
         ]
       }
@@ -928,8 +928,9 @@ resource "mongodbatlas_federated_database_instance" "main" {
 
   cloud_provider_config {
     aws {
-      role_id        = aws_iam_role.mongodb_atlas_access.id
-      test_s3_bucket = aws_s3_bucket.federated_data.id
+      role_id              = aws_iam_role.mongodb_atlas_access.id
+      iam_assumed_role_arn = aws_iam_role.mongodb_atlas_access.arn # IAM Role ARN
+      test_s3_bucket       = aws_s3_bucket.federated_data.id
     }
   }
 
