@@ -856,29 +856,11 @@ resource "aws_iam_role" "mongodb_atlas_access" {
     Version = "2012-10-17"
     Statement = [
       {
-        Action = [
-          "ec2:DescribeNetworkInterfaces",
-          "ec2:DescribeVpcs",
-          "ec2:DescribeSubnets",
-          "ec2:DescribeSecurityGroups"
-        ],
         Effect   = "Allow",
-        Resource = "*"
-      },
-      {
-        Action = [
-          "sts:GetCallerIdentity",
-          "sts:AssumeRole"
-        ]
-        Effect = "Allow"
-        Resource = "*"
-      },
-      {
-        Effect = "Allow",
         Principal = {
           Service = "ecs-tasks.amazonaws.com" # Adjust based on what service needs access
         },
-        Action = [
+        Action   = [
           "sts:GetCallerIdentity",
           "sts:AssumeRole"
         ]
@@ -895,6 +877,16 @@ resource "aws_iam_policy" "mongodb_atlas_access" {
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
+      {
+        Action = [
+          "ec2:DescribeNetworkInterfaces",
+          "ec2:DescribeVpcs",
+          "ec2:DescribeSubnets",
+          "ec2:DescribeSecurityGroups"
+        ],
+        Effect   = "Allow",
+        Resource = "*"
+      },
       {
         Effect = "Allow"
         Action = [
