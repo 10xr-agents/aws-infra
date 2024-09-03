@@ -872,6 +872,16 @@ resource "aws_iam_role" "mongodb_atlas_access" {
         ]
         Effect = "Allow"
         Resource = "*"
+      },
+      {
+        Effect = "Allow",
+        Principal = {
+          Service = "ecs-tasks.amazonaws.com" # Adjust based on what service needs access
+        },
+        Action = [
+          "sts:GetCallerIdentity",
+          "sts:AssumeRole"
+        ]
       }
     ]
   })
@@ -892,6 +902,15 @@ resource "aws_iam_policy" "mongodb_atlas_access" {
           "sts:AssumeRole"
         ]
         Resource = "*"
+      },
+      {
+        Effect = "Allow",
+        Action = [
+          "s3:GetObject",
+          "s3:PutObject",
+          "s3:DeleteObject"
+        ],
+        Resource = "arn:aws:s3:::${aws_s3_bucket.federated_data.arn}/*"
       }
     ]
   })
@@ -918,7 +937,7 @@ resource "mongodbatlas_federated_database_instance" "main" {
 
   cloud_provider_config {
     aws {
-      role_id        = aws_iam_role.mongodb_atlas_access.unique_id
+      role_id        = aws_iam_role.mongodb_atlas_access.id
       test_s3_bucket = aws_s3_bucket.federated_data.id
     }
   }
