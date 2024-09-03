@@ -1,7 +1,7 @@
 terraform {
   required_providers {
     mongodbatlas = {
-      source = "mongodb/mongodbatlas"
+      source  = "mongodb/mongodbatlas"
       version = "1.18.1"
     }
   }
@@ -177,10 +177,10 @@ resource "aws_ecs_task_definition" "service" {
       ]
       environment = concat([
         {
-        name  = "SPRING_DATA_MONGODB_URI"
-        value = "mongodb://${mongodbatlas_cluster.cluster.mongo_uri_with_options}"
+          name  = "SPRING_DATA_MONGODB_URI"
+          value = "mongodb://${mongodbatlas_cluster.cluster.mongo_uri_with_options}"
         }
-      ], [
+        ], [
         for key, value in var.services[count.index].environment_variables :
         {
           name  = key
@@ -215,8 +215,8 @@ resource "aws_ecs_service" "service" {
   desired_count   = var.services[count.index].desired_count
 
   network_configuration {
-    subnets         = aws_subnet.public[*].id
-    security_groups = [aws_security_group.ecs_sg.id]
+    subnets          = aws_subnet.public[*].id
+    security_groups  = [aws_security_group.ecs_sg.id]
     assign_public_ip = true
   }
 
@@ -249,10 +249,10 @@ resource "aws_ecs_service" "service" {
 
 # Service Discovery
 resource "aws_service_discovery_private_dns_namespace" "main" {
-  count = var.enable_service_discovery ? 1 : 0
-  name  = var.service_discovery_namespace
+  count       = var.enable_service_discovery ? 1 : 0
+  name        = var.service_discovery_namespace
   description = "Service Discovery namespace for ECS services"
-  vpc   = aws_vpc.main.id
+  vpc         = aws_vpc.main.id
 }
 
 resource "aws_service_discovery_service" "service" {
@@ -316,14 +316,14 @@ resource "aws_iam_policy" "ecs_task_policy" {
         ]
         Resource = "*"
       }
-    ],
+      ],
       [for policy_arn in var.services[count.index].additional_policies :
         {
-          Effect = "Allow"
-          Action = "*"
+          Effect   = "Allow"
+          Action   = "*"
           Resource = "*"
         }
-      ])
+    ])
   })
 }
 
@@ -429,7 +429,7 @@ resource "aws_autoscaling_group" "ecs_asg" {
 resource "aws_launch_template" "on_demand" {
   name_prefix   = "${var.project_name}-lt-on-demand"
   image_id      = data.aws_ssm_parameter.ecs_optimized_ami.value
-  instance_type = var.instance_types["medium"]  # Default to medium, can be adjusted
+  instance_type = var.instance_types["medium"] # Default to medium, can be adjusted
 
   iam_instance_profile {
     name = aws_iam_instance_profile.ecs_instance_profile.name
@@ -454,7 +454,7 @@ resource "aws_launch_template" "on_demand" {
 resource "aws_launch_template" "spot" {
   name_prefix   = "${var.project_name}-lt-spot"
   image_id      = data.aws_ssm_parameter.ecs_optimized_ami.value
-  instance_type = var.instance_types["medium"]  # Default to medium, can be adjusted
+  instance_type = var.instance_types["medium"] # Default to medium, can be adjusted
 
   iam_instance_profile {
     name = aws_iam_instance_profile.ecs_instance_profile.name
@@ -599,7 +599,7 @@ resource "aws_s3_bucket_policy" "alb_logs" {
         Principal = {
           AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
         }
-        Action   = ["s3:GetBucketLocation", "s3:ListBucket", "s3:GetObject"]
+        Action = ["s3:GetBucketLocation", "s3:ListBucket", "s3:GetObject"]
         Resource = [
           aws_s3_bucket.alb_logs.arn,
           "${aws_s3_bucket.alb_logs.arn}/*"
@@ -664,7 +664,7 @@ resource "mongodbatlas_cluster" "cluster" {
       read_only_nodes = 0
     }
   }
-  cloud_backup = true
+  cloud_backup                 = true
   auto_scaling_disk_gb_enabled = true
 
   # Provider Settings "block"
@@ -674,12 +674,13 @@ resource "mongodbatlas_cluster" "cluster" {
 
 # VPC Peering
 resource "mongodbatlas_network_peering" "peering" {
-  project_id     = var.mongodb_atlas_project_id
-  container_id   = mongodbatlas_cluster.cluster.container_id
-  provider_name  = "AWS"
+  project_id             = var.mongodb_atlas_project_id
+  container_id           = mongodbatlas_cluster.cluster.container_id
+  provider_name          = "AWS"
+  accepter_region_name   = var.mongodb_atlas_region
   route_table_cidr_block = var.vpc_cidr
-  vpc_id         = aws_vpc.main.id
-  aws_account_id = data.aws_caller_identity.current.account_id
+  vpc_id                 = aws_vpc.main.id
+  aws_account_id         = data.aws_caller_identity.current.account_id
   # region_name    = var.aws_region
 }
 
@@ -701,10 +702,10 @@ resource "mongodbatlas_project_ip_access_list" "ip_access_list" {
 }
 
 resource "aws_security_group_rule" "allow_mongodb_atlas" {
-  type        = "egress"
-  from_port   = 27017
-  to_port     = 27017
-  protocol    = "tcp"
-  cidr_blocks = [mongodbatlas_cluster.cluster.mongo_uri_updated]
+  type              = "egress"
+  from_port         = 27017
+  to_port           = 27017
+  protocol          = "tcp"
+  cidr_blocks       = [aws_security_group_rule.allow_mongodb_atlas.cidr_blocks]
   security_group_id = aws_security_group.ecs_sg.id
 }
