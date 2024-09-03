@@ -710,7 +710,7 @@ data "aws_caller_identity" "current" {}
 
 # S3 Bucket Configuration
 resource "aws_s3_bucket" "federated_data" {
-  bucket = "your-federated-data-bucket-name"
+  bucket = "${var.project_name}-general"
   force_destroy = true
 }
 
@@ -892,46 +892,35 @@ resource "aws_iam_role_policy_attachment" "mongodb_atlas_access" {
   policy_arn = aws_iam_policy.mongodb_atlas_access.arn
 }
 
+resource "aws_iam_role_policy_attachment" "mongodb_atlas_ecs_access" {
+  role       = aws_iam_role.ecs_task_role.arn
+  policy_arn = aws_iam_policy.mongodb_atlas_access.arn
+}
+
+
 # 3. Create a MongoDB Atlas federated database instance
 # MongoDB Atlas Federated Database Instance
-# resource "mongodbatlas_federated_database_instance" "main" {
-#   project_id = var.mongodb_atlas_project_id
-#   name       = "federated-instance"
-#
-#   cloud_provider_config {
-#     aws {
-#       role_id        = aws_iam_role.mongodb_atlas_access.id
-#       test_s3_bucket = aws_s3_bucket.federated_data.id
-#     }
-#   }
-#
-#   storage_databases {
-#     name = "VirtualDatabase0"
-#     collections {
-#       name = "your-collection-name"
-#       data_sources {
-#         collection = "your-cluster-collection"
-#         database   = "your-cluster-database"
-#         store_name = mongodbatlas_cluster.cluster.name
-#       }
-#       data_sources {
-#         store_name = aws_s3_bucket.federated_data.id
-#         path       = "your-s3-path"
-#       }
-#     }
-#   }
-#
-#   storage_stores {
-#     name         = "atlas-store"
-#     cluster_name = mongodbatlas_cluster.cluster.name
-#     project_id   = var.mongodb_atlas_project_id
-#     provider     = "atlas"
-#     read_preference {
-#       mode = "secondary"
-#     }
-#   }
-#
-# }
+resource "mongodbatlas_federated_database_instance" "main" {
+  project_id = var.mongodb_atlas_project_id
+  name       = "federated-instance"
+
+  cloud_provider_config {
+    aws {
+      role_id        = aws_iam_role.mongodb_atlas_access.id
+      test_s3_bucket = aws_s3_bucket.federated_data.id
+    }
+  }
+
+  storage_stores {
+    name         = "atlas-store"
+    cluster_name = mongodbatlas_cluster.cluster.name
+    project_id   = var.mongodb_atlas_project_id
+    provider     = "atlas"
+    read_preference {
+      mode = "secondary"
+    }
+  }
+}
 
 # 4. Create a MongoDB Atlas database user with AWS IAM authentication
 resource "mongodbatlas_database_user" "aws_iam_user" {
