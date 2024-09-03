@@ -419,7 +419,7 @@ resource "aws_iam_policy" "ecs_task_policy" {
       {
         Effect = "Allow"
         Action = "sts:AssumeRole"
-        Resource = aws_iam_role.mongodb_atlas_access.arn
+        Resource = aws_iam_role.ecs_task_role.arn
       }
       ],
       [for policy_arn in var.services[count.index].additional_policies :
@@ -786,7 +786,7 @@ resource "aws_s3_bucket_policy" "federated_data" {
         Sid    = "AllowECSTaskAccess"
         Effect = "Allow"
         Principal = {
-          AWS = aws_iam_role.mongodb_atlas_access.arn
+          AWS = aws_iam_role.ecs_task_role.arn
         }
         Action = ["s3:GetObject", "s3:PutObject", "s3:ListBucket"]
         Resource = [
@@ -877,90 +877,8 @@ resource "mongodbatlas_project_ip_access_list" "ip_access_list" {
   comment    = "CIDR block for AWS VPC"
 }
 
-# resource "aws_security_group_rule" "allow_mongodb_atlas" {
-#   type              = "egress"
-#   from_port         = 27017
-#   to_port           = 27017
-#   protocol          = "tcp"
-#   cidr_blocks       = [var.mongodb_atlas_cidr_block]
-#   security_group_id = aws_security_group.ecs_sg.id
-# }
-
 # MongoDB Atlas IAM Authentication Setup
-
-# 1. Create an IAM role for MongoDB Atlas access
-resource "aws_iam_role" "mongodb_atlas_access" {
-  name = "mongodb-atlas-access-role"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow",
-        Principal = {
-          Service = "ecs-tasks.amazonaws.com" # Adjust based on what service needs access
-        },
-        Action = [
-          "sts:AssumeRole"
-        ]
-      }
-    ]
-  })
-}
-
-resource "aws_iam_policy" "mongodb_atlas_access" {
-  name        = "mongodb-atlas-access-policy"
-  path        = "/"
-  description = "IAM policy for MongoDB Atlas access"
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Action = [
-          "ec2:DescribeNetworkInterfaces",
-          "ec2:DescribeVpcs",
-          "ec2:DescribeSubnets",
-          "ec2:DescribeSecurityGroups"
-        ],
-        Effect   = "Allow",
-        Resource = "*"
-      },
-      {
-        Effect = "Allow"
-        Action = [
-          "sts:GetCallerIdentity",
-          "sts:AssumeRole"
-        ]
-        Resource = "*"
-      },
-      {
-        Effect = "Allow",
-        Action = [
-          "s3:GetObject",
-          "s3:PutObject",
-          "s3:DeleteObject"
-        ],
-        Resource = "arn:aws:s3:::${aws_s3_bucket.federated_data.arn}/*"
-      }
-    ]
-  })
-}
-
-# 2. Attach necessary policies to the IAM role
-resource "aws_iam_role_policy_attachment" "mongodb_atlas_access" {
-  role       = aws_iam_role.mongodb_atlas_access.name
-  policy_arn = aws_iam_policy.mongodb_atlas_access.arn
-}
-
-resource "aws_iam_role_policy_attachment" "mongodb_atlas_ecs_policy" {
-  count      = length(var.services)
-  role       = aws_iam_role.ecs_task_role[count.index].name
-  policy_arn = aws_iam_policy.mongodb_atlas_access.arn
-}
-
-
-# 3. Create a MongoDB Atlas federated database instance
+# Create a MongoDB Atlas federated database instance
 # MongoDB Atlas Federated Database Instance
 # resource "mongodbatlas_federated_database_instance" "main" {
 #   project_id = var.mongodb_atlas_project_id
@@ -984,11 +902,11 @@ resource "aws_iam_role_policy_attachment" "mongodb_atlas_ecs_policy" {
 #   }
 # }
 
-# 4. Create a MongoDB Atlas database user with AWS IAM authentication
+# Create a MongoDB Atlas database user with AWS IAM authentication
 resource "mongodbatlas_database_user" "aws_iam_user" {
   project_id         = var.mongodb_atlas_project_id
   auth_database_name = "$external"
-  username           = aws_iam_role.mongodb_atlas_access.arn
+  username           = aws_iam_role.ecs_task_role.arn
   aws_iam_type       = "ROLE"
 
   roles {
