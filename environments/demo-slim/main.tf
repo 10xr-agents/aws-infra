@@ -718,9 +718,3 @@ resource "aws_security_group_rule" "allow_mongodb_atlas" {
   cidr_blocks       = [var.mongodb_atlas_cidr_block]
   security_group_id = aws_security_group.ecs_sg.id
 }
-
-resource "aws_route" "mongodb_atlas_route" {
-  route_table_id            = aws_route_table.public.id
-  destination_cidr_block    = var.mongodb_atlas_cidr_block
-  vpc_peering_connection_id = aws_vpc_peering_connection_accepter.peer.vpc_peering_connection_id
-}
