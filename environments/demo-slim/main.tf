@@ -686,11 +686,10 @@ resource "mongodbatlas_network_peering" "peering" {
   project_id             = var.mongodb_atlas_project_id
   container_id           = mongodbatlas_network_container.container.id
   provider_name          = "AWS"
-  accepter_region_name   = var.aws_region
+  accepter_region_name   = var.mongodb_atlas_region
   route_table_cidr_block = var.vpc_cidr
   vpc_id                 = aws_vpc.main.id
   aws_account_id         = data.aws_caller_identity.current.account_id
-  region_name            = var.mongodb_atlas_region
 }
 
 resource "aws_vpc_peering_connection_accepter" "peer" {
