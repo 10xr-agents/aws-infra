@@ -53,6 +53,11 @@ resource "aws_route_table" "public" {
     gateway_id = aws_internet_gateway.main.id
   }
 
+  route {
+    cidr_block                = var.mongodb_atlas_cidr_block
+    vpc_peering_connection_id = mongodbatlas_network_peering.peering.connection_id
+  }
+
   tags = {
     Name = "${var.project_name}-public-rt"
   }
@@ -686,12 +691,6 @@ resource "mongodbatlas_network_peering" "peering" {
 resource "aws_vpc_peering_connection_accepter" "peer" {
   vpc_peering_connection_id = mongodbatlas_network_peering.peering.connection_id
   auto_accept               = true
-}
-
-resource "aws_route" "mongodb_atlas_route" {
-  route_table_id            = aws_route_table.public.id
-  destination_cidr_block    = var.mongodb_atlas_cidr_block
-  vpc_peering_connection_id = aws_vpc_peering_connection_accepter.peer.vpc_peering_connection_id
 }
 
 # resource "mongodbatlas_project_ip_access_list" "ip_access_list" {
