@@ -951,27 +951,27 @@ resource "aws_iam_role_policy_attachment" "mongodb_atlas_ecs_policy" {
 
 # 3. Create a MongoDB Atlas federated database instance
 # MongoDB Atlas Federated Database Instance
-resource "mongodbatlas_federated_database_instance" "main" {
-  project_id = var.mongodb_atlas_project_id
-  name       = "federated-instance"
-
-  cloud_provider_config {
-    aws {
-      role_id              = aws_iam_role.mongodb_atlas_access.id
-      test_s3_bucket       = aws_s3_bucket.federated_data.id
-    }
-  }
-
-  storage_stores {
-    name         = "atlas-store"
-    cluster_name = mongodbatlas_cluster.cluster.name
-    project_id   = var.mongodb_atlas_project_id
-    provider     = "atlas"
-    read_preference {
-      mode = "secondary"
-    }
-  }
-}
+# resource "mongodbatlas_federated_database_instance" "main" {
+#   project_id = var.mongodb_atlas_project_id
+#   name       = "federated-instance"
+#
+#   cloud_provider_config {
+#     aws {
+#       role_id              = aws_iam_role.mongodb_atlas_access.id
+#       test_s3_bucket       = aws_s3_bucket.federated_data.id
+#     }
+#   }
+#
+#   storage_stores {
+#     name         = "atlas-store"
+#     cluster_name = mongodbatlas_cluster.cluster.name
+#     project_id   = var.mongodb_atlas_project_id
+#     provider     = "atlas"
+#     read_preference {
+#       mode = "secondary"
+#     }
+#   }
+# }
 
 # 4. Create a MongoDB Atlas database user with AWS IAM authentication
 resource "mongodbatlas_database_user" "aws_iam_user" {
@@ -981,7 +981,7 @@ resource "mongodbatlas_database_user" "aws_iam_user" {
   aws_iam_type       = "ROLE"
 
   roles {
-    role_name     = "readWrite"
+    role_name     = "dbAdmin"
     database_name = var.mongodb_database_name
   }
 
