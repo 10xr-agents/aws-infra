@@ -690,8 +690,7 @@ resource "aws_vpc_peering_connection_accepter" "peer" {
 }
 
 resource "aws_route" "mongodb_atlas_route" {
-  count                     = length(aws_route_table.public)
-  route_table_id            = aws_route_table.public[count.index].id
+  route_table_id            = aws_route_table.public.id
   destination_cidr_block    = mongodbatlas_cluster.cluster.mongo_uri_updated
   vpc_peering_connection_id = aws_vpc_peering_connection_accepter.peer.vpc_peering_connection_id
 }
