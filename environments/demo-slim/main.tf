@@ -710,7 +710,7 @@ data "aws_caller_identity" "current" {}
 
 # S3 Bucket Configuration
 resource "aws_s3_bucket" "federated_data" {
-  bucket = "${var.project_name}-general"
+  bucket = "${var.project_name}-federated"
   force_destroy = true
 }
 
@@ -907,7 +907,7 @@ resource "mongodbatlas_federated_database_instance" "main" {
 
   cloud_provider_config {
     aws {
-      role_id        = aws_iam_role.mongodb_atlas_access.arn
+      role_id        = aws_iam_role.mongodb_atlas_access.id
       test_s3_bucket = aws_s3_bucket.federated_data.id
     }
   }
