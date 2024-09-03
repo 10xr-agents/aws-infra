@@ -670,21 +670,12 @@ resource "mongodbatlas_cluster" "cluster" {
   # Provider Settings "block"
   provider_name               = "AWS"
   provider_instance_size_name = "M30"
-
-  container_id = mongodbatlas_network_container.container.id
-}
-
-resource "mongodbatlas_network_container" "container" {
-  project_id       = var.mongodb_atlas_project_id
-  atlas_cidr_block = var.mongodb_atlas_cidr_block
-  provider_name    = "AWS"
-  region_name      = var.mongodb_atlas_region
 }
 
 # VPC Peering
 resource "mongodbatlas_network_peering" "peering" {
   project_id             = var.mongodb_atlas_project_id
-  container_id           = mongodbatlas_network_container.container.id
+  container_id           = mongodbatlas_cluster.cluster.container_id
   provider_name          = "AWS"
   accepter_region_name   = var.mongodb_atlas_region
   route_table_cidr_block = var.vpc_cidr
