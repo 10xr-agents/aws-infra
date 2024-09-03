@@ -671,7 +671,7 @@ resource "mongodbatlas_cluster" "cluster" {
   provider_name               = "AWS"
   provider_instance_size_name = "M30"
 
-  # container_id = mongodbatlas_network_container.container.id
+  container_id = mongodbatlas_network_container.container.id
 }
 
 resource "mongodbatlas_network_container" "container" {
