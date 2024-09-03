@@ -21,17 +21,17 @@ variable "public_subnet_cidrs" {
 variable "services" {
   description = "List of services to deploy"
   type = list(object({
-    name                   = string
-    ecr_repo               = string
-    cpu                    = number
-    memory                 = number
-    desired_count          = number
-    instance_type          = string
-    port                   = number
-    health_check_path      = string
-    environment_variables  = map(string)
-    secrets                = map(string)
-    additional_policies    = list(string)
+    name                  = string
+    ecr_repo              = string
+    cpu                   = number
+    memory                = number
+    desired_count         = number
+    instance_type         = string
+    port                  = number
+    health_check_path     = string
+    environment_variables = map(string)
+    secrets               = map(string)
+    additional_policies   = list(string)
     capacity_provider_strategy = list(object({
       capacity_provider = string
       weight            = number
@@ -63,7 +63,7 @@ variable "capacity_provider_strategy" {
 
 variable "instance_types" {
   description = "Map of instance types for different capacities"
-  type = map(string)
+  type        = map(string)
   default = {
     "small"  = "t3.small"
     "medium" = "t3.medium"
@@ -142,4 +142,10 @@ variable "mongodb_atlas_project_id" {
 variable "mongodb_atlas_region" {
   description = "MongoDB Atlas region"
   type        = string
+}
+
+variable "mongodb_atlas_cidr_block" {
+  description = "CIDR block for MongoDB Atlas cluster"
+  type        = string
+  default     = "192.168.248.0/21"
 }

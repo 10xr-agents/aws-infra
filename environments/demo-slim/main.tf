@@ -670,14 +670,23 @@ resource "mongodbatlas_cluster" "cluster" {
   # Provider Settings "block"
   provider_name               = "AWS"
   provider_instance_size_name = "M30"
+
+  # container_id = mongodbatlas_network_container.container.id
+}
+
+resource "mongodbatlas_network_container" "container" {
+  project_id       = var.mongodb_atlas_project_id
+  atlas_cidr_block = var.mongodb_atlas_cidr_block
+  provider_name    = "AWS"
+  region_name      = var.aws_region
 }
 
 # VPC Peering
 resource "mongodbatlas_network_peering" "peering" {
   project_id             = var.mongodb_atlas_project_id
-  container_id           = mongodbatlas_cluster.cluster.container_id
+  container_id           = mongodbatlas_network_container.container.id
   provider_name          = "AWS"
-  accepter_region_name   = var.mongodb_atlas_region
+  accepter_region_name   = var.aws_region
   route_table_cidr_block = var.vpc_cidr
   vpc_id                 = aws_vpc.main.id
   aws_account_id         = data.aws_caller_identity.current.account_id
@@ -691,21 +700,27 @@ resource "aws_vpc_peering_connection_accepter" "peer" {
 
 resource "aws_route" "mongodb_atlas_route" {
   route_table_id            = aws_route_table.public.id
-  destination_cidr_block    = aws_security_group_rule.allow_mongodb_atlas.cidr_blocks
+  destination_cidr_block    = var.mongodb_atlas_cidr_block
   vpc_peering_connection_id = aws_vpc_peering_connection_accepter.peer.vpc_peering_connection_id
 }
 
-resource "mongodbatlas_project_ip_access_list" "ip_access_list" {
-  project_id = var.mongodb_atlas_project_id
-  cidr_block = var.vpc_cidr
-  comment    = "CIDR block for AWS VPC"
-}
+# resource "mongodbatlas_project_ip_access_list" "ip_access_list" {
+#   project_id = var.mongodb_atlas_project_id
+#   cidr_block = var.vpc_cidr
+#   comment    = "CIDR block for AWS VPC"
+# }
 
 resource "aws_security_group_rule" "allow_mongodb_atlas" {
   type              = "egress"
   from_port         = 27017
   to_port           = 27017
   protocol          = "tcp"
-  cidr_blocks       = aws_security_group_rule.allow_mongodb_atlas.cidr_blocks
+  cidr_blocks       = [var.mongodb_atlas_cidr_block]
   security_group_id = aws_security_group.ecs_sg.id
+}
+
+resource "aws_route" "mongodb_atlas_route" {
+  route_table_id            = aws_route_table.public.id
+  destination_cidr_block    = var.mongodb_atlas_cidr_block
+  vpc_peering_connection_id = aws_vpc_peering_connection_accepter.peer.vpc_peering_connection_id
 }
