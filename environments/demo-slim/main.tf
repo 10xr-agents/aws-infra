@@ -377,9 +377,15 @@ resource "aws_iam_policy" "ecs_task_policy" {
         Action = [
           "ssm:GetParameters",
           "secretsmanager:GetSecretValue",
-          "kms:Decrypt"
+          "kms:Decrypt",
+          "sts:AssumeRole"
         ]
         Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = "sts:AssumeRole"
+        Resource = aws_iam_role.mongodb_atlas_access.arn
       }
       ],
       [for policy_arn in var.services[count.index].additional_policies :
@@ -846,6 +852,29 @@ resource "aws_security_group_rule" "allow_mongodb_atlas" {
   security_group_id = aws_security_group.ecs_sg.id
 }
 
+# Update NACL
+resource "aws_network_acl_rule" "allow_mongodb_atlas_egress" {
+  network_acl_id = aws_network_acl.main.id
+  rule_number    = 900
+  egress         = true
+  protocol       = "tcp"
+  rule_action    = "allow"
+  cidr_block     = var.mongodb_atlas_cidr_block
+  from_port      = 27017
+  to_port        = 27017
+}
+
+resource "aws_network_acl_rule" "allow_mongodb_atlas_ingress" {
+  network_acl_id = aws_network_acl.main.id
+  rule_number    = 901
+  egress         = false
+  protocol       = "tcp"
+  rule_action    = "allow"
+  cidr_block     = var.mongodb_atlas_cidr_block
+  from_port      = 1024
+  to_port        = 65535
+}
+
 # MongoDB Atlas IAM Authentication Setup
 
 # 1. Create an IAM role for MongoDB Atlas access
@@ -929,7 +958,6 @@ resource "mongodbatlas_federated_database_instance" "main" {
   cloud_provider_config {
     aws {
       role_id              = aws_iam_role.mongodb_atlas_access.id
-      iam_assumed_role_arn = aws_iam_role.mongodb_atlas_access.arn # IAM Role ARN
       test_s3_bucket       = aws_s3_bucket.federated_data.id
     }
   }
