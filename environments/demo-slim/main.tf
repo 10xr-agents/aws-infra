@@ -708,6 +708,84 @@ data "aws_availability_zones" "available" {
 
 data "aws_caller_identity" "current" {}
 
+# S3 Bucket Configuration
+resource "aws_s3_bucket" "federated_data" {
+  bucket = "your-federated-data-bucket-name"
+  force_destroy = true
+}
+
+resource "aws_s3_bucket_public_access_block" "federated_data" {
+  bucket = aws_s3_bucket.federated_data.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+# S3 Bucket Policy
+resource "aws_s3_bucket_policy" "federated_data" {
+  bucket = aws_s3_bucket.federated_data.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid       = "AllowECSAccess"
+        Effect    = "Allow"
+        Principal = {
+          Service = "ecs.amazonaws.com"
+        }
+        Action   = ["s3:GetObject", "s3:PutObject", "s3:ListBucket"]
+        Resource = [
+          aws_s3_bucket.federated_data.arn,
+          "${aws_s3_bucket.federated_data.arn}/*"
+        ]
+      },
+      {
+        Sid       = "AllowECSTaskAccess"
+        Effect    = "Allow"
+        Principal = {
+          AWS = aws_iam_role.mongodb_atlas_access.arn
+        }
+        Action   = ["s3:GetObject", "s3:PutObject", "s3:ListBucket"]
+        Resource = [
+          aws_s3_bucket.federated_data.arn,
+          "${aws_s3_bucket.federated_data.arn}/*"
+        ]
+      },
+      {
+        Sid       = "AllowVPCAccess"
+        Effect    = "Allow"
+        Principal = "*"
+        Action    = ["s3:GetObject", "s3:ListBucket"]
+        Resource  = [
+          aws_s3_bucket.federated_data.arn,
+          "${aws_s3_bucket.federated_data.arn}/*"
+        ]
+        Condition = {
+          StringEquals = {
+            "aws:sourceVpc" = aws_vpc.main.id
+          }
+        }
+      },
+      {
+        Sid       = "AllowRootAccess"
+        Effect    = "Allow"
+        Principal = {
+          AWS = data.aws_caller_identity.current.account_id
+        }
+        Action   = "s3:*"
+        Resource = [
+          aws_s3_bucket.federated_data.arn,
+          "${aws_s3_bucket.federated_data.arn}/*"
+        ]
+      }
+    ]
+  })
+}
+
+
 #mongo atlas setup
 
 provider "mongodbatlas" {
@@ -736,7 +814,6 @@ resource "mongodbatlas_cluster" "cluster" {
   provider_name               = "AWS"
   provider_instance_size_name = "M30"
 }
-
 
 # VPC Peering
 resource "mongodbatlas_network_peering" "peering" {
@@ -812,21 +889,49 @@ resource "aws_iam_policy" "mongodb_atlas_access" {
 # 2. Attach necessary policies to the IAM role
 resource "aws_iam_role_policy_attachment" "mongodb_atlas_access" {
   role       = aws_iam_role.mongodb_atlas_access.name
-  policy_arn = "arn:aws:iam::aws:policy/AWSClientVPNServiceRolePolicy" # This policy includes sts:GetCallerIdentity
+  policy_arn = aws_iam_policy.mongodb_atlas_access.arn
 }
 
 # 3. Create a MongoDB Atlas federated database instance
-resource "mongodbatlas_federated_database_instance" "main" {
-  project_id = var.mongodb_atlas_project_id
-  name       = "federated-instance"
-
-  cloud_provider_config {
-    aws {
-      role_id              = aws_iam_role.mongodb_atlas_access.unique_id
-      test_s3_bucket       = ""
-    }
-  }
-}
+# MongoDB Atlas Federated Database Instance
+# resource "mongodbatlas_federated_database_instance" "main" {
+#   project_id = var.mongodb_atlas_project_id
+#   name       = "federated-instance"
+#
+#   cloud_provider_config {
+#     aws {
+#       role_id        = aws_iam_role.mongodb_atlas_access.id
+#       test_s3_bucket = aws_s3_bucket.federated_data.id
+#     }
+#   }
+#
+#   storage_databases {
+#     name = "VirtualDatabase0"
+#     collections {
+#       name = "your-collection-name"
+#       data_sources {
+#         collection = "your-cluster-collection"
+#         database   = "your-cluster-database"
+#         store_name = mongodbatlas_cluster.cluster.name
+#       }
+#       data_sources {
+#         store_name = aws_s3_bucket.federated_data.id
+#         path       = "your-s3-path"
+#       }
+#     }
+#   }
+#
+#   storage_stores {
+#     name         = "atlas-store"
+#     cluster_name = mongodbatlas_cluster.cluster.name
+#     project_id   = var.mongodb_atlas_project_id
+#     provider     = "atlas"
+#     read_preference {
+#       mode = "secondary"
+#     }
+#   }
+#
+# }
 
 # 4. Create a MongoDB Atlas database user with AWS IAM authentication
 resource "mongodbatlas_database_user" "aws_iam_user" {
