@@ -856,11 +856,22 @@ resource "aws_iam_role" "mongodb_atlas_access" {
     Version = "2012-10-17"
     Statement = [
       {
-        Action = "sts:AssumeRole"
+        Action = [
+          "ec2:DescribeNetworkInterfaces",
+          "ec2:DescribeVpcs",
+          "ec2:DescribeSubnets",
+          "ec2:DescribeSecurityGroups"
+        ],
+        Effect   = "Allow",
+        Resource = "*"
+      },
+      {
+        Action = [
+          "sts:GetCallerIdentity",
+          "sts:AssumeRole"
+        ]
         Effect = "Allow"
-        Principal = {
-          Service = "ecs-tasks.amazonaws.com"
-        }
+        Resource = "*"
       }
     ]
   })
@@ -907,7 +918,7 @@ resource "mongodbatlas_federated_database_instance" "main" {
 
   cloud_provider_config {
     aws {
-      role_id        = aws_iam_role.mongodb_atlas_access.id
+      role_id        = aws_iam_role.mongodb_atlas_access.unique_id
       test_s3_bucket = aws_s3_bucket.federated_data.id
     }
   }
