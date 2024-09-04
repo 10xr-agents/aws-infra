@@ -153,26 +153,6 @@ resource "aws_network_acl" "main" {
     to_port    = 65535
   }
 
-  # Allow ephemeral ports for outbound connections
-  egress {
-    protocol   = "tcp"
-    rule_no    = 400
-    action     = "allow"
-    cidr_block = var.mongodb_atlas_cidr_block
-    from_port  = 27017
-    to_port    = 27017
-  }
-
-  # Allow ephemeral ports for inbound connections
-  ingress {
-    protocol   = "tcp"
-    rule_no    = 400
-    action     = "allow"
-    cidr_block = var.mongodb_atlas_cidr_block
-    from_port  = 27017
-    to_port    = 27017
-  }
-
   tags = {
     Name = "${var.project_name}-nacl"
   }
@@ -278,6 +258,10 @@ resource "aws_ecs_task_definition" "service" {
         {
           name  = "SPRING_DATA_MONGODB_URI"
           value = "${mongodbatlas_cluster.cluster.connection_strings[0].standard_srv}/${var.mongodb_database_name}?authMechanism=MONGODB-AWS&authSource=$external"
+        },
+        {
+          name  = "MONGO_DB_URI"
+          value = "${mongodbatlas_cluster.cluster.connection_strings[0].standard_srv}/${var.mongodb_database_name}?authMechanism=MONGODB-AWS&authSource=$external"
         }
         ], [
         for key, value in var.services[count.index].environment_variables :
@@ -286,6 +270,14 @@ resource "aws_ecs_task_definition" "service" {
           value = value
         }
       ])
+      # Include healthCheck only if health_check_path is defined
+      healthCheck = length(var.services[count.index].health_check_path) > 0 ? {
+        command     = ["CMD-SHELL", "curl -f http://localhost:${var.services[count.index].port}${var.services[count.index].health_check_path} || exit 1"]
+        interval    = 10
+        timeout     = 5
+        retries     = 3
+        startPeriod = 60
+      } : null
       secrets = [
         for key, value in var.services[count.index].secrets :
         {
@@ -451,13 +443,13 @@ resource "aws_lb" "main" {
 resource "aws_lb_target_group" "service" {
   count       = length(var.services)
   name        = "${var.project_name}-tg-${var.services[count.index].name}"
-  port        = 80
+  port        = var.services[count.index].port
   protocol    = "HTTP"
   vpc_id      = aws_vpc.main.id
   target_type = "ip"
 
   health_check {
-    path                = "/health"
+    path                = var.services[count.index].health_check_path
     healthy_threshold   = 2
     unhealthy_threshold = 10
     timeout             = 60

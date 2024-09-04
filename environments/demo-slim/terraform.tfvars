@@ -7,53 +7,121 @@ services = [
   {
     name          = "cnvrs-srv"
     ecr_repo      = "761018882607.dkr.ecr.us-east-1.amazonaws.com/10xr/converse-server:0.0.1-demo"
-    cpu           = 1024
-    memory        = 2048
+    cpu           = 256
+    memory        = 512
     desired_count = 2
     instance_type = "medium"
     port          = 8080
     health_check_path = "/actuator/health"
     environment_variables = {
       "ENV" = "demo"
+      "ECS_ENVIRONMENT" = "demo"
       "SPRING_PROFILES_ACTIVE" = "demo"
     }
     secrets = {}
     additional_policies = ["arn:aws:iam::aws:policy/AmazonS3FullAccess"]
     capacity_provider_strategy = [
       {
-        capacity_provider = "FARGATE_SPOT"
-        weight            = 3
-        base              = 0
-      },
-      {
         capacity_provider = "FARGATE"
         weight            = 1
-        base              = 1
+        base              = 2
       }
     ]
   },
-#   {
-#     name          = "high-performance-service"
-#     ecr_repo      = "761018882607.dkr.ecr.us-east-1.amazonaws.com/10xr/high-performance:latest"
-#     cpu           = 4096
-#     memory        = 8192
-#     desired_count = 1
-#     instance_type = "xlarge"
-#     port          = 8080
-#     health_check_path = "/status"
-#     environment_variables = {
-#       "ENV" = "production"
-#     }
-#     secrets = {}
-#     additional_policies = []
-#     capacity_provider_strategy = [
-#       {
-#         capacity_provider = "FARGATE"
-#         weight            = 1
-#         base              = 1
-#       }
-#     ]
-#   }
+  {
+    name          = "cnvrs-ui"
+    ecr_repo      = "761018882607.dkr.ecr.us-east-1.amazonaws.com/10xr/converse-server:0.0.1-demo"
+    cpu           = 512
+    memory        = 1024
+    desired_count = 2
+    instance_type = "medium"
+    port          = 3000
+    health_check_path = "/app/api/management/health"
+    environment_variables = {
+      "ENV" = "demo"
+      "ECS_ENVIRONMENT" = "demo"
+      "SPRING_PROFILES_ACTIVE" = "demo"
+    }
+    secrets = {}
+    additional_policies = ["arn:aws:iam::aws:policy/AmazonS3FullAccess"]
+    capacity_provider_strategy = [
+      {
+        capacity_provider = "FARGATE"
+        weight            = 1
+        base              = 2
+      }
+    ]
+  },
+  {
+    name          = "livkt-prxy"
+    ecr_repo      = "761018882607.dkr.ecr.us-east-1.amazonaws.com/10xr/livekit-proxy:latest"
+    cpu           = 512
+    memory        = 1024
+    desired_count = 2
+    instance_type = "medium"
+    port          = 9000
+    health_check_path = "/api/v1/management/health"
+    environment_variables = {
+      "ENV" = "demo"
+      "ECS_ENVIRONMENT" = "demo"
+      "SPRING_PROFILES_ACTIVE" = "demo"
+    }
+    secrets = {}
+    additional_policies = ["arn:aws:iam::aws:policy/AmazonS3FullAccess"]
+    capacity_provider_strategy = [
+      {
+        capacity_provider = "FARGATE"
+        weight            = 1
+        base              = 2
+      }
+    ]
+  },
+  {
+    name          = "cnvrs-agt"
+    ecr_repo      = "761018882607.dkr.ecr.us-east-1.amazonaws.com/10xr/conversation-agent:v1.0.0-demo"
+    cpu           = 2048
+    memory        = 4096
+    desired_count = 2
+    instance_type = "medium"
+    port          = 8080
+    #health_check_path = "/management/health"
+    environment_variables = {
+      "ENV" = "demo"
+      "ECS_ENVIRONMENT" = "demo"
+    }
+    secrets = {}
+    additional_policies = ["arn:aws:iam::aws:policy/AmazonS3FullAccess"]
+    capacity_provider_strategy = [
+      {
+        capacity_provider = "FARGATE"
+        weight            = 1
+        base              = 2
+      }
+    ]
+  },
+  {
+    name          = "agt-anlytc"
+    ecr_repo      = "761018882607.dkr.ecr.us-east-1.amazonaws.com/10xr/agent-analytics:v1.0.0-demo"
+    cpu           = 2048
+    memory        = 4096
+    desired_count = 2
+    instance_type = "medium"
+    port          = 9800
+    health_check_path = "/management/health"
+    environment_variables = {
+      "ENV" = "demo"
+      "ECS_ENVIRONMENT" = "demo"
+    }
+    secrets = {}
+    additional_policies = ["arn:aws:iam::aws:policy/AmazonS3FullAccess"]
+    capacity_provider_strategy = [
+      {
+        capacity_provider = "FARGATE"
+        weight            = 1
+        base              = 2
+      }
+    ]
+  }
 ]
 
 instance_types = {
