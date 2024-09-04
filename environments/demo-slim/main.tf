@@ -9,15 +9,15 @@ terraform {
       version = "~> 4.40.0"
     }
     helm = {
-      source = "hashicorp/helm"
+      source  = "hashicorp/helm"
       version = "2.15.0"
     }
     kubernetes = {
-      source = "hashicorp/kubernetes"
+      source  = "hashicorp/kubernetes"
       version = "2.32.0"
     }
     aws = {
-      source = "hashicorp/aws"
+      source  = "hashicorp/aws"
       version = "5.65.0"
     }
   }
@@ -510,10 +510,10 @@ resource "cloudflare_record" "cert_validation" {
 
   zone_id = var.cloudflare_zone_id
   name    = each.value.name
-  value   = each.value.record
+  content = each.value.record
   type    = each.value.type
   ttl     = 60
-  proxied = false
+  proxied = true
 }
 
 # Certificate Validation
