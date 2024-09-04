@@ -1126,7 +1126,7 @@ resource "aws_nat_gateway" "main" {
 
 resource "aws_eip" "nat" {
   count = 2
-  vpc   = true
+  domain = "vpc"
 
   tags = {
     Name = "${var.project_name}-nat-eip-${count.index + 1}"
@@ -1827,7 +1827,7 @@ resource "aws_acm_certificate" "redis" {
 
 # Create the ElastiCache Redis cluster
 resource "aws_elasticache_replication_group" "redis" {
-  replication_group_id       = "${var.project_name}-redis"
+  replication_group_id       = "redis-${var.project_name}"
   description                = "Redis cluster for ${var.project_name}"
   node_type                  = "cache.t3.micro"
   num_cache_clusters         = 2
