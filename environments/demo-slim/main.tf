@@ -61,6 +61,7 @@ resource "aws_subnet" "public" {
   count             = 2
   vpc_id            = aws_vpc.main.id
   cidr_block        = var.public_subnet_cidrs[count.index]
+  map_public_ip_on_launch = true
   availability_zone = data.aws_availability_zones.available.names[count.index]
 
   tags = {
@@ -466,16 +467,45 @@ resource "aws_iam_policy" "ecs_task_policy" {
 # Public Certificate
 # ACM Certificate
 resource "aws_acm_certificate" "main" {
-  domain_name       = var.domain_name # e.g., "10xr.com"
-  validation_method = "DNS"
-
+  domain_name               = var.domain_name
+  validation_method         = "DNS"
   subject_alternative_names = [
-    "*.${var.domain_name}" # This covers all subdomains
+    "*.${var.domain_name}"
   ]
 
   lifecycle {
     create_before_destroy = true
   }
+}
+
+# Certificate Validation
+resource "aws_acm_certificate_validation" "main" {
+  certificate_arn         = aws_acm_certificate.main.arn
+  validation_record_fqdns = [for record in aws_route53_record.cert_validation : record.fqdn]
+}
+
+# Route 53 record for certificate validation
+resource "aws_route53_record" "cert_validation" {
+  for_each = {
+    for dvo in aws_acm_certificate.main.domain_validation_options : dvo.domain_name => {
+      name   = dvo.resource_record_name
+      record = dvo.resource_record_value
+      type   = dvo.resource_record_type
+    }
+  }
+
+  allow_overwrite = true
+  name            = each.value.name
+  records         = [each.value.record]
+  ttl             = 60
+  type            = each.value.type
+  zone_id         = data.aws_route53_zone.main.zone_id
+}
+
+# Data source for Route 53 zone
+data "aws_route53_zone" "main" {
+  name         = var.domain_name
+  private_zone = false
 }
 
 # Application Load Balancer
@@ -549,6 +579,8 @@ resource "aws_lb_listener" "https" {
       status_code  = "404"
     }
   }
+
+  depends_on = [aws_acm_certificate_validation.main]
 }
 
 resource "aws_lb_listener_rule" "service" {
@@ -1790,7 +1822,7 @@ resource "aws_iam_role_policy_attachment" "alb_ingress_controller" {
 
 # Create an ElastiCache subnet group
 resource "aws_elasticache_subnet_group" "redis" {
-  name       = "${var.project_name}-redis-subnet-group"
+  name       = "redis-${var.project_name}-subnet-group"
   subnet_ids = aws_subnet.public[*].id
 }
 
@@ -1817,8 +1849,16 @@ resource "aws_security_group" "redis" {
 
 # Create an AWS Certificate Manager (ACM) certificate for Redis
 resource "aws_acm_certificate" "redis" {
-  domain_name       = "redis.${var.project_name}.internal"
+  domain_name       = "redis.${var.domain_name}"
   validation_method = "DNS"
+
+  subject_alternative_names = [
+    "redis.${var.domain_name}",
+    "livekit.${var.domain_name}",
+    var.livekit_turn_domain_name,
+    var.livekit_domain_name,
+    "*.${var.domain_name}" # This covers all subdomains
+  ]
 
   lifecycle {
     create_before_destroy = true
@@ -1899,7 +1939,7 @@ resource "aws_iam_role_policy_attachment" "eks_redis_access" {
 
 # Update the EKS node role to allow assuming the Redis access role
 resource "aws_iam_role_policy_attachment" "eks_node_redis_access" {
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonEKSWorkerNodePolicy"
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy"
   role       = aws_iam_role.eks_nodes.name
 }
 
