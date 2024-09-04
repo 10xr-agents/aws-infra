@@ -27,11 +27,11 @@ output "ecs_services" {
   description = "Details of the ECS services"
   value = [
     for i, service in aws_ecs_service.service : {
-      name             = service.name
-      cluster          = service.cluster
-      desired_count    = service.desired_count
-      task_definition  = service.task_definition
-      load_balancer    = service.load_balancer
+      name                       = service.name
+      cluster                    = service.cluster
+      desired_count              = service.desired_count
+      task_definition            = service.task_definition
+      load_balancer              = service.load_balancer
       capacity_provider_strategy = service.capacity_provider_strategy
     }
   ]
@@ -140,4 +140,5 @@ output "livekit_api_key" {
 output "livekit_api_secret" {
   description = "LiveKit API secret"
   value       = random_password.livekit_api_secret
+  sensitive   = true
 }
