@@ -1,0 +1,34 @@
+replicaCount: 3
+
+livekit:
+    port: 7880
+    log_level: info
+    rtc:
+        tcp_port: 7881
+        port_range_start: 50000
+        port_range_end: 60000
+        use_external_ip: true
+    redis:
+         address: "${aws_redis_cluster}"
+         username: "${livekit_redis_username}"
+         password: "${livekit_redis_password}"
+         use_tls: true
+    keys:
+        "${livekit_api_key}": "${livekit_api_secret}"
+    turn:
+        enabled: true
+        domain: "${livekit_turn_domain_name}"
+        secretName: "${livekit_secret_name}"
+
+service:
+    type: NodePort
+
+podHostNetwork: true
+
+resources:
+    limits:
+        cpu: 2000m
+        memory: 2048Mi
+    requests:
+        cpu: 1000m
+        memory: 1024Mi

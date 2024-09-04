@@ -12,6 +12,30 @@ provider "aws" {
   region = var.aws_region
 }
 
+# Helm provider
+provider "helm" {
+  kubernetes {
+    host                   = aws_eks_cluster.main.endpoint
+    cluster_ca_certificate = base64decode(aws_eks_cluster.main.certificate_authority[0].data)
+    exec {
+      api_version = "client.authentication.k8s.io/v1beta1"
+      args        = ["eks", "get-token", "--cluster-name", aws_eks_cluster.main.name]
+      command     = "aws"
+    }
+  }
+}
+
+# Kubernetes provider
+provider "kubernetes" {
+  host                   = aws_eks_cluster.main.endpoint
+  cluster_ca_certificate = base64decode(aws_eks_cluster.main.certificate_authority[0].data)
+  exec {
+    api_version = "client.authentication.k8s.io/v1beta1"
+    args        = ["eks", "get-token", "--cluster-name", aws_eks_cluster.main.name]
+    command     = "aws"
+  }
+}
+
 # VPC
 resource "aws_vpc" "main" {
   cidr_block           = var.vpc_cidr
@@ -153,6 +177,26 @@ resource "aws_network_acl" "main" {
     to_port    = 65535
   }
 
+  # Allow ephemeral ports for outbound connections
+  egress {
+    protocol   = "udp"
+    rule_no    = 400
+    action     = "allow"
+    cidr_block = "0.0.0.0/0"
+    from_port  = 1024
+    to_port    = 65535
+  }
+
+  # Allow ephemeral ports for inbound connections
+  ingress {
+    protocol   = "udp"
+    rule_no    = 400
+    action     = "allow"
+    cidr_block = "0.0.0.0/0"
+    from_port  = 1024
+    to_port    = 65535
+  }
+
   tags = {
     Name = "${var.project_name}-nacl"
   }
@@ -182,14 +226,14 @@ resource "aws_security_group" "ecs_sg" {
     from_port   = 0
     to_port     = 65535
     protocol    = "tcp"
-    cidr_blocks = [ var.mongodb_atlas_cidr_block ]
+    cidr_blocks = [var.mongodb_atlas_cidr_block]
   }
 
   egress {
     from_port   = 0
     to_port     = 65535
     protocol    = "tcp"
-    cidr_blocks = [ var.mongodb_atlas_cidr_block ]
+    cidr_blocks = [var.mongodb_atlas_cidr_block]
   }
 
   ingress {
@@ -335,7 +379,7 @@ resource "aws_ecs_service" "service" {
 
   enable_execute_command = var.enable_ecs_exec
 
-  depends_on = [aws_lb_listener.front_end]
+  depends_on = [aws_lb_listener.https]
 }
 
 # Service Discovery
@@ -419,6 +463,21 @@ resource "aws_iam_policy" "ecs_task_policy" {
   })
 }
 
+# Public Certificate
+# ACM Certificate
+resource "aws_acm_certificate" "main" {
+  domain_name       = var.domain_name # e.g., "10xr.com"
+  validation_method = "DNS"
+
+  subject_alternative_names = [
+    "*.${var.domain_name}" # This covers all subdomains
+  ]
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
 # Application Load Balancer
 resource "aws_lb" "main" {
   name               = "${var.project_name}-alb"
@@ -458,10 +517,29 @@ resource "aws_lb_target_group" "service" {
   }
 }
 
-resource "aws_lb_listener" "front_end" {
+# HTTP Listener
+resource "aws_lb_listener" "http" {
   load_balancer_arn = aws_lb.main.arn
   port              = 80
   protocol          = "HTTP"
+
+  default_action {
+    type = "redirect"
+    redirect {
+      port        = "443"
+      protocol    = "HTTPS"
+      status_code = "HTTP_301"
+    }
+  }
+}
+
+# HTTPS Listener
+resource "aws_lb_listener" "https" {
+  load_balancer_arn = aws_lb.main.arn
+  port              = 443
+  protocol          = "HTTPS"
+  ssl_policy        = "ELBSecurityPolicy-2016-08"
+  certificate_arn   = aws_acm_certificate.main.arn
 
   default_action {
     type = "fixed-response"
@@ -475,7 +553,7 @@ resource "aws_lb_listener" "front_end" {
 
 resource "aws_lb_listener_rule" "service" {
   count        = length(var.services)
-  listener_arn = aws_lb_listener.front_end.arn
+  listener_arn = aws_lb_listener.https.arn
 
   action {
     type             = "forward"
@@ -485,6 +563,28 @@ resource "aws_lb_listener_rule" "service" {
   condition {
     path_pattern {
       values = ["/${var.services[count.index].name}*"]
+    }
+  }
+}
+
+# Listener Rule for demo.10xr.com
+resource "aws_lb_listener_rule" "demo_subdomain" {
+  listener_arn = aws_lb_listener.https.arn
+
+  action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.service[index(var.services[*].name, "cnvrs-ui")].arn
+  }
+
+  condition {
+    host_header {
+      values = ["demo.10xr.com"]
+    }
+  }
+
+  condition {
+    path_pattern {
+      values = ["/demo*"]
     }
   }
 }
@@ -752,7 +852,7 @@ resource "aws_s3_bucket_public_access_block" "federated_data" {
 
 # S3 Bucket Policy
 resource "aws_s3_bucket_policy" "federated_data" {
-  count      = length(var.services)
+  count  = length(var.services)
   bucket = aws_s3_bucket.federated_data.id
 
   policy = jsonencode({
@@ -892,7 +992,7 @@ resource "mongodbatlas_project_ip_access_list" "ip_access_list" {
 
 # Create a MongoDB Atlas database user with AWS IAM authentication
 resource "mongodbatlas_database_user" "aws_iam_user" {
-  count      = length(var.services)
+  count              = length(var.services)
   project_id         = var.mongodb_atlas_project_id
   auth_database_name = "$external"
   username           = aws_iam_role.ecs_task_role[count.index].arn
@@ -911,5 +1011,947 @@ resource "mongodbatlas_database_user" "aws_iam_user" {
   scopes {
     name = mongodbatlas_cluster.cluster.name
     type = "CLUSTER"
+  }
+}
+
+# eks cluster for livekit
+resource "aws_eks_cluster" "main" {
+  name     = "${var.project_name}-cluster"
+  role_arn = aws_iam_role.eks_cluster.arn
+
+  vpc_config {
+    subnet_ids         = aws_subnet.public[*].id
+    security_group_ids = [aws_security_group.eks_cluster.id]
+  }
+
+  depends_on = [
+    aws_iam_role_policy_attachment.eks_cluster_AmazonEKSClusterPolicy,
+    aws_iam_role_policy_attachment.eks_cluster_AmazonEKSVPCResourceController,
+  ]
+}
+
+# EKS Cluster IAM Role
+resource "aws_iam_role" "eks_cluster" {
+  name = "${var.project_name}-eks-cluster-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "eks.amazonaws.com"
+        }
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "eks_cluster_AmazonEKSClusterPolicy" {
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy"
+  role       = aws_iam_role.eks_cluster.name
+}
+
+resource "aws_iam_role_policy_attachment" "eks_cluster_AmazonEKSVPCResourceController" {
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSVPCResourceController"
+  role       = aws_iam_role.eks_cluster.name
+}
+
+# EKS Node Groups
+resource "aws_eks_node_group" "main" {
+  cluster_name    = aws_eks_cluster.main.name
+  node_group_name = "${var.project_name}-node-group"
+  node_role_arn   = aws_iam_role.eks_nodes.arn
+  subnet_ids      = aws_subnet.public[*].id
+
+  scaling_config {
+    desired_size = 3
+    max_size     = 5
+    min_size     = 2
+  }
+
+  instance_types = ["t3.medium"]
+
+  depends_on = [
+    aws_iam_role_policy_attachment.eks_nodes_AmazonEKSWorkerNodePolicy,
+    aws_iam_role_policy_attachment.eks_nodes_AmazonEKS_CNI_Policy,
+    aws_iam_role_policy_attachment.eks_nodes_AmazonEC2ContainerRegistryReadOnly,
+  ]
+}
+
+# EKS Node IAM Role
+resource "aws_iam_role" "eks_nodes" {
+  name = "${var.project_name}-eks-node-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "ec2.amazonaws.com"
+        }
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "eks_nodes_AmazonEKSWorkerNodePolicy" {
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy"
+  role       = aws_iam_role.eks_nodes.name
+}
+
+resource "aws_iam_role_policy_attachment" "eks_nodes_AmazonEKS_CNI_Policy" {
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy"
+  role       = aws_iam_role.eks_nodes.name
+}
+
+resource "aws_iam_role_policy_attachment" "eks_nodes_AmazonEC2ContainerRegistryReadOnly" {
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
+  role       = aws_iam_role.eks_nodes.name
+}
+
+# NAT Gateways
+resource "aws_nat_gateway" "main" {
+  count         = 2
+  allocation_id = aws_eip.nat[count.index].id
+  subnet_id     = aws_subnet.public[count.index].id
+
+  tags = {
+    Name = "${var.project_name}-nat-gw-${count.index + 1}"
+  }
+}
+
+resource "aws_eip" "nat" {
+  count = 2
+  vpc   = true
+
+  tags = {
+    Name = "${var.project_name}-nat-eip-${count.index + 1}"
+  }
+}
+
+# Network Load Balancer
+resource "aws_lb" "nlb" {
+  name               = "${var.project_name}-nlb"
+  internal           = false
+  load_balancer_type = "network"
+  subnets            = aws_subnet.public[*].id
+
+  enable_deletion_protection = false
+
+  tags = {
+    Name = "${var.project_name}-nlb"
+  }
+}
+
+# NLB Target Group for LiveKit
+resource "aws_lb_target_group" "livekit" {
+  name        = "${var.project_name}-livekit-tg"
+  port        = 7880
+  protocol    = "TCP"
+  vpc_id      = aws_vpc.main.id
+  target_type = "ip"
+
+  health_check {
+    protocol = "HTTP"
+    path     = "/health"
+    port     = "traffic-port"
+  }
+}
+
+# NLB Listener for LiveKit
+resource "aws_lb_listener" "livekit" {
+  load_balancer_arn = aws_lb.nlb.arn
+  port              = 7880
+  protocol          = "TCP"
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.livekit.arn
+  }
+}
+
+# NLB Listener for HTTP traffic
+resource "aws_lb_listener" "nlb_http" {
+  load_balancer_arn = aws_lb.nlb.arn
+  port              = 80
+  protocol          = "TCP"
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.livekit_http.arn
+  }
+}
+
+# NLB Listener for HTTPS traffic
+resource "aws_lb_listener" "nlb_https" {
+  load_balancer_arn = aws_lb.nlb.arn
+  port              = 443
+  protocol          = "TLS"
+  ssl_policy        = "ELBSecurityPolicy-TLS-1-2-2017-01"
+  certificate_arn   = aws_acm_certificate.main.arn
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.livekit_https.arn
+  }
+}
+
+# NLB Listener for WebRTC traffic
+resource "aws_lb_listener" "nlb_webrtc" {
+  load_balancer_arn = aws_lb.nlb.arn
+  port              = 7882
+  protocol          = "UDP"
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.livekit_webrtc.arn
+  }
+}
+
+resource "aws_lb_listener" "livekit_rtmp" {
+  load_balancer_arn = aws_lb.nlb.arn
+  port              = 1935
+  protocol          = "TCP"
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.livekit_rtmp.arn
+  }
+}
+
+resource "aws_lb_listener" "livekit_whip" {
+  load_balancer_arn = aws_lb.nlb.arn
+  port              = 8080
+  protocol          = "TCP"
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.livekit_whip.arn
+  }
+}
+
+# NLB Target Group for HTTP traffic
+resource "aws_lb_target_group" "livekit_http" {
+  name        = "${var.project_name}-livekit-http"
+  port        = 7880
+  protocol    = "TCP"
+  vpc_id      = aws_vpc.main.id
+  target_type = "ip"
+
+  health_check {
+    enabled             = true
+    protocol            = "HTTP"
+    path                = "/health"
+    port                = "traffic-port"
+    healthy_threshold   = 3
+    unhealthy_threshold = 3
+    interval            = 30
+  }
+}
+
+# NLB Target Group for HTTPS traffic
+resource "aws_lb_target_group" "livekit_https" {
+  name        = "${var.project_name}-livekit-https"
+  port        = 7880
+  protocol    = "TCP"
+  vpc_id      = aws_vpc.main.id
+  target_type = "ip"
+
+  health_check {
+    enabled             = true
+    protocol            = "HTTPS"
+    path                = "/health"
+    port                = "traffic-port"
+    healthy_threshold   = 3
+    unhealthy_threshold = 3
+    interval            = 30
+  }
+}
+
+# NLB Target Group for WebRTC traffic
+resource "aws_lb_target_group" "livekit_webrtc" {
+  name        = "${var.project_name}-livekit-webrtc"
+  port        = 7882
+  protocol    = "UDP"
+  vpc_id      = aws_vpc.main.id
+  target_type = "ip"
+
+  health_check {
+    enabled             = true
+    protocol            = "TCP"
+    port                = 7880
+    healthy_threshold   = 3
+    unhealthy_threshold = 3
+    interval            = 30
+  }
+}
+
+resource "aws_lb_target_group" "livekit_rtmp" {
+  name        = "${var.project_name}-livekit-rtmp"
+  port        = 1935
+  protocol    = "TCP"
+  vpc_id      = aws_vpc.main.id
+  target_type = "ip"
+
+  health_check {
+    enabled             = true
+    protocol            = "TCP"
+    healthy_threshold   = 3
+    unhealthy_threshold = 3
+    interval            = 30
+  }
+}
+
+resource "aws_lb_target_group" "livekit_whip" {
+  name        = "${var.project_name}-livekit-whip"
+  port        = 8080
+  protocol    = "TCP"
+  vpc_id      = aws_vpc.main.id
+  target_type = "ip"
+
+  health_check {
+    enabled             = true
+    protocol            = "HTTP"
+    path                = "/health"
+    port                = "7888"
+    healthy_threshold   = 3
+    unhealthy_threshold = 3
+    interval            = 30
+  }
+}
+
+# Security Group for EKS
+resource "aws_security_group" "eks_cluster" {
+  name        = "${var.project_name}-eks-cluster-sg"
+  description = "Security group for EKS cluster"
+  vpc_id      = aws_vpc.main.id
+
+  ingress {
+    description = "Allow inbound traffic from NLB"
+    from_port   = 0
+    to_port     = 65535
+    protocol    = "tcp"
+    cidr_blocks = [var.vpc_cidr]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    description = "Allow inbound HTTP traffic to LiveKit"
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    description = "Allow inbound HTTPS traffic to LiveKit"
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+
+  ingress {
+    description = "Allow inbound traffic to LiveKit"
+    from_port   = 7880
+    to_port     = 7882
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    description = "Allow inbound traffic LiveKit RTC"
+    from_port   = 50000
+    to_port     = 60000
+    protocol    = "udp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    description = "Allow inbound traffic LiveKit TURN"
+    from_port   = 3478
+    to_port     = 3478
+    protocol    = "udp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    description = "Allow inbound traffic LiveKit TURN TLS"
+    from_port   = 5349
+    to_port     = 5349
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    description = "Allow inbound traffic LiveKit RTMP"
+    from_port   = 1935
+    to_port     = 1935
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    description = "Allow inbound traffic LiveKit TURN WHIM"
+    from_port   = 8080
+    to_port     = 8080
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    description = "Allow outbound HTTP traffic to LiveKit"
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    description = "Allow outbound HTTPS traffic to LiveKit"
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    description = "Allow outbound traffic to LiveKit"
+    from_port   = 7880
+    to_port     = 7882
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    description = "Allow outbound traffic LiveKit RTC"
+    from_port   = 50000
+    to_port     = 60000
+    protocol    = "udp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    description = "Allow outbound traffic LiveKit TURN"
+    from_port   = 3478
+    to_port     = 3478
+    protocol    = "udp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    description = "Allow outbound traffic LiveKit TURN TLS"
+    from_port   = 5349
+    to_port     = 5349
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name = "${var.project_name}-eks-cluster-sg"
+  }
+}
+
+# Helm LiveKit provider
+
+# Create a namespace for LiveKit
+resource "kubernetes_namespace" "livekit" {
+  metadata {
+    name = "livekit"
+  }
+}
+
+resource "random_password" "livekit_api_secret" {
+  length  = 256
+  special = false
+}
+
+# LiveKit Helm Chart
+# LiveKit Server Helm Chart
+resource "helm_release" "livekit_server" {
+  name       = "livekit-server"
+  repository = "https://helm.livekit.io"
+  chart      = "livekit-server"
+  namespace  = kubernetes_namespace.livekit.metadata[0].name
+
+  values = [
+    templatefile("${path.module}/templates/livekit-server-values.yaml", {
+      livekit_api_key          = var.livekit_api_key
+      livekit_api_secret       = random_password.livekit_api_secret.result
+      livekit_turn_domain_name = var.livekit_turn_domain_name
+      aws_redis_cluster        = "${aws_elasticache_replication_group.redis.primary_endpoint_address}:6379"
+      livekit_redis_username   = "default"
+      livekit_redis_password   = random_password.redis_auth_token.result
+      livekit_secret_name      = kubernetes_secret.tls_cert.metadata[0].name
+    })
+  ]
+
+  depends_on = [aws_eks_node_group.main]
+}
+
+# LiveKit Ingress Helm Chart
+resource "helm_release" "livekit_ingress" {
+  name       = "livekit-ingress"
+  repository = "https://helm.livekit.io"
+  chart      = "ingress"
+  namespace  = kubernetes_namespace.livekit.metadata[0].name
+
+  values = [
+    templatefile("${path.module}/templates/livekit-ingress-values.yaml", {
+      livekit_api_key        = var.livekit_api_key
+      livekit_api_secret     = random_password.livekit_api_secret.result
+      livekit_domain_name    = var.livekit_domain_name
+      aws_redis_cluster      = "${aws_elasticache_replication_group.redis.primary_endpoint_address}:6379"
+      livekit_redis_username = "default"
+      livekit_redis_password = random_password.redis_auth_token.result
+    })
+  ]
+
+  depends_on = [helm_release.livekit_server]
+}
+
+# LiveKit Egress Helm Chart
+resource "helm_release" "livekit_egress" {
+  name       = "livekit-egress"
+  repository = "https://helm.livekit.io"
+  chart      = "egress"
+  namespace  = kubernetes_namespace.livekit.metadata[0].name
+
+  values = [
+    templatefile("${path.module}/templates/livekit-egress-values.yaml", {
+      livekit_api_key        = var.livekit_api_key
+      livekit_api_secret     = random_password.livekit_api_secret.result
+      livekit_domain_name    = var.livekit_domain_name
+      aws_redis_cluster      = "${aws_elasticache_replication_group.redis.primary_endpoint_address}:6379"
+      livekit_redis_username = "default"
+      livekit_redis_password = random_password.redis_auth_token.result
+    })
+  ]
+
+  depends_on = [helm_release.livekit_server]
+}
+
+# ALB Ingress Controller
+resource "helm_release" "alb_ingress_controller" {
+  name       = "aws-load-balancer-controller"
+  repository = "https://aws.github.io/eks-charts"
+  chart      = "aws-load-balancer-controller"
+  namespace  = "kube-system"
+
+  set {
+    name  = "clusterName"
+    value = aws_eks_cluster.main.name
+  }
+
+  set {
+    name  = "serviceAccount.create"
+    value = "true"
+  }
+
+  set {
+    name  = "serviceAccount.name"
+    value = "aws-load-balancer-controller"
+  }
+
+  depends_on = [aws_eks_node_group.main]
+}
+
+# IAM Policy for ALB Ingress Controller
+resource "aws_iam_policy" "alb_ingress_controller" {
+  name        = "${var.project_name}-alb-ingress-controller"
+  path        = "/"
+  description = "IAM policy for ALB Ingress Controller"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "iam:CreateServiceLinkedRole",
+          "ec2:DescribeAccountAttributes",
+          "ec2:DescribeAddresses",
+          "ec2:DescribeAvailabilityZones",
+          "ec2:DescribeInternetGateways",
+          "ec2:DescribeVpcs",
+          "ec2:DescribeSubnets",
+          "ec2:DescribeSecurityGroups",
+          "ec2:DescribeInstances",
+          "ec2:DescribeNetworkInterfaces",
+          "ec2:DescribeTags",
+          "ec2:GetCoipPoolUsage",
+          "ec2:DescribeCoipPools",
+          "elasticloadbalancing:DescribeLoadBalancers",
+          "elasticloadbalancing:DescribeLoadBalancerAttributes",
+          "elasticloadbalancing:DescribeListeners",
+          "elasticloadbalancing:DescribeListenerCertificates",
+          "elasticloadbalancing:DescribeSSLPolicies",
+          "elasticloadbalancing:DescribeRules",
+          "elasticloadbalancing:DescribeTargetGroups",
+          "elasticloadbalancing:DescribeTargetGroupAttributes",
+          "elasticloadbalancing:DescribeTargetHealth",
+          "elasticloadbalancing:DescribeTags"
+        ]
+        Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "cognito-idp:DescribeUserPoolClient",
+          "acm:ListCertificates",
+          "acm:DescribeCertificate",
+          "iam:ListServerCertificates",
+          "iam:GetServerCertificate",
+          "waf-regional:GetWebACL",
+          "waf-regional:GetWebACLForResource",
+          "waf-regional:AssociateWebACL",
+          "waf-regional:DisassociateWebACL",
+          "wafv2:GetWebACL",
+          "wafv2:GetWebACLForResource",
+          "wafv2:AssociateWebACL",
+          "wafv2:DisassociateWebACL",
+          "shield:GetSubscriptionState",
+          "shield:DescribeProtection",
+          "shield:CreateProtection",
+          "shield:DeleteProtection"
+        ]
+        Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "ec2:AuthorizeSecurityGroupIngress",
+          "ec2:RevokeSecurityGroupIngress"
+        ]
+        Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "ec2:CreateSecurityGroup"
+        ]
+        Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "ec2:CreateTags"
+        ]
+        Resource = "arn:aws:ec2:*:*:security-group/*"
+        Condition = {
+          StringEquals = {
+            "ec2:CreateAction" = "CreateSecurityGroup"
+          }
+          Null = {
+            "aws:RequestTag/elbv2.k8s.aws/cluster" = "false"
+          }
+        }
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "ec2:CreateTags",
+          "ec2:DeleteTags"
+        ]
+        Resource = "arn:aws:ec2:*:*:security-group/*"
+        Condition = {
+          Null = {
+            "aws:RequestTag/elbv2.k8s.aws/cluster"  = "true"
+            "aws:ResourceTag/elbv2.k8s.aws/cluster" = "false"
+          }
+        }
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "ec2:AuthorizeSecurityGroupIngress",
+          "ec2:RevokeSecurityGroupIngress",
+          "ec2:DeleteSecurityGroup"
+        ]
+        Resource = "*"
+        Condition = {
+          Null = {
+            "aws:ResourceTag/elbv2.k8s.aws/cluster" = "false"
+          }
+        }
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "elasticloadbalancing:CreateLoadBalancer",
+          "elasticloadbalancing:CreateTargetGroup"
+        ]
+        Resource = "*"
+        Condition = {
+          Null = {
+            "aws:RequestTag/elbv2.k8s.aws/cluster" = "false"
+          }
+        }
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "elasticloadbalancing:CreateListener",
+          "elasticloadbalancing:DeleteListener",
+          "elasticloadbalancing:CreateRule",
+          "elasticloadbalancing:DeleteRule"
+        ]
+        Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "elasticloadbalancing:AddTags",
+          "elasticloadbalancing:RemoveTags"
+        ]
+        Resource = [
+          "arn:aws:elasticloadbalancing:*:*:targetgroup/*/*",
+          "arn:aws:elasticloadbalancing:*:*:loadbalancer/net/*/*",
+          "arn:aws:elasticloadbalancing:*:*:loadbalancer/app/*/*"
+        ]
+        Condition = {
+          Null = {
+            "aws:RequestTag/elbv2.k8s.aws/cluster"  = "true"
+            "aws:ResourceTag/elbv2.k8s.aws/cluster" = "false"
+          }
+        }
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "elasticloadbalancing:AddTags",
+          "elasticloadbalancing:RemoveTags"
+        ]
+        Resource = [
+          "arn:aws:elasticloadbalancing:*:*:listener/net/*/*/*",
+          "arn:aws:elasticloadbalancing:*:*:listener/app/*/*/*",
+          "arn:aws:elasticloadbalancing:*:*:listener-rule/net/*/*/*",
+          "arn:aws:elasticloadbalancing:*:*:listener-rule/app/*/*/*"
+        ]
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "elasticloadbalancing:ModifyLoadBalancerAttributes",
+          "elasticloadbalancing:SetIpAddressType",
+          "elasticloadbalancing:SetSecurityGroups",
+          "elasticloadbalancing:SetSubnets",
+          "elasticloadbalancing:DeleteLoadBalancer",
+          "elasticloadbalancing:ModifyTargetGroup",
+          "elasticloadbalancing:ModifyTargetGroupAttributes",
+          "elasticloadbalancing:DeleteTargetGroup"
+        ]
+        Resource = "*"
+        Condition = {
+          Null = {
+            "aws:ResourceTag/elbv2.k8s.aws/cluster" = "false"
+          }
+        }
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "elasticloadbalancing:RegisterTargets",
+          "elasticloadbalancing:DeregisterTargets"
+        ]
+        Resource = "arn:aws:elasticloadbalancing:*:*:targetgroup/*/*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "elasticloadbalancing:SetWebAcl",
+          "elasticloadbalancing:ModifyListener",
+          "elasticloadbalancing:AddListenerCertificates",
+          "elasticloadbalancing:RemoveListenerCertificates",
+          "elasticloadbalancing:ModifyRule"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+# Attach the ALB Ingress Controller policy to the EKS node role
+resource "aws_iam_role_policy_attachment" "alb_ingress_controller" {
+  policy_arn = aws_iam_policy.alb_ingress_controller.arn
+  role       = aws_iam_role.eks_nodes.name
+}
+
+# Create an ElastiCache subnet group
+resource "aws_elasticache_subnet_group" "redis" {
+  name       = "${var.project_name}-redis-subnet-group"
+  subnet_ids = aws_subnet.public[*].id
+}
+
+# Create a security group for Redis
+resource "aws_security_group" "redis" {
+  name        = "${var.project_name}-redis-sg"
+  description = "Security group for Redis cluster"
+  vpc_id      = aws_vpc.main.id
+
+  ingress {
+    from_port       = 6379
+    to_port         = 6379
+    protocol        = "tcp"
+    security_groups = [aws_security_group.eks_cluster.id]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+# Create an AWS Certificate Manager (ACM) certificate for Redis
+resource "aws_acm_certificate" "redis" {
+  domain_name       = "redis.${var.project_name}.internal"
+  validation_method = "DNS"
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+# Create the ElastiCache Redis cluster
+resource "aws_elasticache_replication_group" "redis" {
+  replication_group_id       = "${var.project_name}-redis"
+  description                = "Redis cluster for ${var.project_name}"
+  node_type                  = "cache.t3.micro"
+  num_cache_clusters         = 2
+  port                       = 6379
+  subnet_group_name          = aws_elasticache_subnet_group.redis.name
+  security_group_ids         = [aws_security_group.redis.id]
+  automatic_failover_enabled = true
+
+  engine               = "redis"
+  engine_version       = "6.x"
+  parameter_group_name = "default.redis6.x"
+
+  transit_encryption_enabled = true
+  auth_token                 = random_password.redis_auth_token.result
+
+  depends_on = [aws_acm_certificate.redis]
+}
+
+# Generate a random auth token for Redis
+resource "random_password" "redis_auth_token" {
+  length  = 32
+  special = false
+}
+
+# Create an IAM role for EKS pods to access Redis
+resource "aws_iam_role" "eks_redis_access" {
+  name = "${var.project_name}-eks-redis-access"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "eks.amazonaws.com"
+        }
+      }
+    ]
+  })
+}
+
+# Create an IAM policy for Redis access
+resource "aws_iam_policy" "redis_access" {
+  name        = "${var.project_name}-redis-access-policy"
+  description = "IAM policy for Redis access from EKS pods"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "elasticache:DescribeReplicationGroups",
+          "elasticache:DescribeCacheClusters",
+          "elasticache:ListTagsForResource"
+        ]
+        Resource = aws_elasticache_replication_group.redis.arn
+      }
+    ]
+  })
+}
+
+# Attach the Redis access policy to the EKS Redis access role
+resource "aws_iam_role_policy_attachment" "eks_redis_access" {
+  policy_arn = aws_iam_policy.redis_access.arn
+  role       = aws_iam_role.eks_redis_access.name
+}
+
+# Update the EKS node role to allow assuming the Redis access role
+resource "aws_iam_role_policy_attachment" "eks_node_redis_access" {
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonEKSWorkerNodePolicy"
+  role       = aws_iam_role.eks_nodes.name
+}
+
+# Create a Kubernetes secret for Redis credentials
+resource "kubernetes_secret" "redis_credentials" {
+  metadata {
+    name      = "redis-credentials"
+    namespace = kubernetes_namespace.livekit.metadata[0].name
+  }
+
+  data = {
+    host     = aws_elasticache_replication_group.redis.primary_endpoint_address
+    port     = "6379"
+    password = random_password.redis_auth_token.result
+  }
+}
+
+# Generate a private key
+resource "tls_private_key" "cert_private_key" {
+  algorithm = "RSA"
+  rsa_bits  = 2048
+}
+
+# Create a self-signed certificate
+resource "tls_self_signed_cert" "cert" {
+  private_key_pem = tls_private_key.cert_private_key.private_key_pem
+
+  subject {
+    common_name  = "*.${var.domain_name}"
+    organization = var.project_name
+  }
+
+  validity_period_hours = 8760 # 1 year
+
+  allowed_uses = [
+    "key_encipherment",
+    "digital_signature",
+    "server_auth",
+  ]
+}
+
+# Create a Kubernetes secret for the certificate
+resource "kubernetes_secret" "tls_cert" {
+  metadata {
+    name      = "${var.project_name}-tls-cert"
+    namespace = kubernetes_namespace.livekit.metadata[0].name
+  }
+
+  type = "kubernetes.io/tls"
+
+  data = {
+    "tls.crt" = tls_self_signed_cert.cert.cert_pem
+    "tls.key" = tls_private_key.cert_private_key.private_key_pem
   }
 }

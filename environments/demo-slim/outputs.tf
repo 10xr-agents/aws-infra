@@ -119,3 +119,25 @@ output "ecs_instance_profile_name" {
   description = "Name of the ECS instance profile"
   value       = aws_iam_instance_profile.ecs_instance_profile.name
 }
+
+# Output for manual DNS validation
+output "acm_validation_records" {
+  value = {
+    for dvo in aws_acm_certificate.main.domain_validation_options : dvo.domain_name => {
+      name   = dvo.resource_record_name
+      record = dvo.resource_record_value
+      type   = dvo.resource_record_type
+    }
+  }
+  description = "The DNS records to create in Cloudflare for ACM certificate validation"
+}
+
+output "livekit_api_key" {
+  description = "LiveKit API key"
+  value       = var.livekit_api_key
+}
+
+output "livekit_api_secret" {
+  description = "LiveKit API secret"
+  value       = random_password.livekit_api_secret
+}

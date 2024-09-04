@@ -8,6 +8,11 @@ variable "project_name" {
   type        = string
 }
 
+variable "domain_name" {
+  description = "Domain on which our services will be hosted"
+  type        = string
+}
+
 variable "vpc_cidr" {
   description = "The CIDR block for the VPC"
   type        = string
@@ -154,4 +159,19 @@ variable "mongodb_database_name" {
   description = "Database used from MongoDB Atlas cluster"
   type        = string
   default     = "converse-server"
+}
+
+variable "livekit_api_key" {
+  description = "LiveKit API key"
+  type        = string
+}
+
+variable "livekit_domain_name" {
+  description = "LiveKit domain name"
+  type        = string
+}
+
+variable "livekit_turn_domain_name" {
+  description = "LiveKit TURN domain name"
+  type        = string
 }
