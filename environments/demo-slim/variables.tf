@@ -175,3 +175,13 @@ variable "livekit_turn_domain_name" {
   description = "LiveKit TURN domain name"
   type        = string
 }
+
+variable "cloudflare_api_token" {
+  description = "Cloudflare API Token"
+  type        = string
+}
+
+variable "cloudflare_zone_id" {
+  description = "Cloudflare zone id"
+  type        = string
+}
