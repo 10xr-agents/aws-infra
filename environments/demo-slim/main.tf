@@ -12,8 +12,17 @@ terraform {
       source = "hashicorp/helm"
       version = "2.15.0"
     }
+    kubernetes = {
+      source = "hashicorp/kubernetes"
+      version = "2.32.0"
+    }
+    aws = {
+      source = "hashicorp/aws"
+      version = "5.65.0"
+    }
   }
 }
+
 provider "cloudflare" {
   api_token = var.cloudflare_api_token
 }
@@ -1909,7 +1918,7 @@ resource "aws_elasticache_replication_group" "redis" {
   automatic_failover_enabled = true
 
   engine               = "redis"
-  engine_version       = "7.x"
+  engine_version       = "7.1"
   parameter_group_name = "default.redis7"
 
   transit_encryption_enabled = true
