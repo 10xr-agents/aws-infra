@@ -6,7 +6,11 @@ terraform {
     }
     cloudflare = {
       source  = "cloudflare/cloudflare"
-      version = "~> 3.0"
+      version = "~> 4.40.0"
+    }
+    helm = {
+      source = "hashicorp/helm"
+      version = "2.15.0"
     }
   }
 }
@@ -65,11 +69,11 @@ resource "aws_internet_gateway" "main" {
 
 # Subnets
 resource "aws_subnet" "public" {
-  count             = 2
-  vpc_id            = aws_vpc.main.id
-  cidr_block        = var.public_subnet_cidrs[count.index]
+  count                   = 2
+  vpc_id                  = aws_vpc.main.id
+  cidr_block              = var.public_subnet_cidrs[count.index]
   map_public_ip_on_launch = true
-  availability_zone = data.aws_availability_zones.available.names[count.index]
+  availability_zone       = data.aws_availability_zones.available.names[count.index]
 
   tags = {
     Name = "${var.project_name}-public-subnet-${count.index + 1}"
@@ -474,8 +478,8 @@ resource "aws_iam_policy" "ecs_task_policy" {
 # Public Certificate
 # ACM Certificate
 resource "aws_acm_certificate" "main" {
-  domain_name               = var.domain_name
-  validation_method         = "DNS"
+  domain_name       = var.domain_name
+  validation_method = "DNS"
   subject_alternative_names = [
     "*.${var.domain_name}"
   ]
@@ -1146,6 +1150,33 @@ resource "aws_iam_role_policy_attachment" "eks_nodes_AmazonEC2ContainerRegistryR
   role       = aws_iam_role.eks_nodes.name
 }
 
+resource "aws_iam_policy" "eks_full_access" {
+  name        = "EKSFullAccess"
+  path        = "/"
+  description = "Full access to EKS cluster and its internals"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = "*"
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_user_policy_attachment" "current_user_eks_access" {
+  policy_arn = aws_iam_policy.eks_full_access.arn
+  user       = data.aws_caller_identity.current.arn
+}
+
+resource "aws_iam_user_policy_attachment" "root_user_eks_access" {
+  policy_arn = aws_iam_policy.eks_full_access.arn
+  user       = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
+}
+
 # NAT Gateways
 resource "aws_nat_gateway" "main" {
   count         = 2
@@ -1158,7 +1189,7 @@ resource "aws_nat_gateway" "main" {
 }
 
 resource "aws_eip" "nat" {
-  count = 2
+  count  = 2
   domain = "vpc"
 
   tags = {
@@ -1530,7 +1561,7 @@ resource "helm_release" "livekit_server" {
     })
   ]
 
-  depends_on = [aws_eks_node_group.main]
+  depends_on = [aws_eks_node_group.main, helm_release.alb_ingress_controller]
 }
 
 # LiveKit Ingress Helm Chart
@@ -1878,8 +1909,8 @@ resource "aws_elasticache_replication_group" "redis" {
   automatic_failover_enabled = true
 
   engine               = "redis"
-  engine_version       = "6.x"
-  parameter_group_name = "default.redis6.x"
+  engine_version       = "7.x"
+  parameter_group_name = "default.redis7"
 
   transit_encryption_enabled = true
   auth_token                 = random_password.redis_auth_token.result
