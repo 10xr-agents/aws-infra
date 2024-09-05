@@ -513,7 +513,7 @@ resource "cloudflare_record" "cert_validation" {
   content = each.value.record
   type    = each.value.type
   ttl     = 60
-  proxied = true
+  proxied = false
 }
 
 # Certificate Validation
@@ -1159,33 +1159,6 @@ resource "aws_iam_role_policy_attachment" "eks_nodes_AmazonEC2ContainerRegistryR
   role       = aws_iam_role.eks_nodes.name
 }
 
-resource "aws_iam_policy" "eks_full_access" {
-  name        = "EKSFullAccess"
-  path        = "/"
-  description = "Full access to EKS cluster and its internals"
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect   = "Allow"
-        Action   = "*"
-        Resource = "*"
-      }
-    ]
-  })
-}
-
-resource "aws_iam_user_policy_attachment" "current_user_eks_access" {
-  policy_arn = aws_iam_policy.eks_full_access.arn
-  user       = data.aws_caller_identity.current.arn
-}
-
-resource "aws_iam_user_policy_attachment" "root_user_eks_access" {
-  policy_arn = aws_iam_policy.eks_full_access.arn
-  user       = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
-}
-
 # NAT Gateways
 resource "aws_nat_gateway" "main" {
   count         = 2
@@ -1544,6 +1517,42 @@ resource "kubernetes_namespace" "livekit" {
     name = "livekit"
   }
 }
+
+resource "kubernetes_config_map" "aws_auth" {
+  metadata {
+    name      = "aws-auth"
+    namespace = "kube-system"
+  }
+
+  data = {
+    mapRoles = yamlencode(
+      [
+        {
+          rolearn  = aws_iam_role.eks_nodes.arn
+          username = "system:node:{{EC2PrivateDNSName}}"
+          groups   = ["system:bootstrappers", "system:nodes"]
+        },
+      ]
+    )
+    mapUsers = yamlencode(
+      [
+        {
+        userarn  = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
+        username = "root"
+        groups   = ["system:masters"]
+      },
+        {
+          userarn  = data.aws_caller_identity.current.arn
+          username = "creator"
+          groups   = ["system:masters"]
+        }
+      ]
+    )
+  }
+
+  depends_on = [aws_iam_role.eks_nodes]
+}
+
 
 resource "random_password" "livekit_api_secret" {
   length  = 256
