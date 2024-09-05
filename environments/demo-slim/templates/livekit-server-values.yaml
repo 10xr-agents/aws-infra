@@ -12,7 +12,7 @@ livekit:
          address: "${aws_redis_cluster}"
          username: "${livekit_redis_username}"
          password: "${livekit_redis_password}"
-         use_tls: true
+         use_tls: false
     keys:
         "${livekit_api_key}": "${livekit_api_secret}"
     turn:

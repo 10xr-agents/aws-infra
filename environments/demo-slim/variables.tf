@@ -8,6 +8,18 @@ variable "project_name" {
   type        = string
 }
 
+variable "environment" {
+  description = "Environment of our services"
+  type        = string
+}
+
+variable "default_organization" {
+  description = "default organization name"
+  type        = string
+  default = "demo"
+}
+
+
 variable "domain_name" {
   description = "Domain on which our services will be hosted"
   type        = string
@@ -183,5 +195,10 @@ variable "cloudflare_api_token" {
 
 variable "cloudflare_zone_id" {
   description = "Cloudflare zone id"
+  type        = string
+}
+
+variable "cloudflare_account_id" {
+  description = "Cloudflare account id"
   type        = string
 }

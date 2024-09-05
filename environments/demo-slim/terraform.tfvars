@@ -1,8 +1,10 @@
-aws_region          = "us-east-1"
-project_name        = "10xr-demo"
-domain_name         = "10xr.co"
-vpc_cidr            = "10.0.0.0/16"
-public_subnet_cidrs = ["10.0.1.0/24", "10.0.2.0/24"]
+aws_region           = "us-east-1"
+environment          = "demo"
+project_name         = "10xr-demo"
+default_organization = "demo"
+domain_name          = "demo.10xr.co"
+vpc_cidr             = "10.0.0.0/16"
+public_subnet_cidrs  = ["10.0.1.0/24", "10.0.2.0/24"]
 
 services = [
   {
@@ -152,9 +154,10 @@ mongodb_atlas_region       = "US_EAST_1"
 mongodb_atlas_cidr_block   = "192.168.248.0/21"
 mongodb_database_name      = "converse-server"
 
-livekit_domain_name      = "livekit-demo.10xr.co"
-livekit_turn_domain_name = "livekit-turn-demo.10xr.co"
+livekit_domain_name      = "livekit.demo.10xr.co"
+livekit_turn_domain_name = "turn.livekit.demo.10xr.co"
 livekit_api_key          = "livekit-demo-key"
 
-cloudflare_api_token = "jTm01UhNhNDE-Md4jrQwBS0w3vHsqVikxC9cop9r"
-cloudflare_zone_id   = "3ae048b26df2c81c175c609f802feafb"
+cloudflare_api_token  = "jTm01UhNhNDE-Md4jrQwBS0w3vHsqVikxC9cop9r"
+cloudflare_zone_id    = "3ae048b26df2c81c175c609f802feafb"
+cloudflare_account_id = "929c1d893cb7bb8455e151ae08f3b538"

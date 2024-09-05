@@ -471,9 +471,10 @@ resource "aws_acm_certificate" "main" {
   validation_method = "DNS"
   subject_alternative_names = [
     "*.${var.domain_name}",
-    "services.demo.${var.domain_name}",
-    "app.demo.${var.domain_name}",
-    "api.demo.${var.domain_name}",
+    "services.${var.domain_name}",
+    "app.${var.domain_name}",
+    "api.${var.domain_name}",
+    "*.${var.livekit_domain_name}",
     var.livekit_domain_name,
     var.livekit_turn_domain_name,
 
@@ -600,7 +601,7 @@ resource "aws_lb_listener_rule" "service" {
   }
 }
 
-# Listener Rule for demo.10xr.com
+# Listener Rule for demo.10xr.co
 resource "aws_lb_listener_rule" "demo_subdomain" {
   listener_arn = aws_lb_listener.https.arn
 
@@ -611,13 +612,13 @@ resource "aws_lb_listener_rule" "demo_subdomain" {
 
   condition {
     host_header {
-      values = ["demo.10xr.com"]
+      values = ["${var.environment}.10xr.co"]
     }
   }
 
   condition {
     path_pattern {
-      values = ["/demo*"]
+      values = ["/${var.default_organization}*"]
     }
   }
 }
@@ -956,7 +957,7 @@ provider "mongodbatlas" {
 
 resource "mongodbatlas_cluster" "cluster" {
   project_id             = var.mongodb_atlas_project_id
-  name                   = "10xr-demo"
+  name                   = var.project_name
   mongo_db_major_version = "7.0"
   cluster_type           = "REPLICASET"
   replication_specs {
@@ -1220,12 +1221,52 @@ resource "aws_lb_listener" "nlb_http" {
 }
 
 # NLB Listener for HTTPS traffic
+resource "aws_acm_certificate" "nlb" {
+  domain_name       = var.livekit_domain_name # Single domain for NLB
+  validation_method = "DNS"
+  subject_alternative_names = [
+    "livekit.${var.domain_name}",
+    var.livekit_domain_name,
+    var.livekit_turn_domain_name,
+    "*.${var.livekit_domain_name}",
+  ]
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+# Cloudflare DNS record for certificate validation
+resource "cloudflare_record" "nlb_cert_validation" {
+  for_each = {
+    for dvo in aws_acm_certificate.main.domain_validation_options : dvo.domain_name => {
+      name   = dvo.resource_record_name
+      record = dvo.resource_record_value
+      type   = dvo.resource_record_type
+    }
+    if dvo.domain_name != "*.${var.domain_name}"
+  }
+
+  zone_id = var.cloudflare_zone_id
+  name    = each.value.name
+  content = each.value.record
+  type    = each.value.type
+  ttl     = 60
+  proxied = false
+}
+
+# Certificate Validation
+resource "aws_acm_certificate_validation" "nlb_validation" {
+  certificate_arn         = aws_acm_certificate.main.arn
+  validation_record_fqdns = [for record in cloudflare_record.nlb_cert_validation : record.hostname]
+}
+
+
 resource "aws_lb_listener" "nlb_https" {
   load_balancer_arn = aws_lb.nlb.arn
   port              = 443
   protocol          = "TLS"
   ssl_policy        = "ELBSecurityPolicy-TLS-1-2-2017-01"
-  certificate_arn   = aws_acm_certificate.main.arn
+  certificate_arn   = aws_acm_certificate.nlb.arn
 
   default_action {
     type             = "forward"
@@ -1997,10 +2038,6 @@ resource "aws_acm_certificate" "redis" {
   validation_method = "DNS"
 
   subject_alternative_names = [
-    "redis.${var.domain_name}",
-    "livekit.${var.domain_name}",
-    var.livekit_turn_domain_name,
-    var.livekit_domain_name,
     "*.${var.domain_name}" # This covers all subdomains
   ]
 
@@ -2024,7 +2061,7 @@ resource "aws_elasticache_replication_group" "redis" {
   engine_version       = "7.1"
   parameter_group_name = "default.redis7"
 
-  transit_encryption_enabled = true
+  transit_encryption_enabled = false
   auth_token                 = random_password.redis_auth_token.result
 
   depends_on = [aws_acm_certificate.redis]
@@ -2138,4 +2175,86 @@ resource "kubernetes_secret" "tls_cert" {
     "tls.crt" = tls_self_signed_cert.cert.cert_pem
     "tls.key" = tls_private_key.cert_private_key.private_key_pem
   }
+}
+
+# ELB for ALB & NLB
+
+# Cloudflare DNS record for ALB
+resource "cloudflare_record" "alb_dns" {
+  zone_id = var.cloudflare_zone_id
+  name    = var.environment
+  content = aws_lb.main.dns_name
+  type    = "A"
+  proxied = false
+}
+
+# Cloudflare DNS record for NLB
+resource "cloudflare_record" "nlb_dns" {
+  zone_id = var.cloudflare_zone_id
+  name    = "livekit.${var.environment}"
+  content = aws_lb.nlb.dns_name
+  type    = "A"
+  proxied = false
+}
+
+# Cloudflare Load Balancer
+resource "cloudflare_load_balancer" "main" {
+  zone_id          = var.cloudflare_zone_id
+  name             = var.domain_name
+  default_pool_ids = [cloudflare_load_balancer_pool.alb_pool.id]
+  fallback_pool_id = cloudflare_load_balancer_pool.alb_pool.id
+
+  rules {
+    name      = "livekit-rule"
+    condition = "hostname matches \"*livekit*.${var.domain_name}\""
+    fixed_response {
+      message_body = "This request was sent to the NLB pool"
+      status_code  = 200
+      content_type = "text/plain"
+    }
+    overrides {
+      ttl = 60
+      default_pools = [cloudflare_load_balancer_pool.nlb_pool.id]
+    }
+  }
+}
+
+# Cloudflare Load Balancer Pool for ALB
+resource "cloudflare_load_balancer_pool" "alb_pool" {
+  name = "alb-pool"
+  origins {
+    name    = "alb-origin"
+    address = cloudflare_record.alb_dns.hostname
+    weight  = 1
+  }
+  account_id = var.cloudflare_account_id
+}
+
+# Cloudflare Load Balancer Pool for NLB
+resource "cloudflare_load_balancer_pool" "nlb_pool" {
+  name = "nlb-pool"
+  origins {
+    name    = "nlb-origin"
+    address = cloudflare_record.nlb_dns.hostname
+    weight  = 1
+  }
+  account_id = var.cloudflare_account_id
+}
+
+# Cloudflare DNS record for the load balancer
+resource "cloudflare_record" "lb_dns" {
+  zone_id = var.cloudflare_zone_id
+  name    = var.environment
+  content   = cloudflare_load_balancer.main.id
+  type    = "CNAME"
+  proxied = true
+}
+
+# Wildcard DNS record for demo.10xr.co
+resource "cloudflare_record" "wildcard_dns" {
+  zone_id = var.cloudflare_zone_id
+  name    = "*.${var.domain_name}"
+  content   = cloudflare_load_balancer.main.id
+  type    = "CNAME"
+  proxied = true
 }

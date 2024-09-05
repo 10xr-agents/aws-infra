@@ -11,7 +11,7 @@ egress:
         address: ${aws_redis_cluster}
         username: ${livekit_redis_username}
         password: ${livekit_redis_password}
-        use_tls: true
+        use_tls: false
 
 terminationGracePeriodSeconds: 3600
 
