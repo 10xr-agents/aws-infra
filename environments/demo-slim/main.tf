@@ -474,10 +474,6 @@ resource "aws_acm_certificate" "main" {
     "services.${var.domain_name}",
     "app.${var.domain_name}",
     "api.${var.domain_name}",
-    "*.${var.livekit_domain_name}",
-    var.livekit_domain_name,
-    var.livekit_turn_domain_name,
-
   ]
 
   lifecycle {
@@ -1225,10 +1221,8 @@ resource "aws_acm_certificate" "nlb" {
   domain_name       = var.livekit_domain_name # Single domain for NLB
   validation_method = "DNS"
   subject_alternative_names = [
-    "livekit.${var.domain_name}",
-    var.livekit_domain_name,
-    var.livekit_turn_domain_name,
     "*.${var.livekit_domain_name}",
+    var.livekit_turn_domain_name
   ]
   lifecycle {
     create_before_destroy = true
@@ -1243,7 +1237,7 @@ resource "cloudflare_record" "nlb_cert_validation" {
       record = dvo.resource_record_value
       type   = dvo.resource_record_type
     }
-    if dvo.domain_name != "*.${var.domain_name}"
+    if dvo.domain_name != "*.${var.livekit_domain_name}"
   }
 
   zone_id = var.cloudflare_zone_id
