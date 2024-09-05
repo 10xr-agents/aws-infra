@@ -1784,15 +1784,12 @@ resource "helm_release" "metrics_server" {
   namespace  = "kube-system"
   repository = "https://kubernetes-sigs.github.io/metrics-server/"
   chart      = "metrics-server"
-  version    = "3.11.0"  # Ensure this version is compatible with your Kubernetes version
+  version    = "3.11.0" # Ensure this version is compatible with your Kubernetes version
 
-  set {
-    name  = "args"
-    value = [
-      "--kubelet-insecure-tls",           # Enable insecure TLS to communicate with Kubelets
-      "--kubelet-preferred-address-types=InternalIP"  # Use internal IP to communicate with nodes
-    ]
-  }
+  args = [
+    "--kubelet-insecure-tls",                      # Enable insecure TLS to communicate with Kubelets
+    "--kubelet-preferred-address-types=InternalIP" # Use internal IP to communicate with nodes
+  ]
 
   depends_on = [aws_eks_cluster.main]
 }
@@ -2065,6 +2062,7 @@ resource "aws_elasticache_replication_group" "redis" {
 
   # Important: Apply changes immediately
   apply_immediately = true
+  replication_group_description = "redis default replication group"
 }
 
 # Generate a random auth token for Redis

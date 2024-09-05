@@ -56,3 +56,14 @@ securityContext: {}
 tolerations: []
 
 affinity: {}
+
+
+extraVolumes:
+    - name: tls-cert
+      secret:
+          secretName: "${var.project_name}-tls-cert"
+
+extraVolumeMounts:
+    - name: tls-cert
+      mountPath: /etc/lkcert
+      readOnly: true
