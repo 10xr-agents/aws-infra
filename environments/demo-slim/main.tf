@@ -470,7 +470,13 @@ resource "aws_acm_certificate" "main" {
   domain_name       = var.domain_name
   validation_method = "DNS"
   subject_alternative_names = [
-    "*.${var.domain_name}"
+    "*.${var.domain_name}",
+    "services.demo.${var.domain_name}",
+    "app.demo.${var.domain_name}",
+    "api.demo.${var.domain_name}",
+    var.livekit_domain_name,
+    var.livekit_turn_domain_name,
+
   ]
 
   lifecycle {
@@ -486,6 +492,7 @@ resource "cloudflare_record" "cert_validation" {
       record = dvo.resource_record_value
       type   = dvo.resource_record_type
     }
+    if dvo.domain_name != "*.${var.domain_name}"
   }
 
   zone_id = var.cloudflare_zone_id
