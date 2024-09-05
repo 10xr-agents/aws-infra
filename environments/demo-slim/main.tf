@@ -32,30 +32,6 @@ provider "aws" {
   region = var.aws_region
 }
 
-# Helm provider
-provider "helm" {
-  kubernetes {
-    host                   = aws_eks_cluster.main.endpoint
-    cluster_ca_certificate = base64decode(aws_eks_cluster.main.certificate_authority[0].data)
-    exec {
-      api_version = "client.authentication.k8s.io/v1beta1"
-      args        = ["eks", "get-token", "--cluster-name", aws_eks_cluster.main.name]
-      command     = "aws"
-    }
-  }
-}
-
-# Kubernetes provider
-provider "kubernetes" {
-  host                   = aws_eks_cluster.main.endpoint
-  cluster_ca_certificate = base64decode(aws_eks_cluster.main.certificate_authority[0].data)
-  exec {
-    api_version = "client.authentication.k8s.io/v1beta1"
-    args        = ["eks", "get-token", "--cluster-name", aws_eks_cluster.main.name]
-    command     = "aws"
-  }
-}
-
 # VPC
 resource "aws_vpc" "main" {
   cidr_block           = var.vpc_cidr
@@ -287,7 +263,7 @@ resource "aws_security_group" "ecs_sg" {
 
 # ECS Cluster
 resource "aws_ecs_cluster" "main" {
-  name = "${var.project_name}-cluster"
+  name = "${var.project_name}-ecs-cluster"
 
   dynamic "setting" {
     for_each = var.ecs_cluster_settings
@@ -1062,7 +1038,7 @@ resource "mongodbatlas_database_user" "aws_iam_user" {
 
 # eks cluster for livekit
 resource "aws_eks_cluster" "main" {
-  name     = "${var.project_name}-cluster"
+  name     = "${var.project_name}-eks-cluster"
   role_arn = aws_iam_role.eks_cluster.arn
 
   vpc_config {
@@ -1509,12 +1485,37 @@ resource "aws_security_group" "eks_cluster" {
   }
 }
 
-# Helm LiveKit provider
+# Helm provider
+provider "helm" {
+  kubernetes {
+    host                   = aws_eks_cluster.main.endpoint
+    cluster_ca_certificate = base64decode(aws_eks_cluster.main.certificate_authority[0].data)
+    exec {
+      api_version = "client.authentication.k8s.io/v1beta1"
+      args        = ["eks", "get-token", "--cluster-name", aws_eks_cluster.main.name]
+      command     = "aws"
+    }
+  }
+}
 
-# Create a namespace for LiveKit
-resource "kubernetes_namespace" "livekit" {
-  metadata {
-    name = "livekit"
+# Kubernetes provider
+provider "kubernetes" {
+  host                   = aws_eks_cluster.main.endpoint
+  cluster_ca_certificate = base64decode(aws_eks_cluster.main.certificate_authority[0].data)
+  exec {
+    api_version = "client.authentication.k8s.io/v1beta1"
+    args        = ["eks", "get-token", "--cluster-name", aws_eks_cluster.main.name]
+    command     = "aws"
+  }
+}
+
+provider "kubectl" {
+  host                   = aws_eks_cluster.main.endpoint
+  cluster_ca_certificate = base64decode(aws_eks_cluster.main.certificate_authority[0].data)
+  exec {
+    api_version = "client.authentication.k8s.io/v1beta1"
+    args        = ["eks", "get-token", "--cluster-name", aws_eks_cluster.main.name]
+    command     = "aws"
   }
 }
 
@@ -1537,10 +1538,10 @@ resource "kubernetes_config_map" "aws_auth" {
     mapUsers = yamlencode(
       [
         {
-        userarn  = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
-        username = "root"
-        groups   = ["system:masters"]
-      },
+          userarn  = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
+          username = "root"
+          groups   = ["system:masters"]
+        },
         {
           userarn  = data.aws_caller_identity.current.arn
           username = "creator"
@@ -1553,10 +1554,52 @@ resource "kubernetes_config_map" "aws_auth" {
   depends_on = [aws_iam_role.eks_nodes]
 }
 
+# Helm LiveKit provider
+
+# Create a namespace for LiveKit
+resource "kubernetes_namespace" "livekit" {
+  metadata {
+    name = "livekit"
+  }
+}
+
 
 resource "random_password" "livekit_api_secret" {
   length  = 256
   special = false
+}
+
+# Add CoreDNS add-on
+resource "aws_eks_addon" "coredns" {
+  cluster_name  = aws_eks_cluster.main.name
+  addon_name    = "coredns"
+  addon_version = "v1.11.1-eksbuild.11"
+
+  depends_on = [
+    aws_eks_node_group.main
+  ]
+}
+
+# Add kube-proxy add-on
+resource "aws_eks_addon" "kube_proxy" {
+  cluster_name  = aws_eks_cluster.main.name
+  addon_name    = "kube-proxy"
+  addon_version = "v1.30.3-eksbuild.2"
+
+  depends_on = [
+    aws_eks_node_group.main
+  ]
+}
+
+# Add vpc-cni add-on
+resource "aws_eks_addon" "vpc_cni" {
+  cluster_name  = aws_eks_cluster.main.name
+  addon_name    = "vpc-cni"
+  addon_version = "v1.18.3-eksbuild.2"
+
+  depends_on = [
+    aws_eks_node_group.main
+  ]
 }
 
 # LiveKit Helm Chart
@@ -1579,7 +1622,7 @@ resource "helm_release" "livekit_server" {
     })
   ]
 
-  depends_on = [aws_eks_node_group.main, helm_release.alb_ingress_controller]
+  depends_on = [aws_eks_node_group.main, helm_release.aws_load_balancer_controller]
 }
 
 # LiveKit Ingress Helm Chart
@@ -1625,11 +1668,14 @@ resource "helm_release" "livekit_egress" {
 }
 
 # ALB Ingress Controller
-resource "helm_release" "alb_ingress_controller" {
-  name       = "aws-load-balancer-controller"
-  repository = "https://aws.github.io/eks-charts"
-  chart      = "aws-load-balancer-controller"
-  namespace  = "kube-system"
+# Helm release for AWS Load Balancer Controller
+resource "helm_release" "aws_load_balancer_controller" {
+  name             = "aws-load-balancer-controller"
+  repository       = "https://aws.github.io/eks-charts"
+  chart            = "aws-load-balancer-controller"
+  namespace        = "kube-system"
+  create_namespace = true
+  version          = "1.8.2"
 
   set {
     name  = "clusterName"
@@ -1642,11 +1688,48 @@ resource "helm_release" "alb_ingress_controller" {
   }
 
   set {
-    name  = "serviceAccount.name"
-    value = "aws-load-balancer-controller"
+    name  = "serviceAccount.annotations.eks\\.amazonaws\\.com/role-arn"
+    value = aws_iam_role.eks_nodes.arn
   }
 
-  depends_on = [aws_eks_node_group.main]
+  set {
+    name  = "region"
+    value = var.aws_region
+  }
+
+  set {
+    name  = "vpcId"
+    value = aws_vpc.main.id
+  }
+
+  # Increase timeout and add retry logic
+  timeout = 900 # 15 minutes
+
+  # Wait for EKS cluster to be ready
+  depends_on = [
+    aws_eks_cluster.main,
+    aws_eks_node_group.main,
+    kubernetes_config_map.aws_auth
+  ]
+}
+
+# Add a null_resource for additional wait and retry logic
+resource "null_resource" "wait_for_alb_controller" {
+  triggers = {
+    helm_release = helm_release.aws_load_balancer_controller.id
+  }
+
+  provisioner "local-exec" {
+    interpreter = ["/bin/bash", "-c"]
+    command     = <<EOT
+    KUBECONFIG_FILE=$(mktemp)
+    aws eks get-token --cluster-name 10xr-infra-demo-cluster | kubectl config view --raw -o yaml | sed 's/''/''/g' > $KUBECONFIG_FILE
+    kubectl --kubeconfig $KUBECONFIG_FILE wait --for=condition=available --timeout=900s deployment/aws-load-balancer-controller -n kube-system
+    rm $KUBECONFIG_FILE
+  EOT
+  }
+
+  depends_on = [helm_release.aws_load_balancer_controller]
 }
 
 # IAM Policy for ALB Ingress Controller
