@@ -1619,7 +1619,7 @@ resource "random_password" "livekit_api_secret" {
 resource "aws_eks_addon" "coredns" {
   cluster_name  = aws_eks_cluster.main.name
   addon_name    = "coredns"
-  addon_version = "v1.11.1-eksbuild.11"
+  addon_version = "v1.11.3-eksbuild.1"
 
   depends_on = [
     aws_eks_node_group.main
@@ -1776,6 +1776,25 @@ resource "null_resource" "wait_for_alb_controller" {
   }
 
   depends_on = [helm_release.aws_load_balancer_controller]
+}
+
+# Install Metrics Server using Helm
+resource "helm_release" "metrics_server" {
+  name       = "metrics-server"
+  namespace  = "kube-system"
+  repository = "https://kubernetes-sigs.github.io/metrics-server/"
+  chart      = "metrics-server"
+  version    = "3.11.0"  # Ensure this version is compatible with your Kubernetes version
+
+  set {
+    name  = "args"
+    value = [
+      "--kubelet-insecure-tls",           # Enable insecure TLS to communicate with Kubelets
+      "--kubelet-preferred-address-types=InternalIP"  # Use internal IP to communicate with nodes
+    ]
+  }
+
+  depends_on = [aws_eks_cluster.main]
 }
 
 # IAM Policy for ALB Ingress Controller
