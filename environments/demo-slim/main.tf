@@ -1232,7 +1232,7 @@ resource "aws_acm_certificate" "nlb" {
 # Cloudflare DNS record for certificate validation
 resource "cloudflare_record" "nlb_cert_validation" {
   for_each = {
-    for dvo in aws_acm_certificate.main.domain_validation_options : dvo.domain_name => {
+    for dvo in aws_acm_certificate.nlb.domain_validation_options : dvo.domain_name => {
       name   = dvo.resource_record_name
       record = dvo.resource_record_value
       type   = dvo.resource_record_type
@@ -1250,7 +1250,7 @@ resource "cloudflare_record" "nlb_cert_validation" {
 
 # Certificate Validation
 resource "aws_acm_certificate_validation" "nlb_validation" {
-  certificate_arn         = aws_acm_certificate.main.arn
+  certificate_arn         = aws_acm_certificate.nlb.arn
   validation_record_fqdns = [for record in cloudflare_record.nlb_cert_validation : record.hostname]
 }
 
@@ -2026,20 +2026,6 @@ resource "aws_security_group" "redis" {
   }
 }
 
-# Create an AWS Certificate Manager (ACM) certificate for Redis
-resource "aws_acm_certificate" "redis" {
-  domain_name       = "redis.${var.domain_name}"
-  validation_method = "DNS"
-
-  subject_alternative_names = [
-    "*.${var.domain_name}" # This covers all subdomains
-  ]
-
-  lifecycle {
-    create_before_destroy = true
-  }
-}
-
 # Create the ElastiCache Redis cluster
 resource "aws_elasticache_replication_group" "redis" {
   replication_group_id       = "redis-${var.project_name}"
@@ -2057,8 +2043,6 @@ resource "aws_elasticache_replication_group" "redis" {
 
   transit_encryption_enabled = false
   auth_token                 = random_password.redis_auth_token.result
-
-  depends_on = [aws_acm_certificate.redis]
 }
 
 # Generate a random auth token for Redis
