@@ -1790,7 +1790,7 @@ resource "helm_release" "metrics_server" {
 
   set {
     name  = "args"
-    value = "--kubelet-insecure-tls --kubelet-preferred-address-types=InternalIP"
+    value = "{--kubelet-insecure-tls --kubelet-preferred-address-types=InternalIP}"
   }
 
   depends_on = [aws_eks_cluster.main]
