@@ -46,7 +46,7 @@ affinity: {}
 extraVolumes:
     - name: tls-cert
       secret:
-          secretName: "${var.project_name}-tls-cert"
+          secretName: "${livekit_secret_name}"
 
 extraVolumeMounts:
     - name: tls-cert

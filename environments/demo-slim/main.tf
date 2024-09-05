@@ -1686,6 +1686,7 @@ resource "helm_release" "livekit_ingress" {
       aws_redis_cluster      = "${aws_elasticache_replication_group.redis.primary_endpoint_address}:6379"
       livekit_redis_username = "default"
       livekit_redis_password = random_password.redis_auth_token.result
+      livekit_secret_name      = kubernetes_secret.tls_cert.metadata[0].name
     })
   ]
 
@@ -1707,6 +1708,7 @@ resource "helm_release" "livekit_egress" {
       aws_redis_cluster      = "${aws_elasticache_replication_group.redis.primary_endpoint_address}:6379"
       livekit_redis_username = "default"
       livekit_redis_password = random_password.redis_auth_token.result
+      livekit_secret_name      = kubernetes_secret.tls_cert.metadata[0].name
     })
   ]
 
