@@ -2043,6 +2043,9 @@ resource "aws_elasticache_replication_group" "redis" {
 
   transit_encryption_enabled = false
   auth_token                 = random_password.redis_auth_token.result
+
+  # Important: Apply changes immediately
+  apply_immediately = true
 }
 
 # Generate a random auth token for Redis
@@ -2162,7 +2165,7 @@ resource "cloudflare_record" "alb_dns" {
   zone_id = var.cloudflare_zone_id
   name    = var.environment
   content = aws_lb.main.dns_name
-  type    = "A"
+  type    = "CNAME"
   proxied = false
 }
 
@@ -2171,7 +2174,7 @@ resource "cloudflare_record" "nlb_dns" {
   zone_id = var.cloudflare_zone_id
   name    = "livekit.${var.environment}"
   content = aws_lb.nlb.dns_name
-  type    = "A"
+  type    = "CNAME"
   proxied = false
 }
 
@@ -2191,7 +2194,7 @@ resource "cloudflare_load_balancer" "main" {
       content_type = "text/plain"
     }
     overrides {
-      ttl = 60
+      ttl           = 60
       default_pools = [cloudflare_load_balancer_pool.nlb_pool.id]
     }
   }
@@ -2223,7 +2226,7 @@ resource "cloudflare_load_balancer_pool" "nlb_pool" {
 resource "cloudflare_record" "lb_dns" {
   zone_id = var.cloudflare_zone_id
   name    = var.environment
-  content   = cloudflare_load_balancer.main.id
+  content = cloudflare_load_balancer.main.id
   type    = "CNAME"
   proxied = true
 }
@@ -2232,7 +2235,7 @@ resource "cloudflare_record" "lb_dns" {
 resource "cloudflare_record" "wildcard_dns" {
   zone_id = var.cloudflare_zone_id
   name    = "*.${var.domain_name}"
-  content   = cloudflare_load_balancer.main.id
+  content = cloudflare_load_balancer.main.id
   type    = "CNAME"
   proxied = true
 }
