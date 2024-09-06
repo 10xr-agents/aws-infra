@@ -474,6 +474,7 @@ resource "aws_acm_certificate" "main" {
     "services.${var.domain_name}",
     "app.${var.domain_name}",
     "api.${var.domain_name}",
+    "proxy.${var.domain_name}",
   ]
 
   lifecycle {
@@ -609,6 +610,50 @@ resource "aws_lb_listener_rule" "demo_subdomain" {
   condition {
     host_header {
       values = ["${var.environment}.10xr.co"]
+    }
+  }
+
+  condition {
+    path_pattern {
+      values = ["/*"]
+    }
+  }
+}
+
+# Listener Rule for api.demo.10xr.co
+resource "aws_lb_listener_rule" "api_demo_subdomain" {
+  listener_arn = aws_lb_listener.https.arn
+
+  action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.service[index(var.services[*].name, "cnvrs-srv")].arn
+  }
+
+  condition {
+    host_header {
+      values = ["api.${var.environment}.10xr.co"]
+    }
+  }
+
+  condition {
+    path_pattern {
+      values = ["/*"]
+    }
+  }
+}
+
+# Listener Rule for proxy.demo.10xr.co
+resource "aws_lb_listener_rule" "proxy_demo_subdomain" {
+  listener_arn = aws_lb_listener.https.arn
+
+  action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.service[index(var.services[*].name, "livkt-prxy")].arn
+  }
+
+  condition {
+    host_header {
+      values = ["proxy.${var.environment}.10xr.co"]
     }
   }
 
@@ -2186,6 +2231,24 @@ resource "kubernetes_secret" "tls_cert" {
 resource "cloudflare_record" "alb_dns" {
   zone_id = var.cloudflare_zone_id
   name    = var.environment
+  content = aws_lb.main.dns_name
+  type    = "CNAME"
+  proxied = false
+}
+
+# Cloudflare DNS record for ALB
+resource "cloudflare_record" "alb_dns" {
+  zone_id = var.cloudflare_zone_id
+  name    = "api.${var.environment}"
+  content = aws_lb.main.dns_name
+  type    = "CNAME"
+  proxied = false
+}
+
+# Cloudflare DNS record for ALB
+resource "cloudflare_record" "alb_dns" {
+  zone_id = var.cloudflare_zone_id
+  name    = "proxy.${var.environment}"
   content = aws_lb.main.dns_name
   type    = "CNAME"
   proxied = false
