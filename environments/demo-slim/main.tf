@@ -317,11 +317,11 @@ resource "aws_ecs_task_definition" "service" {
       ])
       # Include healthCheck only if health_check_path is defined
       healthCheck = length(var.services[count.index].health_check_path) > 0 ? {
-        command     = ["CMD-SHELL", "curl -f http://127.0.0.1:${var.services[count.index].port}${var.services[count.index].health_check_path} || exit 1"]
+        command     = ["CMD-SHELL", "curl -v -f http://127.0.0.1:${var.services[count.index].port}${var.services[count.index].health_check_path} || exit 1"]
         interval    = 30
         timeout     = 10
         retries     = 6
-        startPeriod = 180
+        startPeriod = 60
       } : null
       secrets = [
         for key, value in var.services[count.index].secrets :
@@ -449,7 +449,11 @@ resource "aws_iam_policy" "ecs_task_policy" {
           "ssm:GetParameters",
           "secretsmanager:GetSecretValue",
           "kms:Decrypt",
-          "sts:AssumeRole"
+          "sts:AssumeRole",
+          "ssm:SendCommand",
+          "ssm:ListCommands",
+          "ssm:ListCommandInvocations",
+          "ssm:DescribeInstanceInformation"
         ]
         Resource = "*"
       }
