@@ -1705,7 +1705,7 @@ resource "helm_release" "livekit_server" {
       livekit_api_key          = var.livekit_api_key
       livekit_api_secret       = random_password.livekit_api_secret.result
       livekit_turn_domain_name = var.livekit_turn_domain_name
-      aws_redis_cluster        = "${aws_elasticache_replication_group.redis.primary_endpoint_address}:6379"
+      aws_redis_cluster        = ""#"${aws_elasticache_replication_group.redis.primary_endpoint_address}:6379"
       livekit_redis_username   = "default"
       livekit_redis_password   = random_password.redis_auth_token.result
       livekit_secret_name      = kubernetes_secret.tls_cert.metadata[0].name
@@ -1727,7 +1727,7 @@ resource "helm_release" "livekit_ingress" {
       livekit_api_key        = var.livekit_api_key
       livekit_api_secret     = random_password.livekit_api_secret.result
       livekit_domain_name    = var.livekit_domain_name
-      aws_redis_cluster      = "${aws_elasticache_replication_group.redis.primary_endpoint_address}:6379"
+      aws_redis_cluster      = ""#"${aws_elasticache_replication_group.redis.primary_endpoint_address}:6379"
       livekit_redis_username = "default"
       livekit_redis_password = random_password.redis_auth_token.result
       livekit_secret_name      = kubernetes_secret.tls_cert.metadata[0].name
@@ -1749,7 +1749,7 @@ resource "helm_release" "livekit_egress" {
       livekit_api_key        = var.livekit_api_key
       livekit_api_secret     = random_password.livekit_api_secret.result
       livekit_domain_name    = var.livekit_domain_name
-      aws_redis_cluster      = "${aws_elasticache_replication_group.redis.primary_endpoint_address}:6379"
+      aws_redis_cluster      = ""#"${aws_elasticache_replication_group.redis.primary_endpoint_address}:6379"
       livekit_redis_username = "default"
       livekit_redis_password = random_password.redis_auth_token.result
       livekit_secret_name      = kubernetes_secret.tls_cert.metadata[0].name
@@ -2067,124 +2067,124 @@ resource "aws_iam_role_policy_attachment" "alb_ingress_controller" {
 }
 
 # Create an ElastiCache subnet group
-resource "aws_elasticache_subnet_group" "redis" {
-  name       = "redis-${var.project_name}-subnet-group"
-  subnet_ids = aws_subnet.public[*].id
-}
-
-# Create a security group for Redis
-resource "aws_security_group" "redis" {
-  name        = "${var.project_name}-redis-sg"
-  description = "Security group for Redis cluster"
-  vpc_id      = aws_vpc.main.id
-
-  ingress {
-    from_port       = 6379
-    to_port         = 6379
-    protocol        = "tcp"
-    security_groups = [aws_security_group.eks_cluster.id]
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-}
-
-# Create the ElastiCache Redis cluster
-resource "aws_elasticache_replication_group" "redis" {
-  replication_group_id       = "redis-${var.project_name}"
-  description                = "Redis cluster for ${var.project_name}"
-  node_type                  = "cache.t3.micro"
-  num_cache_clusters         = 2
-  port                       = 6379
-  subnet_group_name          = aws_elasticache_subnet_group.redis.name
-  security_group_ids         = [aws_security_group.redis.id]
-  automatic_failover_enabled = true
-
-  engine               = "redis"
-  engine_version       = "7.1"
-  parameter_group_name = "default.redis7"
-
-  transit_encryption_enabled = false
-  auth_token                 = random_password.redis_auth_token.result
-
-  # Important: Apply changes immediately
-  apply_immediately = true
-}
-
-# Generate a random auth token for Redis
+# resource "aws_elasticache_subnet_group" "redis" {
+#   name       = "redis-${var.project_name}-subnet-group"
+#   subnet_ids = aws_subnet.public[*].id
+# }
+#
+# # Create a security group for Redis
+# resource "aws_security_group" "redis" {
+#   name        = "${var.project_name}-redis-sg"
+#   description = "Security group for Redis cluster"
+#   vpc_id      = aws_vpc.main.id
+#
+#   ingress {
+#     from_port       = 6379
+#     to_port         = 6379
+#     protocol        = "tcp"
+#     security_groups = [aws_security_group.eks_cluster.id]
+#   }
+#
+#   egress {
+#     from_port   = 0
+#     to_port     = 0
+#     protocol    = "-1"
+#     cidr_blocks = ["0.0.0.0/0"]
+#   }
+# }
+#
+# # Create the ElastiCache Redis cluster
+# resource "aws_elasticache_replication_group" "redis" {
+#   replication_group_id       = "redis-${var.project_name}"
+#   description                = "Redis cluster for ${var.project_name}"
+#   node_type                  = "cache.t3.micro"
+#   num_cache_clusters         = 2
+#   port                       = 6379
+#   subnet_group_name          = aws_elasticache_subnet_group.redis.name
+#   security_group_ids         = [aws_security_group.redis.id]
+#   automatic_failover_enabled = true
+#
+#   engine               = "redis"
+#   engine_version       = "7.1"
+#   parameter_group_name = "default.redis7"
+#
+#   transit_encryption_enabled = false
+#   auth_token                 = random_password.redis_auth_token.result
+#
+#   # Important: Apply changes immediately
+#   apply_immediately = true
+# }
+#
+# # Generate a random auth token for Redis
 resource "random_password" "redis_auth_token" {
   length  = 32
   special = false
 }
-
-# Create an IAM role for EKS pods to access Redis
-resource "aws_iam_role" "eks_redis_access" {
-  name = "${var.project_name}-eks-redis-access"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Action = "sts:AssumeRole"
-        Effect = "Allow"
-        Principal = {
-          Service = "eks.amazonaws.com"
-        }
-      }
-    ]
-  })
-}
-
-# Create an IAM policy for Redis access
-resource "aws_iam_policy" "redis_access" {
-  name        = "${var.project_name}-redis-access-policy"
-  description = "IAM policy for Redis access from EKS pods"
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Action = [
-          "elasticache:DescribeReplicationGroups",
-          "elasticache:DescribeCacheClusters",
-          "elasticache:ListTagsForResource"
-        ]
-        Resource = aws_elasticache_replication_group.redis.arn
-      }
-    ]
-  })
-}
-
-# Attach the Redis access policy to the EKS Redis access role
-resource "aws_iam_role_policy_attachment" "eks_redis_access" {
-  policy_arn = aws_iam_policy.redis_access.arn
-  role       = aws_iam_role.eks_redis_access.name
-}
-
-# Update the EKS node role to allow assuming the Redis access role
-resource "aws_iam_role_policy_attachment" "eks_node_redis_access" {
-  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy"
-  role       = aws_iam_role.eks_nodes.name
-}
-
-# Create a Kubernetes secret for Redis credentials
-resource "kubernetes_secret" "redis_credentials" {
-  metadata {
-    name      = "redis-credentials"
-    namespace = kubernetes_namespace.livekit.metadata[0].name
-  }
-
-  data = {
-    host     = aws_elasticache_replication_group.redis.primary_endpoint_address
-    port     = "6379"
-    password = random_password.redis_auth_token.result
-  }
-}
+#
+# # Create an IAM role for EKS pods to access Redis
+# resource "aws_iam_role" "eks_redis_access" {
+#   name = "${var.project_name}-eks-redis-access"
+#
+#   assume_role_policy = jsonencode({
+#     Version = "2012-10-17"
+#     Statement = [
+#       {
+#         Action = "sts:AssumeRole"
+#         Effect = "Allow"
+#         Principal = {
+#           Service = "eks.amazonaws.com"
+#         }
+#       }
+#     ]
+#   })
+# }
+#
+# # Create an IAM policy for Redis access
+# resource "aws_iam_policy" "redis_access" {
+#   name        = "${var.project_name}-redis-access-policy"
+#   description = "IAM policy for Redis access from EKS pods"
+#
+#   policy = jsonencode({
+#     Version = "2012-10-17"
+#     Statement = [
+#       {
+#         Effect = "Allow"
+#         Action = [
+#           "elasticache:DescribeReplicationGroups",
+#           "elasticache:DescribeCacheClusters",
+#           "elasticache:ListTagsForResource"
+#         ]
+#         Resource = aws_elasticache_replication_group.redis.arn
+#       }
+#     ]
+#   })
+# }
+#
+# # Attach the Redis access policy to the EKS Redis access role
+# resource "aws_iam_role_policy_attachment" "eks_redis_access" {
+#   policy_arn = aws_iam_policy.redis_access.arn
+#   role       = aws_iam_role.eks_redis_access.name
+# }
+#
+# # Update the EKS node role to allow assuming the Redis access role
+# resource "aws_iam_role_policy_attachment" "eks_node_redis_access" {
+#   policy_arn = "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy"
+#   role       = aws_iam_role.eks_nodes.name
+# }
+#
+# # Create a Kubernetes secret for Redis credentials
+# resource "kubernetes_secret" "redis_credentials" {
+#   metadata {
+#     name      = "redis-credentials"
+#     namespace = kubernetes_namespace.livekit.metadata[0].name
+#   }
+#
+#   data = {
+#     host     = aws_elasticache_replication_group.redis.primary_endpoint_address
+#     port     = "6379"
+#     password = random_password.redis_auth_token.result
+#   }
+# }
 
 # Generate a private key
 resource "tls_private_key" "cert_private_key" {
