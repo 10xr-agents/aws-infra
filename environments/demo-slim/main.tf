@@ -317,7 +317,7 @@ resource "aws_ecs_task_definition" "service" {
       ])
       # Include healthCheck only if health_check_path is defined
       healthCheck = length(var.services[count.index].health_check_path) > 0 ? {
-        command     = ["CMD-SHELL", "curl -f http://localhost:${var.services[count.index].port}${var.services[count.index].health_check_path} || exit 1"]
+        command     = ["CMD-SHELL", "curl -f http://127.0.0.1:${var.services[count.index].port}${var.services[count.index].health_check_path} || exit 1"]
         interval    = 30
         timeout     = 10
         retries     = 6
