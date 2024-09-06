@@ -614,7 +614,7 @@ resource "aws_lb_listener_rule" "demo_subdomain" {
 
   condition {
     path_pattern {
-      values = ["/${var.default_organization}*"]
+      values = ["/*"]
     }
   }
 }
