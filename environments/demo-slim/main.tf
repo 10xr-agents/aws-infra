@@ -318,10 +318,10 @@ resource "aws_ecs_task_definition" "service" {
       # Include healthCheck only if health_check_path is defined
       healthCheck = length(var.services[count.index].health_check_path) > 0 ? {
         command     = ["CMD-SHELL", "curl -f http://localhost:${var.services[count.index].port}${var.services[count.index].health_check_path} || exit 1"]
-        interval    = 10
-        timeout     = 5
-        retries     = 3
-        startPeriod = 60
+        interval    = 30
+        timeout     = 10
+        retries     = 6
+        startPeriod = 180
       } : null
       secrets = [
         for key, value in var.services[count.index].secrets :
