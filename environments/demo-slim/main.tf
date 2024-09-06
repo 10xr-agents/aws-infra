@@ -2029,7 +2029,7 @@ resource "aws_elasticache_replication_group" "redis" {
   engine_version       = "7.1"
   parameter_group_name = "default.redis7"
 
-  transit_encryption_enabled = false
+  transit_encryption_enabled = true
   auth_token                 = random_password.redis_auth_token.result
 
   # Important: Apply changes immediately
