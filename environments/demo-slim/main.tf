@@ -2237,7 +2237,7 @@ resource "cloudflare_record" "alb_dns" {
 }
 
 # Cloudflare DNS record for ALB
-resource "cloudflare_record" "alb_dns" {
+resource "cloudflare_record" "api_alb_dns" {
   zone_id = var.cloudflare_zone_id
   name    = "api.${var.environment}"
   content = aws_lb.main.dns_name
@@ -2246,7 +2246,7 @@ resource "cloudflare_record" "alb_dns" {
 }
 
 # Cloudflare DNS record for ALB
-resource "cloudflare_record" "alb_dns" {
+resource "cloudflare_record" "proxy_alb_dns" {
   zone_id = var.cloudflare_zone_id
   name    = "proxy.${var.environment}"
   content = aws_lb.main.dns_name
