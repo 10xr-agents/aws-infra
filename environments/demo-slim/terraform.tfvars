@@ -10,8 +10,8 @@ services = [
   {
     name              = "cnvrs-srv"
     ecr_repo          = "761018882607.dkr.ecr.us-east-1.amazonaws.com/10xr/converse-server:0.0.1-demo"
-    cpu               = 256
-    memory            = 512
+    cpu               = 1024
+    memory            = 2048
     desired_count     = 2
     instance_type     = "medium"
     port              = 8080
@@ -33,9 +33,9 @@ services = [
   },
   {
     name              = "cnvrs-ui"
-    ecr_repo          = "761018882607.dkr.ecr.us-east-1.amazonaws.com/10xr/converse-server:0.0.1-demo"
-    cpu               = 512
-    memory            = 1024
+    ecr_repo          = "761018882607.dkr.ecr.us-east-1.amazonaws.com/10xr/converse-ui:0.1.0"
+    cpu               = 1024
+    memory            = 2048
     desired_count     = 2
     instance_type     = "medium"
     port              = 3000

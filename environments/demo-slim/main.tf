@@ -1609,7 +1609,6 @@ resource "kubernetes_namespace" "livekit" {
   }
 }
 
-
 resource "random_password" "livekit_api_secret" {
   length  = 256
   special = false
@@ -1789,8 +1788,13 @@ resource "helm_release" "metrics_server" {
   version    = "3.11.0" # Ensure this version is compatible with your Kubernetes version
 
   set {
-    name  = "args"
-    value = "{--kubelet-insecure-tls --kubelet-preferred-address-types=InternalIP}"
+    name  = "args[0]"
+    value = "--kubelet-preferred-address-types=InternalIP"
+  }
+
+  set {
+    name  = "args[1]"
+    value = "--kubelet-insecure-tls"
   }
 
   depends_on = [aws_eks_cluster.main]
@@ -2197,63 +2201,63 @@ resource "cloudflare_record" "nlb_dns" {
 }
 
 # Cloudflare Load Balancer
-resource "cloudflare_load_balancer" "main" {
-  zone_id          = var.cloudflare_zone_id
-  name             = var.domain_name
-  default_pool_ids = [cloudflare_load_balancer_pool.alb_pool.id]
-  fallback_pool_id = cloudflare_load_balancer_pool.alb_pool.id
-
-  rules {
-    name      = "livekit-rule"
-    condition = "hostname matches \"*livekit*.${var.domain_name}\""
-    fixed_response {
-      message_body = "This request was sent to the NLB pool"
-      status_code  = 200
-      content_type = "text/plain"
-    }
-    overrides {
-      ttl           = 60
-      default_pools = [cloudflare_load_balancer_pool.nlb_pool.id]
-    }
-  }
-}
-
-# Cloudflare Load Balancer Pool for ALB
-resource "cloudflare_load_balancer_pool" "alb_pool" {
-  name = "alb-pool"
-  origins {
-    name    = "alb-origin"
-    address = cloudflare_record.alb_dns.hostname
-    weight  = 1
-  }
-  account_id = var.cloudflare_account_id
-}
-
-# Cloudflare Load Balancer Pool for NLB
-resource "cloudflare_load_balancer_pool" "nlb_pool" {
-  name = "nlb-pool"
-  origins {
-    name    = "nlb-origin"
-    address = cloudflare_record.nlb_dns.hostname
-    weight  = 1
-  }
-  account_id = var.cloudflare_account_id
-}
-
-# Cloudflare DNS record for the load balancer
-resource "cloudflare_record" "lb_dns" {
-  zone_id = var.cloudflare_zone_id
-  name    = var.environment
-  content = cloudflare_load_balancer.main.id
-  type    = "CNAME"
-  proxied = true
-}
-
-# Wildcard DNS record for demo.10xr.co
-resource "cloudflare_record" "wildcard_dns" {
-  zone_id = var.cloudflare_zone_id
-  name    = "*.${var.domain_name}"
-  content = cloudflare_load_balancer.main.id
-  type    = "CNAME"
-  proxied = true
-}
+# resource "cloudflare_load_balancer" "main" {
+#   zone_id          = var.cloudflare_zone_id
+#   name             = var.domain_name
+#   default_pool_ids = [cloudflare_load_balancer_pool.alb_pool.id]
+#   fallback_pool_id = cloudflare_load_balancer_pool.alb_pool.id
+#
+#   rules {
+#     name      = "livekit-rule"
+#     condition = "hostname matches \"*livekit*.${var.domain_name}\""
+#     fixed_response {
+#       message_body = "This request was sent to the NLB pool"
+#       status_code  = 200
+#       content_type = "text/plain"
+#     }
+#     overrides {
+#       ttl           = 60
+#       default_pools = [cloudflare_load_balancer_pool.nlb_pool.id]
+#     }
+#   }
+# }
+#
+# # Cloudflare Load Balancer Pool for ALB
+# resource "cloudflare_load_balancer_pool" "alb_pool" {
+#   name = "alb-pool"
+#   origins {
+#     name    = "alb-origin"
+#     address = cloudflare_record.alb_dns.hostname
+#     weight  = 1
+#   }
+#   account_id = var.cloudflare_account_id
+# }
+#
+# # Cloudflare Load Balancer Pool for NLB
+# resource "cloudflare_load_balancer_pool" "nlb_pool" {
+#   name = "nlb-pool"
+#   origins {
+#     name    = "nlb-origin"
+#     address = cloudflare_record.nlb_dns.hostname
+#     weight  = 1
+#   }
+#   account_id = var.cloudflare_account_id
+# }
+#
+# # Cloudflare DNS record for the load balancer
+# resource "cloudflare_record" "lb_dns" {
+#   zone_id = var.cloudflare_zone_id
+#   name    = var.environment
+#   content = cloudflare_load_balancer.main.id
+#   type    = "CNAME"
+#   proxied = true
+# }
+#
+# # Wildcard DNS record for demo.10xr.co
+# resource "cloudflare_record" "wildcard_dns" {
+#   zone_id = var.cloudflare_zone_id
+#   name    = "*.${var.domain_name}"
+#   content = cloudflare_load_balancer.main.id
+#   type    = "CNAME"
+#   proxied = true
+# }
