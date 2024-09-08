@@ -1113,6 +1113,69 @@ resource "aws_iam_role_policy_attachment" "eks_nodes_AmazonEC2ContainerRegistryR
   role       = aws_iam_role.eks_nodes.name
 }
 
+# IAM Role for LiveKit Pods
+resource "aws_iam_role" "livekit_pods_role" {
+  name = "${var.project_name}-livekit-pods-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Action = "sts:AssumeRoleWithWebIdentity",
+        Effect = "Allow",
+        Principal = {
+          Federated = "${aws_eks_cluster.main.identity[0].oidc[0].issuer}"
+        },
+        Condition = {
+          StringEquals = {
+            "${aws_eks_cluster.main.identity[0].oidc[0].issuer}:sub" = "system:serviceaccount:${kubernetes_namespace.livekit.metadata[0].name}:livekit-service-account"
+          }
+        }
+      }
+    ]
+  })
+}
+
+
+# IAM Policy for LiveKit Pods
+resource "aws_iam_policy" "livekit_pods_policy" {
+  name        = "${var.project_name}-livekit-pods-policy"
+  description = "IAM policy for LiveKit pods to access AWS services"
+
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect = "Allow",
+        Action = [
+          "elasticache:DescribeReplicationGroups",
+          "elasticache:DescribeCacheClusters",
+          "elasticache:ListTagsForResource",
+          "sts:AssumeRole"
+        ],
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+# Attach the policy to the role
+resource "aws_iam_role_policy_attachment" "livekit_pods_policy_attachment" {
+  policy_arn = aws_iam_policy.livekit_pods_policy.arn
+  role      = aws_iam_role.livekit_pods_role.name
+}
+
+# Kubernetes Service Account for LiveKit
+resource "kubernetes_service_account" "livekit_service_account" {
+  metadata {
+    name      = "livekit-service-account"
+    namespace = kubernetes_namespace.livekit.metadata[0].name
+    annotations = {
+      "eks.amazonaws.com/role-arn" = aws_iam_role.livekit_pods_role.arn
+    }
+  }
+}
+
 # NAT Gateways
 resource "aws_nat_gateway" "main" {
   count         = 2

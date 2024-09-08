@@ -39,9 +39,9 @@ resources:
         memory: 1024Mi
 
 serviceAccount:
-    create: true
+    create: false
     annotations: {}
-    name: ""
+    name: livekit-service-account
 
 podHostNetwork: true
 
@@ -56,7 +56,6 @@ securityContext: {}
 tolerations: []
 
 affinity: {}
-
 
 extraVolumes:
     - name: tls-cert
