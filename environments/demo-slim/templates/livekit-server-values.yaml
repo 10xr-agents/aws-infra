@@ -1,6 +1,9 @@
 replicaCount: 3
 
 serviceAccount:
+    create: false
+    annotations:
+        eks.amazonaws.com/role-arn: ${livekit_pods_role}
     name: livekit-service-account
 
 livekit:

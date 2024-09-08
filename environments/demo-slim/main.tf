@@ -1030,6 +1030,16 @@ resource "aws_eks_cluster" "main" {
   ]
 }
 
+data "tls_certificate" "eks" {
+  url = aws_eks_cluster.main.identity[0].oidc[0].issuer
+}
+
+resource "aws_iam_openid_connect_provider" "eks" {
+  client_id_list  = ["sts.amazonaws.com"]
+  thumbprint_list = [data.tls_certificate.eks.certificates[0].sha1_fingerprint]
+  url             = aws_eks_cluster.main.identity[0].oidc[0].issuer
+}
+
 # EKS Cluster IAM Role
 resource "aws_iam_role" "eks_cluster" {
   name = "${var.project_name}-eks-cluster-role"
@@ -1124,11 +1134,11 @@ resource "aws_iam_role" "livekit_pods_role" {
         Action = "sts:AssumeRoleWithWebIdentity",
         Effect = "Allow",
         Principal = {
-          Federated = "${aws_eks_cluster.main.identity[0].oidc[0].issuer}"
+          Federated = aws_iam_openid_connect_provider.eks.arn
         },
         Condition = {
           StringEquals = {
-            "${aws_eks_cluster.main.identity[0].oidc[0].issuer}:sub" = "system:serviceaccount:${kubernetes_namespace.livekit.metadata[0].name}:livekit-service-account"
+            "${replace(aws_eks_cluster.main.identity[0].oidc[0].issuer, "https://", "")}:sub": "system:serviceaccount:${kubernetes_namespace.livekit.metadata[0].name}:livekit-service-account"
           }
         }
       }
@@ -1742,6 +1752,7 @@ resource "helm_release" "livekit_server" {
       livekit_redis_password   = random_password.redis_auth_token.result
       livekit_secret_name      = kubernetes_secret.tls_cert.metadata[0].name
       acm_certificate_arn      = aws_acm_certificate.nlb.arn
+      livekit_pods_role         = aws_iam_role.livekit_pods_role.arn
     })
   ]
 
@@ -1764,6 +1775,7 @@ resource "helm_release" "livekit_ingress" {
       livekit_redis_username = "default"
       livekit_redis_password = random_password.redis_auth_token.result
       livekit_secret_name      = kubernetes_secret.tls_cert.metadata[0].name
+      livekit_pods_role         = aws_iam_role.livekit_pods_role.arn
     })
   ]
 
@@ -1786,6 +1798,7 @@ resource "helm_release" "livekit_egress" {
       livekit_redis_username = "default"
       livekit_redis_password = random_password.redis_auth_token.result
       livekit_secret_name      = kubernetes_secret.tls_cert.metadata[0].name
+      livekit_pods_role         = aws_iam_role.livekit_pods_role.arn
     })
   ]
 
