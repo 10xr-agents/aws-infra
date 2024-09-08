@@ -1138,7 +1138,7 @@ resource "aws_iam_role" "livekit_pods_role" {
         },
         Condition = {
           StringEquals = {
-            "${replace(aws_eks_cluster.main.identity[0].oidc[0].issuer, "https://", "")}:sub": "system:serviceaccount:${kubernetes_namespace.livekit.metadata[0].name}:livekit-service-account"
+            "${replace(aws_eks_cluster.main.identity[0].oidc[0].issuer, "https://", "")}:sub" : "system:serviceaccount:${kubernetes_namespace.livekit.metadata[0].name}:livekit-service-account"
           }
         }
       }
@@ -1161,7 +1161,14 @@ resource "aws_iam_policy" "livekit_pods_policy" {
           "elasticache:DescribeReplicationGroups",
           "elasticache:DescribeCacheClusters",
           "elasticache:ListTagsForResource",
-          "sts:AssumeRole"
+          "sts:AssumeRole",
+          "sts:AssumeRoleWithWebIdentity",
+          "sts:GetCallerIdentity",
+          "ec2:DescribeNetworkInterfaces",
+          "ec2:CreateNetworkInterface",
+          "ec2:DeleteNetworkInterface",
+          "ec2:DescribeInstances",
+          "ec2:AttachNetworkInterface"
         ],
         Resource = "*"
       }
@@ -1172,7 +1179,7 @@ resource "aws_iam_policy" "livekit_pods_policy" {
 # Attach the policy to the role
 resource "aws_iam_role_policy_attachment" "livekit_pods_policy_attachment" {
   policy_arn = aws_iam_policy.livekit_pods_policy.arn
-  role      = aws_iam_role.livekit_pods_role.name
+  role       = aws_iam_role.livekit_pods_role.name
 }
 
 # Kubernetes Service Account for LiveKit
@@ -1752,7 +1759,7 @@ resource "helm_release" "livekit_server" {
       livekit_redis_password   = random_password.redis_auth_token.result
       livekit_secret_name      = kubernetes_secret.tls_cert.metadata[0].name
       acm_certificate_arn      = aws_acm_certificate.nlb.arn
-      livekit_pods_role         = aws_iam_role.livekit_pods_role.arn
+      livekit_pods_role        = aws_iam_role.livekit_pods_role.arn
     })
   ]
 
@@ -1774,8 +1781,8 @@ resource "helm_release" "livekit_ingress" {
       aws_redis_cluster      = "${aws_elasticache_replication_group.redis.primary_endpoint_address}:6379"
       livekit_redis_username = "default"
       livekit_redis_password = random_password.redis_auth_token.result
-      livekit_secret_name      = kubernetes_secret.tls_cert.metadata[0].name
-      livekit_pods_role         = aws_iam_role.livekit_pods_role.arn
+      livekit_secret_name    = kubernetes_secret.tls_cert.metadata[0].name
+      livekit_pods_role      = aws_iam_role.livekit_pods_role.arn
     })
   ]
 
@@ -1797,8 +1804,8 @@ resource "helm_release" "livekit_egress" {
       aws_redis_cluster      = "${aws_elasticache_replication_group.redis.primary_endpoint_address}:6379"
       livekit_redis_username = "default"
       livekit_redis_password = random_password.redis_auth_token.result
-      livekit_secret_name      = kubernetes_secret.tls_cert.metadata[0].name
-      livekit_pods_role         = aws_iam_role.livekit_pods_role.arn
+      livekit_secret_name    = kubernetes_secret.tls_cert.metadata[0].name
+      livekit_pods_role      = aws_iam_role.livekit_pods_role.arn
     })
   ]
 
@@ -2148,7 +2155,7 @@ resource "aws_security_group" "redis" {
     from_port   = 6379
     to_port     = 6379
     protocol    = "tcp"
-    cidr_blocks = [var.vpc_cidr]  # Allow access from VPC
+    cidr_blocks = [var.vpc_cidr] # Allow access from VPC
   }
 
   egress {
