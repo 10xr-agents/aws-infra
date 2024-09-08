@@ -1600,39 +1600,6 @@ provider "kubectl" {
   }
 }
 
-# Read the existing aws-auth config map from kube-system namespace
-data "kubernetes_config_map" "aws_auth_existing" {
-  metadata {
-    name      = "aws-auth"
-    namespace = "kube-system"
-  }
-}
-
-# Define new roles and users to append
-locals {
-  new_roles = [
-    {
-      rolearn  = aws_iam_role.eks_nodes.arn
-      username = "system:node:{{EC2PrivateDNSName}}"
-      groups   = ["system:bootstrappers", "system:nodes"]
-    }
-  ]
-
-  new_users = [
-    {
-      userarn  = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
-      username = "root"
-      groups   = ["system:masters"]
-    },
-    {
-      userarn  = data.aws_caller_identity.current.arn
-      username = "creator"
-      groups   = ["system:masters"]
-    }
-  ]
-}
-
-# Merge existing mapRoles and mapUsers with the new ones
 resource "kubernetes_config_map" "aws_auth" {
   metadata {
     name      = "aws-auth"
@@ -1641,16 +1608,32 @@ resource "kubernetes_config_map" "aws_auth" {
 
   data = {
     mapRoles = yamlencode(
-      flatten([yamldecode(data.kubernetes_config_map.aws_auth_existing.data["mapRoles"]), local.new_roles])
+      [
+        {
+          rolearn  = aws_iam_role.eks_nodes.arn
+          username = "system:node:{{EC2PrivateDNSName}}"
+          groups   = ["system:bootstrappers", "system:nodes"]
+        },
+      ]
     )
     mapUsers = yamlencode(
-      flatten([yamldecode(data.kubernetes_config_map.aws_auth_existing.data["mapUsers"]), local.new_users])
+      [
+        {
+          userarn  = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
+          username = "root"
+          groups   = ["system:masters"]
+        },
+        {
+          userarn  = data.aws_caller_identity.current.arn
+          username = "creator"
+          groups   = ["system:masters"]
+        }
+      ]
     )
   }
 
   depends_on = [aws_iam_role.eks_nodes]
 }
-
 
 # Helm LiveKit provider
 
