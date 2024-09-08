@@ -1682,7 +1682,7 @@ resource "helm_release" "livekit_server" {
     })
   ]
 
-  depends_on = [aws_eks_node_group.main, helm_release.aws_load_balancer_controller, kubernetes_service.livekit_udp_range]
+  depends_on = [aws_eks_node_group.main, helm_release.aws_load_balancer_controller]
 }
 
 # LiveKit Ingress Helm Chart
