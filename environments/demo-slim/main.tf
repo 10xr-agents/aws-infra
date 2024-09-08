@@ -2100,7 +2100,7 @@ resource "aws_elasticache_subnet_group" "redis" {
 # If you don't already have a CloudWatch log group, create one
 resource "aws_cloudwatch_log_group" "redis_logs" {
   name              = "/aws/elasticache/${var.project_name}-redis"
-  retention_in_days = 30  # Adjust retention period as needed
+  retention_in_days = 30 # Adjust retention period as needed
 }
 
 
@@ -2153,7 +2153,7 @@ resource "aws_elasticache_replication_group" "redis" {
   engine_version       = "7.1"
   parameter_group_name = "default.redis7"
 
-  transit_encryption_enabled = false
+  transit_encryption_enabled = true
   auth_token                 = random_password.redis_auth_token.result
 
   # Enable logging
