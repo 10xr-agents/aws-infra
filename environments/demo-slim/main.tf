@@ -144,16 +144,16 @@ resource "aws_network_acl" "main" {
     protocol   = "tcp"
     rule_no    = 200
     action     = "allow"
-    cidr_block = "0.0.0.0/0"
+    cidr_block = var.vpc_cidr
     from_port  = 80
     to_port    = 80
   }
 
-  ingress {
+  egress {
     protocol   = "tcp"
     rule_no    = 201
     action     = "allow"
-    cidr_block = "0.0.0.0/0"
+    cidr_block = var.vpc_cidr
     from_port  = 443
     to_port    = 443
   }
@@ -171,7 +171,7 @@ resource "aws_network_acl" "main" {
   # Allow ephemeral ports for inbound connections
   ingress {
     protocol   = "tcp"
-    rule_no    = 300
+    rule_no    = 301
     action     = "allow"
     cidr_block = "0.0.0.0/0"
     from_port  = 1024
@@ -191,9 +191,49 @@ resource "aws_network_acl" "main" {
   # Allow ephemeral ports for inbound connections
   ingress {
     protocol   = "udp"
-    rule_no    = 400
+    rule_no    = 401
     action     = "allow"
     cidr_block = "0.0.0.0/0"
+    from_port  = 1024
+    to_port    = 65535
+  }
+
+  # Allow ephemeral ports for outbound connections
+  egress {
+    protocol   = "tcp"
+    rule_no    = 500
+    action     = "allow"
+    cidr_block = var.vpc_cidr
+    from_port  = 1024
+    to_port    = 65535
+  }
+
+  # Allow ephemeral ports for inbound connections
+  ingress {
+    protocol   = "tcp"
+    rule_no    = 501
+    action     = "allow"
+    cidr_block = var.vpc_cidr
+    from_port  = 1024
+    to_port    = 65535
+  }
+
+  # Allow ephemeral ports for outbound connections
+  egress {
+    protocol   = "udp"
+    rule_no    = 600
+    action     = "allow"
+    cidr_block = var.vpc_cidr
+    from_port  = 1024
+    to_port    = 65535
+  }
+
+  # Allow ephemeral ports for inbound connections
+  ingress {
+    protocol   = "udp"
+    rule_no    = 601
+    action     = "allow"
+    cidr_block = var.vpc_cidr
     from_port  = 1024
     to_port    = 65535
   }
