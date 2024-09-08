@@ -244,6 +244,7 @@ resource "aws_network_acl" "main" {
 }
 
 # Security Group
+# ECS Security Group
 resource "aws_security_group" "ecs_sg" {
   name        = "${var.project_name}-ecs-sg"
   description = "Security group for ECS cluster and ALB"
@@ -254,6 +255,7 @@ resource "aws_security_group" "ecs_sg" {
     to_port     = 80
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
+    description = "Allow inbound HTTP traffic"
   }
 
   ingress {
@@ -261,6 +263,7 @@ resource "aws_security_group" "ecs_sg" {
     to_port     = 443
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
+    description = "Allow inbound HTTPS traffic"
   }
 
   ingress {
@@ -268,29 +271,7 @@ resource "aws_security_group" "ecs_sg" {
     to_port     = 65535
     protocol    = "tcp"
     cidr_blocks = [var.mongodb_atlas_cidr_block]
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 65535
-    protocol    = "tcp"
-    cidr_blocks = [var.mongodb_atlas_cidr_block]
-  }
-
-  ingress {
-    from_port   = 0
-    to_port     = 65535
-    protocol    = "tcp"
-    self        = true
-    description = "Allow internal communication between services"
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 65535
-    protocol    = "tcp"
-    self        = true
-    description = "Allow internal communication between services"
+    description = "Allow inbound traffic from MongoDB Atlas"
   }
 
   egress {
@@ -298,6 +279,7 @@ resource "aws_security_group" "ecs_sg" {
     to_port     = 0
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
+    description = "Allow all outbound traffic"
   }
 
   tags = {
@@ -1483,6 +1465,7 @@ resource "aws_lb_target_group" "livekit_whip" {
 }
 
 # Security Group for EKS
+# EKS Cluster Security Group
 resource "aws_security_group" "eks_cluster" {
   name        = "${var.project_name}-eks-cluster-sg"
   description = "Security group for EKS cluster"
@@ -1496,23 +1479,8 @@ resource "aws_security_group" "eks_cluster" {
     cidr_blocks = [var.vpc_cidr]
   }
 
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
   ingress {
-    description = "Allow inbound HTTP traffic to LiveKit"
-    from_port   = 53
-    to_port     = 53
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  ingress {
-    description = "Allow inbound HTTP traffic to LiveKit"
+    description = "Allow inbound HTTP traffic"
     from_port   = 80
     to_port     = 80
     protocol    = "tcp"
@@ -1520,16 +1488,15 @@ resource "aws_security_group" "eks_cluster" {
   }
 
   ingress {
-    description = "Allow inbound HTTPS traffic to LiveKit"
+    description = "Allow inbound HTTPS traffic"
     from_port   = 443
     to_port     = 443
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-
   ingress {
-    description = "Allow inbound traffic to LiveKit"
+    description = "Allow inbound LiveKit traffic"
     from_port   = 7880
     to_port     = 7882
     protocol    = "tcp"
@@ -1537,7 +1504,7 @@ resource "aws_security_group" "eks_cluster" {
   }
 
   ingress {
-    description = "Allow inbound traffic LiveKit RTC"
+    description = "Allow inbound LiveKit RTC traffic"
     from_port   = 40000
     to_port     = 65535
     protocol    = "udp"
@@ -1545,7 +1512,7 @@ resource "aws_security_group" "eks_cluster" {
   }
 
   ingress {
-    description = "Allow inbound traffic LiveKit TURN"
+    description = "Allow inbound LiveKit TURN traffic"
     from_port   = 3478
     to_port     = 3478
     protocol    = "udp"
@@ -1553,7 +1520,7 @@ resource "aws_security_group" "eks_cluster" {
   }
 
   ingress {
-    description = "Allow inbound traffic LiveKit TURN TLS"
+    description = "Allow inbound LiveKit TURN TLS traffic"
     from_port   = 5349
     to_port     = 5349
     protocol    = "tcp"
@@ -1561,7 +1528,7 @@ resource "aws_security_group" "eks_cluster" {
   }
 
   ingress {
-    description = "Allow inbound traffic LiveKit RTMP"
+    description = "Allow inbound LiveKit RTMP traffic"
     from_port   = 1935
     to_port     = 1935
     protocol    = "tcp"
@@ -1569,7 +1536,7 @@ resource "aws_security_group" "eks_cluster" {
   }
 
   ingress {
-    description = "Allow inbound traffic LiveKit TURN WHIM"
+    description = "Allow inbound LiveKit WHIP traffic"
     from_port   = 8080
     to_port     = 8080
     protocol    = "tcp"
@@ -1577,59 +1544,11 @@ resource "aws_security_group" "eks_cluster" {
   }
 
   egress {
-    description = "Allow outbound HTTP traffic to LiveKit"
-    from_port   = 53
-    to_port     = 53
-    protocol    = "udp"
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  egress {
-    description = "Allow outbound HTTP traffic to LiveKit"
-    from_port   = 80
-    to_port     = 80
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  egress {
-    description = "Allow outbound HTTPS traffic to LiveKit"
-    from_port   = 443
-    to_port     = 443
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  egress {
-    description = "Allow outbound traffic to LiveKit"
-    from_port   = 7880
-    to_port     = 7882
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  egress {
-    description = "Allow outbound traffic LiveKit RTC"
-    from_port   = 40000
-    to_port     = 65535
-    protocol    = "udp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  egress {
-    description = "Allow outbound traffic LiveKit TURN"
-    from_port   = 3478
-    to_port     = 3478
-    protocol    = "udp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  egress {
-    description = "Allow outbound traffic LiveKit TURN TLS"
-    from_port   = 5349
-    to_port     = 5349
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    description = "Allow all outbound traffic"
   }
 
   tags = {
@@ -2178,7 +2097,14 @@ resource "aws_elasticache_subnet_group" "redis" {
   subnet_ids = aws_subnet.public[*].id
 }
 
-# Create a security group for Redis
+# If you don't already have a CloudWatch log group, create one
+resource "aws_cloudwatch_log_group" "redis_logs" {
+  name              = "/aws/elasticache/${var.project_name}-redis"
+  retention_in_days = 30  # Adjust retention period as needed
+}
+
+
+# Redis Security Group
 resource "aws_security_group" "redis" {
   name        = "${var.project_name}-redis-sg"
   description = "Security group for Redis cluster"
@@ -2189,13 +2115,7 @@ resource "aws_security_group" "redis" {
     to_port         = 6379
     protocol        = "tcp"
     security_groups = [aws_security_group.eks_cluster.id]
-  }
-
-  ingress {
-    from_port   = 6379
-    to_port     = 6379
-    protocol    = "tcp"
-    cidr_blocks = [var.vpc_cidr] # Allow access from VPC
+    description     = "Allow inbound Redis traffic from EKS cluster"
   }
 
   egress {
@@ -2203,16 +2123,19 @@ resource "aws_security_group" "redis" {
     to_port     = 0
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
+    description = "Allow all outbound traffic"
   }
 }
 
-resource "aws_security_group_rule" "eks_to_redis_outbound" {
+# Add this rule to allow EKS to access Redis
+resource "aws_security_group_rule" "eks_to_redis" {
   type                     = "egress"
   from_port                = 6379
   to_port                  = 6379
   protocol                 = "tcp"
   source_security_group_id = aws_security_group.redis.id
   security_group_id        = aws_security_group.eks_cluster.id
+  description              = "Allow outbound traffic from EKS to Redis"
 }
 
 # Create the ElastiCache Redis cluster
@@ -2230,11 +2153,37 @@ resource "aws_elasticache_replication_group" "redis" {
   engine_version       = "7.1"
   parameter_group_name = "default.redis7"
 
-  transit_encryption_enabled = true
+  transit_encryption_enabled = false
   auth_token                 = random_password.redis_auth_token.result
+
+  # Enable logging
+  log_delivery_configuration {
+    destination      = aws_cloudwatch_log_group.redis_logs.name
+    destination_type = "cloudwatch-logs"
+    log_format       = "json"
+    log_type         = "slow-log"
+  }
+
+  log_delivery_configuration {
+    destination      = aws_cloudwatch_log_group.redis_logs.name
+    destination_type = "cloudwatch-logs"
+    log_format       = "json"
+    log_type         = "engine-log"
+  }
 
   # Important: Apply changes immediately
   apply_immediately = true
+}
+
+resource "aws_vpc_endpoint" "elasticache" {
+  vpc_id            = aws_vpc.main.id
+  service_name      = "com.amazonaws.${var.aws_region}.elasticache"
+  vpc_endpoint_type = "Interface"
+
+  security_group_ids = [aws_security_group.eks_cluster.id]
+  subnet_ids         = aws_subnet.public[*].id
+
+  private_dns_enabled = true
 }
 
 # Generate a random auth token for Redis
