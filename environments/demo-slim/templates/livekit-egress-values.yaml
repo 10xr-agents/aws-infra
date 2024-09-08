@@ -1,7 +1,7 @@
 replicaCount: 3
 
 egress:
-    log_level: info
+    log_level: debug
     health_port: 8080
     prometheus_port: 9090
     api_key: ${livekit_api_key}

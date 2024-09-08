@@ -2,7 +2,7 @@ replicaCount: 3
 
 ingress:
     logging:
-        level: info
+        level: debug
     health_port: 7888
     prometheus_port: 7889
     http_relay_port: 9090
