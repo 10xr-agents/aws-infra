@@ -2166,6 +2166,15 @@ resource "aws_security_group" "redis" {
   }
 }
 
+resource "aws_security_group_rule" "eks_to_redis_outbound" {
+  type                     = "egress"
+  from_port                = 6379
+  to_port                  = 6379
+  protocol                 = "tcp"
+  source_security_group_id = aws_security_group.redis.id
+  security_group_id        = aws_security_group.eks_cluster.id
+}
+
 # Create the ElastiCache Redis cluster
 resource "aws_elasticache_replication_group" "redis" {
   replication_group_id       = "redis-${var.project_name}"
