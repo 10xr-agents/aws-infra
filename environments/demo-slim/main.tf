@@ -1153,7 +1153,7 @@ resource "aws_lb_target_group" "livekit" {
   port        = 7880
   protocol    = "TCP"
   vpc_id      = aws_vpc.main.id
-  target_type = "ip"
+  target_type = "instance"
 
   health_check {
     protocol = "HTTP"
@@ -1278,7 +1278,7 @@ resource "aws_lb_target_group" "livekit_http" {
   port        = 7880
   protocol    = "TCP"
   vpc_id      = aws_vpc.main.id
-  target_type = "ip"
+  target_type = "instance"
 
   health_check {
     enabled             = true
@@ -1297,7 +1297,7 @@ resource "aws_lb_target_group" "livekit_https" {
   port        = 7880
   protocol    = "TCP"
   vpc_id      = aws_vpc.main.id
-  target_type = "ip"
+  target_type = "instance"
 
   health_check {
     enabled             = true
@@ -1316,7 +1316,7 @@ resource "aws_lb_target_group" "livekit_webrtc" {
   port        = 7882
   protocol    = "UDP"
   vpc_id      = aws_vpc.main.id
-  target_type = "ip"
+  target_type = "instance"
 
   health_check {
     enabled             = true
@@ -1333,7 +1333,7 @@ resource "aws_lb_target_group" "livekit_rtmp" {
   port        = 1935
   protocol    = "TCP"
   vpc_id      = aws_vpc.main.id
-  target_type = "ip"
+  target_type = "instance"
 
   health_check {
     enabled             = true
@@ -1349,7 +1349,7 @@ resource "aws_lb_target_group" "livekit_whip" {
   port        = 8080
   protocol    = "TCP"
   vpc_id      = aws_vpc.main.id
-  target_type = "ip"
+  target_type = "instance"
 
   health_check {
     enabled             = true
@@ -1385,6 +1385,14 @@ resource "aws_security_group" "eks_cluster" {
 
   ingress {
     description = "Allow inbound HTTP traffic to LiveKit"
+    from_port   = 53
+    to_port     = 53
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    description = "Allow inbound HTTP traffic to LiveKit"
     from_port   = 80
     to_port     = 80
     protocol    = "tcp"
@@ -1410,8 +1418,8 @@ resource "aws_security_group" "eks_cluster" {
 
   ingress {
     description = "Allow inbound traffic LiveKit RTC"
-    from_port   = 50000
-    to_port     = 60000
+    from_port   = 40000
+    to_port     = 65535
     protocol    = "udp"
     cidr_blocks = ["0.0.0.0/0"]
   }
@@ -1450,6 +1458,14 @@ resource "aws_security_group" "eks_cluster" {
 
   egress {
     description = "Allow outbound HTTP traffic to LiveKit"
+    from_port   = 53
+    to_port     = 53
+    protocol    = "udp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    description = "Allow outbound HTTP traffic to LiveKit"
     from_port   = 80
     to_port     = 80
     protocol    = "tcp"
@@ -1474,8 +1490,8 @@ resource "aws_security_group" "eks_cluster" {
 
   egress {
     description = "Allow outbound traffic LiveKit RTC"
-    from_port   = 50000
-    to_port     = 60000
+    from_port   = 40000
+    to_port     = 65535
     protocol    = "udp"
     cidr_blocks = ["0.0.0.0/0"]
   }
@@ -1619,6 +1635,34 @@ resource "aws_eks_addon" "vpc_cni" {
 
 # LiveKit Helm Chart
 # LiveKit Server Helm Chart
+# resource "kubernetes_service" "livekit_udp_range" {
+#   metadata {
+#     name      = "livekit-udp-range"
+#     namespace = kubernetes_namespace.livekit.metadata[0].name
+#   }
+#
+#   spec {
+#     selector = {
+#       app = "livekit-server"
+#     }
+#
+#     // Dynamic block to iterate over a range of ports
+#     dynamic "port" {
+#       for_each = range(40000, 65535) # Loop from 40000 to 65535 (60001 is exclusive)
+#
+#       content {
+#         name        = "udp-${port.value}"
+#         port        = port.value
+#         target_port = port.value
+#         protocol    = "UDP"
+#       }
+#     }
+#
+#     type                    = "NodePort"
+#     external_traffic_policy = "Local"
+#   }
+# }
+
 resource "helm_release" "livekit_server" {
   name       = "livekit-server"
   repository = "https://helm.livekit.io"
@@ -1634,10 +1678,11 @@ resource "helm_release" "livekit_server" {
       livekit_redis_username   = "default"
       livekit_redis_password   = random_password.redis_auth_token.result
       livekit_secret_name      = kubernetes_secret.tls_cert.metadata[0].name
+      acm_certificate_arn      = aws_acm_certificate.nlb.arn
     })
   ]
 
-  depends_on = [aws_eks_node_group.main, helm_release.aws_load_balancer_controller]
+  depends_on = [aws_eks_node_group.main, helm_release.aws_load_balancer_controller, kubernetes_service.livekit_udp_range]
 }
 
 # LiveKit Ingress Helm Chart
@@ -1686,6 +1731,7 @@ resource "helm_release" "livekit_egress" {
 
 # ALB Ingress Controller
 # Helm release for AWS Load Balancer Controller
+# AWS Load Balancer Controller
 resource "helm_release" "aws_load_balancer_controller" {
   name             = "aws-load-balancer-controller"
   repository       = "https://aws.github.io/eks-charts"
@@ -1719,10 +1765,23 @@ resource "helm_release" "aws_load_balancer_controller" {
     value = aws_vpc.main.id
   }
 
-  # Increase timeout and add retry logic
+  set {
+    name  = "enableShield"
+    value = "false"
+  }
+
+  set {
+    name  = "enableWaf"
+    value = "false"
+  }
+
+  set {
+    name  = "enableWafv2"
+    value = "false"
+  }
+
   timeout = 900 # 15 minutes
 
-  # Wait for EKS cluster to be ready
   depends_on = [
     aws_eks_cluster.main,
     aws_eks_node_group.main,
@@ -1730,7 +1789,6 @@ resource "helm_release" "aws_load_balancer_controller" {
   ]
 }
 
-# Add a null_resource for additional wait and retry logic
 resource "null_resource" "wait_for_alb_controller" {
   triggers = {
     helm_release = helm_release.aws_load_balancer_controller.id
@@ -1740,7 +1798,7 @@ resource "null_resource" "wait_for_alb_controller" {
     interpreter = ["/bin/bash", "-c"]
     command     = <<EOT
     KUBECONFIG_FILE=$(mktemp)
-    aws eks get-token --cluster-name 10xr-infra-demo-cluster | kubectl config view --raw -o yaml | sed 's/''/''/g' > $KUBECONFIG_FILE
+    aws eks get-token --cluster-name ${aws_eks_cluster.main.name} | kubectl config view --raw -o yaml | sed 's/''/''/g' > $KUBECONFIG_FILE
     kubectl --kubeconfig $KUBECONFIG_FILE wait --for=condition=available --timeout=900s deployment/aws-load-balancer-controller -n kube-system
     rm $KUBECONFIG_FILE
   EOT

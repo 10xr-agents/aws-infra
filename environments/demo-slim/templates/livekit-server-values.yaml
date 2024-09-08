@@ -25,7 +25,37 @@ livekit:
         cert_file: "tls.crt"
 
 service:
-    type: NodePort
+    type: LoadBalancer
+    annotations:
+        service.beta.kubernetes.io/aws-load-balancer-type: external
+        service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: instance
+        service.beta.kubernetes.io/aws-load-balancer-scheme: internet-facing
+        service.beta.kubernetes.io/aws-load-balancer-attributes: load_balancing.cross_zone.enabled=true
+        service.beta.kubernetes.io/aws-load-balancer-ssl-ports: "443,5349"
+        service.beta.kubernetes.io/aws-load-balancer-ssl-cert: ${acm_certificate_arn}
+    ports:
+        - port: 80
+          targetPort: 7880
+          protocol: TCP
+        - port: 443
+          targetPort: 7880
+          protocol: TCP
+        - port: 7880
+          targetPort: 7880
+          protocol: TCP
+        - port: 7881
+          targetPort: 7881
+          protocol: TCP
+        - port: 7882
+          targetPort: 7882
+          protocol: UDP
+        - port: 3478
+          targetPort: 3478
+          protocol: UDP
+        - port: 5349
+          targetPort: 5349
+          protocol: TCP
+    externalTrafficPolicy: Local
 
 podHostNetwork: true
 
