@@ -1095,10 +1095,10 @@ resource "aws_iam_role_policy_attachment" "eks_cluster_AmazonEKSVPCResourceContr
   role       = aws_iam_role.eks_cluster.name
 }
 
-# resource "aws_iam_role_policy_attachment" "eks_pod_identity_webhook" {
-#   policy_arn = "arn:aws:iam::aws:policy/AmazonEKS_PodIdentityWebHook"
-#   role       = aws_iam_role.eks_cluster.name
-# }
+resource "aws_iam_role_policy_attachment" "eks_pod_identity_webhook" {
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKS_PodIdentityWebHook"
+  role       = aws_iam_role.eks_cluster.name
+}
 
 # EKS Node Groups
 resource "aws_eks_node_group" "main" {
