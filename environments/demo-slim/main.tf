@@ -619,6 +619,12 @@ resource "aws_lb" "main" {
     enabled = true
   }
 
+  connection_logs {
+    bucket  = aws_s3_bucket.alb_logs.bucket
+    prefix  = "alb-logs"
+    enabled = true
+  }
+
   tags = {
     Name = "${var.project_name}-alb"
   }
@@ -1262,4 +1268,39 @@ resource "aws_globalaccelerator_endpoint_group" "main" {
   health_check_port             = 80
   health_check_interval_seconds = 30
   traffic_dial_percentage       = 100
+}
+
+resource "aws_vpc_endpoint" "global_accelerator" {
+  vpc_id            = aws_vpc.main.id
+  service_name      = "com.amazonaws.${var.aws_region}.global-accelerator"
+  vpc_endpoint_type = "Interface"
+  subnet_ids        = aws_subnet.public[*].id
+  security_group_ids = [aws_security_group.global_accelerator_endpoint.id]
+}
+
+resource "aws_security_group" "global_accelerator_endpoint" {
+  name        = "${var.project_name}-global-accelerator-endpoint-sg"
+  description = "Allow traffic from Global Accelerator to ALB"
+  vpc_id      = aws_vpc.main.id
+
+  ingress {
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
 }
