@@ -142,3 +142,20 @@ output "livekit_api_key" {
 #   value       = random_password.livekit_api_secret
 #   sensitive   = true
 # }
+
+# Output the access keys (Be cautious with this in production environments)
+output "s3_external_access_key_id" {
+  value = aws_iam_access_key.s3_external_access.id
+  description = "Access Key ID for S3 external access"
+}
+
+output "s3_external_access_secret" {
+  value = aws_iam_access_key.s3_external_access.secret
+  description = "Secret Access Key for S3 external access"
+  sensitive = true
+}
+
+output "s3_external_access_bucket_name" {
+  value = aws_s3_bucket.external_access.id
+  description = "Name of the S3 bucket for external access"
+}

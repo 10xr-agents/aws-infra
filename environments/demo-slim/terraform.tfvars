@@ -4,7 +4,7 @@ project_name         = "10xr-demo"
 default_organization = "demo"
 domain_name          = "demo.10xr.co"
 vpc_cidr             = "10.0.0.0/16"
-public_subnet_cidrs  = ["10.0.1.0/24", "10.0.2.0/24"]
+public_subnet_cidrs = ["10.0.1.0/24", "10.0.2.0/24"]
 
 services = [
   {
@@ -21,7 +21,7 @@ services = [
       "ECS_ENVIRONMENT"        = "demo"
       "SPRING_PROFILES_ACTIVE" = "demo"
     }
-    secrets             = {}
+    secrets = {}
     additional_policies = ["arn:aws:iam::aws:policy/AmazonS3FullAccess"]
     capacity_provider_strategy = [
       {
@@ -45,7 +45,7 @@ services = [
       "ECS_ENVIRONMENT"        = "demo"
       "SPRING_PROFILES_ACTIVE" = "demo"
     }
-    secrets             = {}
+    secrets = {}
     additional_policies = ["arn:aws:iam::aws:policy/AmazonS3FullAccess"]
     capacity_provider_strategy = [
       {
@@ -69,7 +69,7 @@ services = [
       "ECS_ENVIRONMENT"        = "demo"
       "SPRING_PROFILES_ACTIVE" = "demo"
     }
-    secrets             = {}
+    secrets = {}
     additional_policies = ["arn:aws:iam::aws:policy/AmazonS3FullAccess"]
     capacity_provider_strategy = [
       {
@@ -92,7 +92,7 @@ services = [
       "ENV"             = "demo"
       "ECS_ENVIRONMENT" = "demo"
     }
-    secrets             = {}
+    secrets = {}
     additional_policies = ["arn:aws:iam::aws:policy/AmazonS3FullAccess"]
     capacity_provider_strategy = [
       {
@@ -115,7 +115,7 @@ services = [
       "ENV"             = "demo"
       "ECS_ENVIRONMENT" = "demo"
     }
-    secrets             = {}
+    secrets = {}
     additional_policies = ["arn:aws:iam::aws:policy/AmazonS3FullAccess"]
     capacity_provider_strategy = [
       {

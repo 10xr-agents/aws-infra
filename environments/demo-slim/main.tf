@@ -1062,3 +1062,64 @@ resource "cloudflare_record" "proxy_alb_dns" {
   type    = "CNAME"
   proxied = false
 }
+
+# S3 Bucket for external access
+resource "aws_s3_bucket" "external_access" {
+  bucket = "${var.project_name}-external-access"
+  force_destroy = true
+
+  tags = {
+    Name = "${var.project_name}-external-access"
+  }
+}
+
+# Bucket public access block
+resource "aws_s3_bucket_public_access_block" "external_access" {
+  bucket = aws_s3_bucket.external_access.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+# IAM User for programmatic access
+resource "aws_iam_user" "s3_external_access" {
+  name = "${var.project_name}-s3-external-access"
+}
+
+# IAM Policy for S3 access
+resource "aws_iam_policy" "s3_external_access" {
+  name        = "${var.project_name}-s3-external-access-policy"
+  description = "Policy for external S3 access"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:GetObject",
+          "s3:PutObject",
+          "s3:ListBucket",
+          "s3:DeleteObject"
+        ]
+        Resource = [
+          aws_s3_bucket.external_access.arn,
+          "${aws_s3_bucket.external_access.arn}/*"
+        ]
+      }
+    ]
+  })
+}
+
+# Attach policy to IAM user
+resource "aws_iam_user_policy_attachment" "s3_external_access" {
+  user       = aws_iam_user.s3_external_access.name
+  policy_arn = aws_iam_policy.s3_external_access.arn
+}
+
+# Generate access keys for the IAM user
+resource "aws_iam_access_key" "s3_external_access" {
+  user = aws_iam_user.s3_external_access.name
+}
