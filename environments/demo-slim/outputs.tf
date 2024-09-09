@@ -137,8 +137,8 @@ output "livekit_api_key" {
   value       = var.livekit_api_key
 }
 
-output "livekit_api_secret" {
-  description = "LiveKit API secret"
-  value       = random_password.livekit_api_secret
-  sensitive   = true
-}
+# output "livekit_api_secret" {
+#   description = "LiveKit API secret"
+#   value       = random_password.livekit_api_secret
+#   sensitive   = true
+# }
