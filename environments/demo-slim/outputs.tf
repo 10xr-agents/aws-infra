@@ -159,3 +159,15 @@ output "s3_external_access_bucket_name" {
   value = aws_s3_bucket.external_access.id
   description = "Name of the S3 bucket for external access"
 }
+
+# Output the Global Accelerator DNS name
+output "global_accelerator_dns_name" {
+  value       = aws_globalaccelerator_accelerator.main.dns_name
+  description = "The DNS name of the Global Accelerator"
+}
+
+# Output the Global Accelerator IP addresses
+output "global_accelerator_ip_addresses" {
+  value       = aws_globalaccelerator_accelerator.main.ip_sets[0].ip_addresses
+  description = "The IP addresses of the Global Accelerator"
+}

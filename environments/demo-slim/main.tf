@@ -350,14 +350,14 @@ resource "aws_ecs_cluster" "main" {
 
 # ECS Task Definitions
 resource "aws_ecs_task_definition" "service" {
-  count                    = length(var.services)
-  family                   = "${var.project_name}-${var.services[count.index].name}"
-  network_mode             = "awsvpc"
+  count = length(var.services)
+  family             = "${var.project_name}-${var.services[count.index].name}"
+  network_mode       = "awsvpc"
   requires_compatibilities = ["FARGATE"]
-  cpu                      = var.services[count.index].cpu
-  memory                   = var.services[count.index].memory
-  execution_role_arn       = aws_iam_role.ecs_execution_role.arn
-  task_role_arn            = aws_iam_role.ecs_task_role[count.index].arn
+  cpu                = var.services[count.index].cpu
+  memory             = var.services[count.index].memory
+  execution_role_arn = aws_iam_role.ecs_execution_role.arn
+  task_role_arn      = aws_iam_role.ecs_task_role[count.index].arn
 
   container_definitions = jsonencode([
     {
@@ -378,7 +378,7 @@ resource "aws_ecs_task_definition" "service" {
           name  = "MONGO_DB_URI"
           value = "${mongodbatlas_cluster.cluster.connection_strings[0].standard_srv}/${var.mongodb_database_name}?authMechanism=MONGODB-AWS&authSource=$external"
         }
-        ], [
+      ], [
         for key, value in var.services[count.index].environment_variables :
         {
           name  = key
@@ -387,7 +387,10 @@ resource "aws_ecs_task_definition" "service" {
       ])
       # Include healthCheck only if health_check_path is defined
       healthCheck = length(var.services[count.index].health_check_path) > 0 ? {
-        command     = ["CMD-SHELL", "curl -v -f http://127.0.0.1:${var.services[count.index].port}${var.services[count.index].health_check_path} || exit 1"]
+        command = [
+          "CMD-SHELL",
+          "curl -v -f http://127.0.0.1:${var.services[count.index].port}${var.services[count.index].health_check_path} || exit 1"
+        ]
         interval    = 30
         timeout     = 10
         retries     = 6
@@ -414,7 +417,7 @@ resource "aws_ecs_task_definition" "service" {
 
 # ECS Services
 resource "aws_ecs_service" "service" {
-  count           = length(var.services)
+  count = length(var.services)
   name            = "${var.project_name}-${var.services[count.index].name}"
   cluster         = aws_ecs_cluster.main.id
   task_definition = aws_ecs_task_definition.service[count.index].arn
@@ -422,7 +425,7 @@ resource "aws_ecs_service" "service" {
 
   network_configuration {
     subnets          = aws_subnet.public[*].id
-    security_groups  = [aws_security_group.ecs_sg.id]
+    security_groups = [aws_security_group.ecs_sg.id]
     assign_public_ip = true
   }
 
@@ -482,7 +485,7 @@ resource "aws_service_discovery_service" "service" {
 # IAM Roles
 resource "aws_iam_role" "ecs_task_role" {
   count = length(var.services)
-  name  = "${var.project_name}-${var.services[count.index].name}-task-role"
+  name = "${var.project_name}-${var.services[count.index].name}-task-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -499,13 +502,13 @@ resource "aws_iam_role" "ecs_task_role" {
 }
 
 resource "aws_iam_role_policy_attachment" "ecs_task_role_policy" {
-  count      = length(var.services)
+  count = length(var.services)
   role       = aws_iam_role.ecs_task_role[count.index].name
   policy_arn = aws_iam_policy.ecs_task_policy[count.index].arn
 }
 
 resource "aws_iam_policy" "ecs_task_policy" {
-  count       = length(var.services)
+  count = length(var.services)
   name        = "${var.project_name}-${var.services[count.index].name}-task-policy"
   path        = "/"
   description = "IAM policy for ECS task"
@@ -527,14 +530,15 @@ resource "aws_iam_policy" "ecs_task_policy" {
         ]
         Resource = "*"
       }
-      ],
-      [for policy_arn in var.services[count.index].additional_policies :
+    ],
+      [
+        for policy_arn in var.services[count.index].additional_policies :
         {
           Effect   = "Allow"
           Action   = "*"
           Resource = "*"
         }
-    ])
+      ])
   })
 }
 
@@ -586,7 +590,7 @@ resource "aws_lb" "main" {
   name               = "${var.project_name}-alb"
   internal           = false
   load_balancer_type = "application"
-  security_groups    = [aws_security_group.ecs_sg.id]
+  security_groups = [aws_security_group.ecs_sg.id]
   subnets            = aws_subnet.public[*].id
 
   enable_deletion_protection = false
@@ -603,7 +607,7 @@ resource "aws_lb" "main" {
 }
 
 resource "aws_lb_target_group" "service" {
-  count       = length(var.services)
+  count = length(var.services)
   name        = "${var.project_name}-tg-${var.services[count.index].name}"
   port        = var.services[count.index].port
   protocol    = "HTTP"
@@ -657,7 +661,7 @@ resource "aws_lb_listener" "https" {
 }
 
 resource "aws_lb_listener_rule" "service" {
-  count        = length(var.services)
+  count = length(var.services)
   listener_arn = aws_lb_listener.https.arn
 
   action {
@@ -1005,7 +1009,7 @@ resource "mongodbatlas_cluster" "cluster" {
       read_only_nodes = 0
     }
   }
-  cloud_backup                 = true
+  cloud_backup = true
   auto_scaling_disk_gb_enabled = true
 
   # Provider Settings "block"
@@ -1062,7 +1066,7 @@ resource "mongodbatlas_project_ip_access_list" "ip_access_list" {
 
 # Create a MongoDB Atlas database user with AWS IAM authentication
 resource "mongodbatlas_database_user" "aws_iam_user" {
-  count              = length(var.services)
+  count = length(var.services)
   project_id         = var.mongodb_atlas_project_id
   auth_database_name = "$external"
   username           = aws_iam_role.ecs_task_role[count.index].arn
@@ -1084,36 +1088,60 @@ resource "mongodbatlas_database_user" "aws_iam_user" {
   }
 }
 
-# Cloudflare DNS record for ALB
-resource "cloudflare_record" "alb_dns" {
+# # Cloudflare DNS record for ALB
+# resource "cloudflare_record" "alb_dns" {
+#   zone_id = var.cloudflare_zone_id
+#   name    = var.environment
+#   content = aws_lb.main.dns_name
+#   type    = "CNAME"
+#   proxied = false
+# }
+#
+# # Cloudflare DNS record for ALB
+# resource "cloudflare_record" "api_alb_dns" {
+#   zone_id = var.cloudflare_zone_id
+#   name    = "api.${var.environment}"
+#   content = aws_lb.main.dns_name
+#   type    = "CNAME"
+#   proxied = false
+# }
+#
+# # Cloudflare DNS record for ALB
+# resource "cloudflare_record" "proxy_alb_dns" {
+#   zone_id = var.cloudflare_zone_id
+#   name    = "proxy.${var.environment}"
+#   content = aws_lb.main.dns_name
+#   type    = "CNAME"
+#   proxied = false
+# }
+
+resource "cloudflare_record" "global_accelerator_dns" {
   zone_id = var.cloudflare_zone_id
   name    = var.environment
-  content = aws_lb.main.dns_name
+  content = aws_globalaccelerator_accelerator.main.dns_name
   type    = "CNAME"
   proxied = false
 }
 
-# Cloudflare DNS record for ALB
-resource "cloudflare_record" "api_alb_dns" {
+resource "cloudflare_record" "api_global_accelerator_dns" {
   zone_id = var.cloudflare_zone_id
   name    = "api.${var.environment}"
-  content = aws_lb.main.dns_name
+  content = aws_globalaccelerator_accelerator.main.dns_name
   type    = "CNAME"
   proxied = false
 }
 
-# Cloudflare DNS record for ALB
-resource "cloudflare_record" "proxy_alb_dns" {
+resource "cloudflare_record" "proxy_global_accelerator_dns" {
   zone_id = var.cloudflare_zone_id
   name    = "proxy.${var.environment}"
-  content = aws_lb.main.dns_name
+  content = aws_globalaccelerator_accelerator.main.dns_name
   type    = "CNAME"
   proxied = false
 }
 
 # S3 Bucket for external access
 resource "aws_s3_bucket" "external_access" {
-  bucket = "${var.project_name}-external-access"
+  bucket        = "${var.project_name}-external-access"
   force_destroy = true
 
   tags = {
@@ -1170,4 +1198,53 @@ resource "aws_iam_user_policy_attachment" "s3_external_access" {
 # Generate access keys for the IAM user
 resource "aws_iam_access_key" "s3_external_access" {
   user = aws_iam_user.s3_external_access.name
+}
+
+# Global Accelerator
+resource "aws_globalaccelerator_accelerator" "main" {
+  name            = "${var.project_name}-accelerator"
+  ip_address_type = "IPV4"
+  enabled         = true
+
+  attributes {
+    flow_logs_enabled   = true
+    flow_logs_s3_bucket = aws_s3_bucket.alb_logs.id
+    flow_logs_s3_prefix = "global-accelerator-flow-logs"
+  }
+}
+
+# Global Accelerator Listener
+resource "aws_globalaccelerator_listener" "main" {
+  accelerator_arn = aws_globalaccelerator_accelerator.main.id
+  client_affinity = "NONE"
+  protocol        = "TCP"
+
+  port_range {
+    from_port = 80
+    to_port   = 80
+  }
+
+  port_range {
+    from_port = 443
+    to_port   = 443
+  }
+}
+
+# Global Accelerator Endpoint Group
+resource "aws_globalaccelerator_endpoint_group" "main" {
+  listener_arn = aws_globalaccelerator_listener.main.id
+
+  endpoint_configuration {
+    endpoint_id = aws_lb.main.arn
+    weight      = 100
+  }
+
+  health_check_path             = "/"
+  health_check_protocol         = "HTTP"
+  health_check_port             = 80
+  health_check_interval_seconds = 30
+  health_check_timeout_seconds  = 10
+  healthy_threshold_count       = 3
+  unhealthy_threshold_count     = 3
+  traffic_dial_percentage       = 100
 }
