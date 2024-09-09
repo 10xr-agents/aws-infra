@@ -33,7 +33,7 @@ services = [
   },
   {
     name              = "cnvrs-ui"
-    ecr_repo          = "761018882607.dkr.ecr.us-east-1.amazonaws.com/10xr/converse-ui:0.1.0"
+    ecr_repo          = "761018882607.dkr.ecr.us-east-1.amazonaws.com/10xr/converse-ui:1.0.0"
     cpu               = 1024
     memory            = 2048
     desired_count     = 2
