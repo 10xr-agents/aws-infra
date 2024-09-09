@@ -1243,8 +1243,5 @@ resource "aws_globalaccelerator_endpoint_group" "main" {
   health_check_protocol         = "HTTP"
   health_check_port             = 80
   health_check_interval_seconds = 30
-  health_check_timeout_seconds  = 10
-  healthy_threshold_count       = 3
-  unhealthy_threshold_count     = 3
   traffic_dial_percentage       = 100
 }
