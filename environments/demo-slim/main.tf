@@ -270,6 +270,14 @@ resource "aws_security_group" "ecs_sg" {
     from_port   = 0
     to_port     = 65535
     protocol    = "tcp"
+    cidr_blocks = [var.vpc_cidr]
+    description = "Allow inbound HTTPS traffic"
+  }
+
+  ingress {
+    from_port   = 0
+    to_port     = 65535
+    protocol    = "tcp"
     cidr_blocks = [var.mongodb_atlas_cidr_block]
     description = "Allow inbound traffic from MongoDB Atlas"
   }
