@@ -608,7 +608,7 @@ resource "aws_lb" "main" {
   name               = "${var.project_name}-alb"
   internal           = false
   load_balancer_type = "application"
-  security_groups = [aws_security_group.ecs_sg.id]
+  security_groups = [aws_security_group.ecs_sg.id, aws_security_group.global_accelerator_endpoint.id]
   subnets            = aws_subnet.public[*].id
 
   enable_deletion_protection = false
@@ -975,15 +975,15 @@ resource "aws_s3_bucket_policy" "alb_logs" {
         ]
       },
       {
-        "Effect": "Allow",
-        "Principal": {
-          "Service": "globalaccelerator.amazonaws.com"
+        "Effect" : "Allow",
+        "Principal" : {
+          "Service" : "globalaccelerator.amazonaws.com"
         },
-        "Action": "s3:PutObject",
-        "Resource": "arn:aws:s3:::${aws_s3_bucket.alb_logs.id}/*",
-        "Condition": {
-          "StringEquals": {
-            "aws:SourceAccount": "${data.aws_caller_identity.current.account_id}"
+        "Action" : "s3:PutObject",
+        "Resource" : "arn:aws:s3:::${aws_s3_bucket.alb_logs.id}/*",
+        "Condition" : {
+          "StringEquals" : {
+            "aws:SourceAccount" : "${data.aws_caller_identity.current.account_id}"
           }
         }
       }
@@ -1289,23 +1289,23 @@ resource "aws_security_group" "global_accelerator_endpoint" {
   vpc_id      = aws_vpc.main.id
 
   ingress {
-    from_port   = 80
-    to_port     = 80
-    protocol    = "tcp"
+    from_port = 80
+    to_port   = 80
+    protocol  = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
 
   ingress {
-    from_port   = 443
-    to_port     = 443
-    protocol    = "tcp"
+    from_port = 443
+    to_port   = 443
+    protocol  = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
 
   egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
+    from_port = 0
+    to_port   = 0
+    protocol  = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
 }
