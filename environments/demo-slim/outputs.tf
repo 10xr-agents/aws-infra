@@ -171,27 +171,3 @@ output "global_accelerator_ip_addresses" {
   value       = aws_globalaccelerator_accelerator.main.ip_sets[0].ip_addresses
   description = "The IP addresses of the Global Accelerator"
 }
-
-output "internet_to_alb_analysis_status" {
-  value = aws_ec2_network_insights_analysis.internet_to_alb.status
-}
-
-output "internet_to_ga_analysis_status" {
-  value = aws_ec2_network_insights_analysis.internet_to_ga.status
-}
-
-output "ga_to_alb_analysis_status" {
-  value = aws_ec2_network_insights_analysis.ga_to_alb.status
-}
-
-output "internet_to_alb_analysis_result" {
-  value = aws_ec2_network_insights_analysis.internet_to_alb.status == "succeeded" ? "ALB is reachable from internet" : "ALB may not be reachable from internet"
-}
-
-output "internet_to_ga_analysis_result" {
-  value = aws_ec2_network_insights_analysis.internet_to_ga.status == "succeeded" ? "Global Accelerator is reachable from internet" : "Global Accelerator may not be reachable from internet"
-}
-
-output "ga_to_alb_analysis_result" {
-  value = aws_ec2_network_insights_analysis.ga_to_alb.status == "succeeded" ? "ALB is reachable from Global Accelerator" : "ALB may not be reachable from Global Accelerator"
-}
