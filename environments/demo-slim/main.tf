@@ -120,6 +120,26 @@ resource "aws_network_acl" "main" {
     to_port    = 65535
   }
 
+  # Inbound rule for internet access (for updates, etc.)
+  ingress {
+    protocol   = "tcp"
+    rule_no    = 900
+    action     = "allow"
+    cidr_block = "0.0.0.0/0"
+    from_port  = 80
+    to_port    = 80
+  }
+
+  ingress {
+    protocol   = "tcp"
+    rule_no    = 901
+    action     = "allow"
+    cidr_block = "0.0.0.0/0"
+    from_port  = 443
+    to_port    = 443
+  }
+
+
   # Outbound rule for internet access (for updates, etc.)
   egress {
     protocol   = "tcp"
