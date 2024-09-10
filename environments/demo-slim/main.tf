@@ -1697,17 +1697,6 @@ resource "aws_iam_role_policy_attachment" "eks_admin" {
   role       = aws_iam_role.eks_admin.name
 }
 
-# Grant EKS admin access to the current user and root account
-resource "aws_iam_role_policy_attachment" "current_user_eks_admin" {
-  policy_arn = aws_iam_policy.eks_admin.arn
-  role       = data.aws_caller_identity.current.user_id
-}
-
-resource "aws_iam_role_policy_attachment" "root_account_eks_admin" {
-  policy_arn = aws_iam_policy.eks_admin.arn
-  role       = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
-}
-
 # aws-auth ConfigMap to grant cluster-admin access
 resource "kubernetes_config_map" "aws_auth" {
   metadata {
