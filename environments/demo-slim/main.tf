@@ -1130,7 +1130,7 @@ resource "mongodbatlas_database_user" "aws_iam_user" {
   aws_iam_type       = "ROLE"
 
   roles {
-    role_name     = "readWriteAnyDatabase"
+    role_name     = "readWrite"
     database_name = "admin"
   }
 
@@ -1140,7 +1140,7 @@ resource "mongodbatlas_database_user" "aws_iam_user" {
   }
 
   roles {
-    role_name     = "readWriteAnyDatabase"
+    role_name     = "readWrite"
     database_name = var.mongodb_database_name
   }
 
