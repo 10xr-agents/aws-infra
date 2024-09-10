@@ -1141,8 +1141,8 @@ resource "mongodbatlas_database_user" "aws_iam_user" {
 # Ensure the ECS task role has the necessary permissions to assume the MongoDB Atlas role
 resource "aws_iam_role_policy" "ecs_task_mongodb_policy" {
   count = length(var.services)
-  name  = "${var.services[count.index].name}-mongodb-policy"
-  role  = aws_iam_role.ecs_task_role[count.index].id
+  name = "${var.services[count.index].name}-mongodb-policy"
+  role = aws_iam_role.ecs_task_role[count.index].id
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -1342,13 +1342,13 @@ resource "aws_cloudwatch_log_group" "redis_logs" {
 
 # ElastiCache Replication Group (Redis Cluster)
 resource "aws_elasticache_replication_group" "redis" {
-  replication_group_id       = "${var.project_name}-redis-cluster"
-  description = "Redis cluster for ${var.project_name}"
+  replication_group_id       = "redis-cluster-${var.project_name}"
+  description                = "Redis cluster for ${var.project_name}"
   node_type                  = "cache.t3.micro"
   port                       = 6379
   parameter_group_name       = aws_elasticache_parameter_group.redis.name
   subnet_group_name          = aws_elasticache_subnet_group.redis.name
-  security_group_ids         = [aws_security_group.redis.id]
+  security_group_ids = [aws_security_group.redis.id]
   automatic_failover_enabled = true
   num_cache_clusters         = 2
   at_rest_encryption_enabled = true
@@ -1380,17 +1380,17 @@ resource "aws_security_group" "redis" {
   vpc_id      = aws_vpc.main.id
 
   ingress {
-    description     = "Allow inbound from ECS tasks"
-    from_port       = 6379
-    to_port         = 6379
-    protocol        = "tcp"
+    description = "Allow inbound from ECS tasks"
+    from_port   = 6379
+    to_port     = 6379
+    protocol    = "tcp"
     security_groups = [aws_security_group.ecs_sg.id]
   }
 
   egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
+    from_port = 0
+    to_port   = 0
+    protocol  = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
 
@@ -1401,7 +1401,7 @@ resource "aws_security_group" "redis" {
 
 # Update ECS Task Role to allow access to Redis
 resource "aws_iam_role_policy_attachment" "ecs_task_redis_policy" {
-  count      = length(var.services)
+  count = length(var.services)
   role       = aws_iam_role.ecs_task_role[count.index].name
   policy_arn = aws_iam_policy.redis_access.arn
 }
