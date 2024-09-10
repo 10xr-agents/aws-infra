@@ -1428,11 +1428,11 @@ resource "aws_iam_policy" "redis_access" {
 }
 
 data "aws_eks_cluster" "livekit_cluster" {
-  name = "livekit_cluster"
+  name = "${var.project_name}-eks-cluster"
 }
 
 data "aws_eks_cluster_auth" "livekit_cluster" {
-  name = "livekit_cluster"
+  name = "${var.project_name}-eks-cluster"
 }
 
 # Kubernetes provider configuration
