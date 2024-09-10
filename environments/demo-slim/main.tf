@@ -1135,7 +1135,7 @@ resource "mongodbatlas_database_user" "aws_iam_user" {
   }
 
   roles {
-    role_name     = "dbAdminAnyDatabase"
+    role_name     = "dbAdmin"
     database_name = "admin"
   }
 
@@ -1145,7 +1145,7 @@ resource "mongodbatlas_database_user" "aws_iam_user" {
   }
 
   roles {
-    role_name     = "dbAdminAnyDatabase"
+    role_name     = "dbAdmin"
     database_name = var.mongodb_database_name
   }
 
