@@ -1139,6 +1139,17 @@ resource "mongodbatlas_database_user" "aws_iam_user" {
     database_name = "admin"
   }
 
+  roles {
+    role_name     = "readWriteAnyDatabase"
+    database_name = var.mongodb_database_name
+  }
+
+  roles {
+    role_name     = "dbAdminAnyDatabase"
+    database_name = var.mongodb_database_name
+  }
+
+
   scopes {
     name = mongodbatlas_cluster.cluster.name
     type = "CLUSTER"
@@ -1148,7 +1159,7 @@ resource "mongodbatlas_database_user" "aws_iam_user" {
 # Ensure the ECS task role has the necessary permissions to assume the MongoDB Atlas role
 resource "aws_iam_role_policy" "ecs_task_mongodb_policy" {
   count = length(var.services)
-  name  = "${var.services[count.index]}-mongodb-policy"
+  name  = "${var.services[count.index].name}-mongodb-policy"
   role  = aws_iam_role.ecs_task_role[count.index].id
 
   policy = jsonencode({
