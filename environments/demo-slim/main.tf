@@ -1684,7 +1684,7 @@ resource "aws_iam_policy" "eks_admin" {
           "ec2:DescribeVpcs",
           "iam:ListRoles",
           "iam:GetRole",
-          "iam:ListAttachedRolePolicies"
+          "iam:ListAttachedRolePolicies",
         ]
         Resource = "*"
       },
