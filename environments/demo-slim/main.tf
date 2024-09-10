@@ -1130,12 +1130,12 @@ resource "mongodbatlas_database_user" "aws_iam_user" {
   aws_iam_type       = "ROLE"
 
   roles {
-    role_name     = "dbAdmin"
-    database_name = var.mongodb_database_name
+    role_name     = "readWriteAnyDatabase"
+    database_name = "admin"
   }
 
   roles {
-    role_name     = "readAnyDatabase"
+    role_name     = "dbAdminAnyDatabase"
     database_name = "admin"
   }
 
@@ -1143,6 +1143,27 @@ resource "mongodbatlas_database_user" "aws_iam_user" {
     name = mongodbatlas_cluster.cluster.name
     type = "CLUSTER"
   }
+}
+
+# Ensure the ECS task role has the necessary permissions to assume the MongoDB Atlas role
+resource "aws_iam_role_policy" "ecs_task_mongodb_policy" {
+  count = length(var.services)
+  name  = "${var.services[count.index]}-mongodb-policy"
+  role  = aws_iam_role.ecs_task_role[count.index].id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "sts:AssumeRole",
+          "sts:TagSession"
+        ]
+        Resource = aws_iam_role.ecs_task_role[count.index].arn
+      }
+    ]
+  })
 }
 
 # # Cloudflare DNS record for ALB
