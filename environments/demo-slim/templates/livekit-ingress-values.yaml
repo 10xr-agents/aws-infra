@@ -28,7 +28,10 @@ loadBalancer:
 terminationGracePeriodSeconds: 3600
 
 autoscaling:
-    enabled: false
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 80
 
 resources:
     requests:
@@ -38,11 +41,11 @@ resources:
         cpu: 1000m
         memory: 1024Mi
 
-serviceAccount:
-    create: false
-    annotations:
-        eks.amazonaws.com/role-arn: ${livekit_pods_role}
-    name: livekit-service-account
+#serviceAccount:
+#    create: false
+#    annotations:
+#        eks.amazonaws.com/role-arn: ${livekit_pods_role}
+#    name: livekit-service-account
 
 podHostNetwork: true
 
