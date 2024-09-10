@@ -1426,3 +1426,15 @@ resource "aws_iam_policy" "redis_access" {
     ]
   })
 }
+
+provider "helm" {
+  kubernetes {
+    config_path = "~/.kube/config"
+  }
+}
+
+provider "kubectl" {
+  kubernetes {
+    config_path = "~/.kube/config"
+  }
+}
