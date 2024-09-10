@@ -1427,222 +1427,34 @@ resource "aws_iam_policy" "redis_access" {
   })
 }
 
-
-
-
-########################################################################################################################
-########################################################################################################################
-########################################################################################################################
-########################################################################################################################
-########################################################################################################################
-########################################################################################################################
-########################################################################################################################
-
-
-# EKS Cluster
-resource "aws_eks_cluster" "livekit_cluster" {
-  name     = "${var.project_name}-eks-cluster"
-  role_arn = aws_iam_role.eks_cluster_role.arn
-
-  vpc_config {
-    subnet_ids         = aws_subnet.public[*].id
-  }
-
-  depends_on = [
-    aws_iam_role_policy_attachment.eks_cluster_policy,
-    aws_iam_role_policy_attachment.eks_vpc_resource_controller,
-  ]
+data "aws_eks_cluster" "livekit_cluster" {
+  name = "livekit_cluster"
 }
 
-# EKS Cluster IAM Role
-resource "aws_iam_role" "eks_cluster_role" {
-  name = "${var.project_name}-eks-cluster-role"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Action = "sts:AssumeRole"
-        Effect = "Allow"
-        Principal = {
-          Service = "eks.amazonaws.com"
-        }
-      }
-    ]
-  })
-}
-
-resource "aws_iam_role_policy_attachment" "eks_cluster_policy" {
-  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy"
-  role       = aws_iam_role.eks_cluster_role.name
-}
-
-resource "aws_iam_role_policy_attachment" "eks_vpc_resource_controller" {
-  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSVPCResourceController"
-  role       = aws_iam_role.eks_cluster_role.name
-}
-
-# EKS Node Group
-resource "aws_eks_node_group" "livekit_nodes" {
-  cluster_name    = aws_eks_cluster.livekit_cluster.name
-  node_group_name = "${var.project_name}-node-group"
-  node_role_arn   = aws_iam_role.eks_node_role.arn
-  subnet_ids      = aws_subnet.public[*].id
-
-  scaling_config {
-    desired_size = 2
-    max_size     = 3
-    min_size     = 1
-  }
-
-  instance_types = ["t3.medium"]
-
-  depends_on = [
-    aws_iam_role_policy_attachment.eks_worker_node_policy,
-    aws_iam_role_policy_attachment.eks_cni_policy,
-    aws_iam_role_policy_attachment.ecr_read_only,
-  ]
-}
-
-# EKS Node IAM Role
-resource "aws_iam_role" "eks_node_role" {
-  name = "${var.project_name}-eks-node-role"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Action = "sts:AssumeRole"
-        Effect = "Allow"
-        Principal = {
-          Service = "ec2.amazonaws.com"
-        }
-      }
-    ]
-  })
-}
-
-resource "aws_iam_role_policy_attachment" "eks_worker_node_policy" {
-  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy"
-  role       = aws_iam_role.eks_node_role.name
-}
-
-resource "aws_iam_role_policy_attachment" "eks_cni_policy" {
-  policy_arn = "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy"
-  role       = aws_iam_role.eks_node_role.name
-}
-
-resource "aws_iam_role_policy_attachment" "ecr_read_only" {
-  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
-  role       = aws_iam_role.eks_node_role.name
-}
-
-# EKS OIDC Provider
-data "tls_certificate" "eks" {
-  url = aws_eks_cluster.livekit_cluster.identity[0].oidc[0].issuer
-}
-
-resource "aws_iam_openid_connect_provider" "eks" {
-  client_id_list  = ["sts.amazonaws.com"]
-  thumbprint_list = [data.tls_certificate.eks.certificates[0].sha1_fingerprint]
-  url             = aws_eks_cluster.livekit_cluster.identity[0].oidc[0].issuer
+data "aws_eks_cluster_auth" "livekit_cluster" {
+  name = "livekit_cluster"
 }
 
 # Kubernetes provider configuration
 provider "kubernetes" {
-  host                   = aws_eks_cluster.livekit_cluster.endpoint
-  cluster_ca_certificate = base64decode(aws_eks_cluster.livekit_cluster.certificate_authority[0].data)
+  host                   = data.aws_eks_cluster.livekit_cluster.endpoint
+  cluster_ca_certificate = base64decode(data.aws_eks_cluster.livekit_cluster.certificate_authority[0].data)
   exec {
     api_version = "client.authentication.k8s.io/v1beta1"
-    args        = ["eks", "get-token", "--cluster-name", aws_eks_cluster.livekit_cluster.name]
+    args        = ["eks", "get-token", "--cluster-name", data.aws_eks_cluster.livekit_cluster.name]
     command     = "aws"
   }
 }
 
-# Generate a private key
-resource "tls_private_key" "cert_private_key" {
-  algorithm = "RSA"
-  rsa_bits  = 2048
-}
-
-# Create a self-signed certificate
-resource "tls_self_signed_cert" "cert" {
-  private_key_pem = tls_private_key.cert_private_key.private_key_pem
-
-  subject {
-    common_name  = "*.${var.domain_name}"
-    organization = var.project_name
-  }
-
-  validity_period_hours = 8760 # 1 year
-
-  allowed_uses = [
-    "key_encipherment",
-    "digital_signature",
-    "server_auth",
-  ]
-}
-
-# Create a Kubernetes secret for the certificate
-resource "kubernetes_secret" "tls_cert" {
-  metadata {
-    name      = "${var.project_name}-tls-cert"
-    namespace = "kube-system"
-  }
-
-  type = "kubernetes.io/tls"
-
-  data = {
-    "tls.crt" = tls_self_signed_cert.cert.cert_pem
-    "tls.key" = tls_private_key.cert_private_key.private_key_pem
-  }
-}
-
-resource "aws_iam_role" "livekit_pod_role" {
-  name = "${var.project_name}-livekit-pod-role"
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Action = "sts:AssumeRoleWithWebIdentity"
-        Effect = "Allow"
-        Principal = {
-          Federated = aws_iam_openid_connect_provider.eks.arn
-        }
-        Condition = {
-          StringEquals = {
-            "${aws_iam_openid_connect_provider.eks.url}:sub": "system:serviceaccount:livekit:livekit-sa"
-          }
-        }
-      }
-    ]
-  })
-}
-
-resource "kubernetes_network_policy" "livekit_network_policy" {
-  metadata {
-    name      = "livekit-network-policy"
-    namespace = "kube-system"
-  }
-  spec {
-    pod_selector {
-      match_labels = {
-        app = "livekit"
-      }
+# Helm provider configuration
+provider "helm" {
+  kubernetes {
+    host                   = data.aws_eks_cluster.livekit_cluster.endpoint
+    cluster_ca_certificate = base64decode(data.aws_eks_cluster.livekit_cluster.certificate_authority[0].data)
+    exec {
+      api_version = "client.authentication.k8s.io/v1beta1"
+      args        = ["eks", "get-token", "--cluster-name", data.aws_eks_cluster.livekit_cluster.name]
+      command     = "aws"
     }
-    ingress {
-      from {
-        namespace_selector {
-          match_labels = {
-            name = "default"
-          }
-        }
-      }
-      ports {
-        port     = "7880"
-        protocol = "TCP"
-      }
-    }
-    policy_types = ["Ingress"]
   }
 }
