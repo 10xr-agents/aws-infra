@@ -1323,17 +1323,6 @@ resource "aws_elasticache_subnet_group" "redis" {
   subnet_ids = aws_subnet.public[*].id
 }
 
-# ElastiCache Parameter Group
-resource "aws_elasticache_parameter_group" "redis" {
-  family = "redis7.x"
-  name   = "redis-params-${var.project_name}"
-
-  parameter {
-    name  = "maxmemory-policy"
-    value = "allkeys-lru"
-  }
-}
-
 resource "aws_cloudwatch_log_group" "redis_logs" {
   name              = "/aws/elasticache/${var.project_name}-redis"
   retention_in_days = 30 # Adjust retention period as needed
@@ -1346,7 +1335,6 @@ resource "aws_elasticache_replication_group" "redis" {
   description                = "Redis cluster for ${var.project_name}"
   node_type                  = "cache.t3.micro"
   port                       = 6379
-  parameter_group_name       = aws_elasticache_parameter_group.redis.name
   subnet_group_name          = aws_elasticache_subnet_group.redis.name
   security_group_ids = [aws_security_group.redis.id]
   automatic_failover_enabled = true
@@ -1356,6 +1344,7 @@ resource "aws_elasticache_replication_group" "redis" {
 
   engine               = "redis"
   engine_version       = "7.1"
+  parameter_group_name = "default.redis7"
 
   log_delivery_configuration {
     destination      = aws_cloudwatch_log_group.redis_logs.name
