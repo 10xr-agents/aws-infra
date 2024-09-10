@@ -1027,6 +1027,210 @@ resource "aws_iam_role_policy_attachment" "alb_ingress_controller" {
   role       = aws_iam_role.eks_nodes.name
 }
 
+# Create an ElastiCache subnet group
+resource "aws_elasticache_subnet_group" "redis" {
+  name       = "redis-${var.project_name}-subnet-group"
+  subnet_ids = aws_subnet.public[*].id
+}
+
+# If you don't already have a CloudWatch log group, create one
+resource "aws_cloudwatch_log_group" "redis_logs" {
+  name              = "/aws/elasticache/${var.project_name}-redis"
+  retention_in_days = 30 # Adjust retention period as needed
+}
+
+
+# Redis Security Group
+resource "aws_security_group" "redis" {
+  name        = "${var.project_name}-redis-sg"
+  description = "Security group for Redis cluster"
+  vpc_id      = aws_vpc.main.id
+
+  ingress {
+    from_port       = 6379
+    to_port         = 6379
+    protocol        = "tcp"
+    security_groups = [aws_security_group.eks_cluster.id]
+    description     = "Allow inbound Redis traffic from EKS cluster"
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+    description = "Allow all outbound traffic"
+  }
+}
+
+# Add this rule to allow EKS to access Redis
+resource "aws_security_group_rule" "eks_to_redis" {
+  type                     = "egress"
+  from_port                = 6379
+  to_port                  = 6379
+  protocol                 = "tcp"
+  source_security_group_id = aws_security_group.redis.id
+  security_group_id        = aws_security_group.eks_cluster.id
+  description              = "Allow outbound traffic from EKS to Redis"
+}
+
+# Create the ElastiCache Redis cluster
+resource "aws_elasticache_replication_group" "redis" {
+  replication_group_id       = "redis-${var.project_name}"
+  description                = "Redis cluster for ${var.project_name}"
+  node_type                  = "cache.t3.micro"
+  num_cache_clusters         = 2
+  port                       = 6379
+  subnet_group_name          = aws_elasticache_subnet_group.redis.name
+  security_group_ids         = [aws_security_group.redis.id]
+  automatic_failover_enabled = true
+
+  engine               = "redis"
+  engine_version       = "7.1"
+  parameter_group_name = "default.redis7"
+
+  transit_encryption_enabled = true
+  auth_token                 = random_password.redis_auth_token.result
+
+  # Enable logging
+  log_delivery_configuration {
+    destination      = aws_cloudwatch_log_group.redis_logs.name
+    destination_type = "cloudwatch-logs"
+    log_format       = "json"
+    log_type         = "slow-log"
+  }
+
+  log_delivery_configuration {
+    destination      = aws_cloudwatch_log_group.redis_logs.name
+    destination_type = "cloudwatch-logs"
+    log_format       = "json"
+    log_type         = "engine-log"
+  }
+
+  # Important: Apply changes immediately
+  apply_immediately = true
+}
+
+resource "aws_vpc_endpoint" "elasticache" {
+  vpc_id            = aws_vpc.main.id
+  service_name      = "com.amazonaws.${var.aws_region}.elasticache"
+  vpc_endpoint_type = "Interface"
+
+  security_group_ids = [aws_security_group.eks_cluster.id]
+  subnet_ids         = aws_subnet.public[*].id
+
+  private_dns_enabled = true
+}
+
+# Generate a random auth token for Redis
+resource "random_password" "redis_auth_token" {
+  length  = 32
+  special = false
+}
+
+# Create an IAM role for EKS pods to access Redis
+resource "aws_iam_role" "eks_redis_access" {
+  name = "${var.project_name}-eks-redis-access"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "eks.amazonaws.com"
+        }
+      }
+    ]
+  })
+}
+
+# Create an IAM policy for Redis access
+resource "aws_iam_policy" "redis_access" {
+  name        = "${var.project_name}-redis-access-policy"
+  description = "IAM policy for Redis access from EKS pods"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "elasticache:DescribeReplicationGroups",
+          "elasticache:DescribeCacheClusters",
+          "elasticache:ListTagsForResource"
+        ]
+        Resource = aws_elasticache_replication_group.redis.arn
+      }
+    ]
+  })
+}
+
+# Attach the Redis access policy to the EKS Redis access role
+resource "aws_iam_role_policy_attachment" "eks_redis_access" {
+  policy_arn = aws_iam_policy.redis_access.arn
+  role       = aws_iam_role.eks_redis_access.name
+}
+
+# Update the EKS node role to allow assuming the Redis access role
+resource "aws_iam_role_policy_attachment" "eks_node_redis_access" {
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy"
+  role       = aws_iam_role.eks_nodes.name
+}
+
+# Create a Kubernetes secret for Redis credentials
+resource "kubernetes_secret" "redis_credentials" {
+  metadata {
+    name      = "redis-credentials"
+    namespace = kubernetes_namespace.livekit.metadata[0].name
+  }
+
+  data = {
+    host     = aws_elasticache_replication_group.redis.primary_endpoint_address
+    port     = "6379"
+    password = random_password.redis_auth_token.result
+  }
+}
+
+# Generate a private key
+resource "tls_private_key" "cert_private_key" {
+  algorithm = "RSA"
+  rsa_bits  = 2048
+}
+
+# Create a self-signed certificate
+resource "tls_self_signed_cert" "cert" {
+  private_key_pem = tls_private_key.cert_private_key.private_key_pem
+
+  subject {
+    common_name  = "*.${var.domain_name}"
+    organization = var.project_name
+  }
+
+  validity_period_hours = 8760 # 1 year
+
+  allowed_uses = [
+    "key_encipherment",
+    "digital_signature",
+    "server_auth",
+  ]
+}
+
+# Create a Kubernetes secret for the certificate
+resource "kubernetes_secret" "tls_cert" {
+  metadata {
+    name      = "${var.project_name}-tls-cert"
+    namespace = kubernetes_namespace.livekit.metadata[0].name
+  }
+
+  type = "kubernetes.io/tls"
+
+  data = {
+    "tls.crt" = tls_self_signed_cert.cert.cert_pem
+    "tls.key" = tls_private_key.cert_private_key.private_key_pem
+  }
+}
 
 # ELB for ALB & NLB
 # Cloudflare DNS record for NLB

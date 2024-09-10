@@ -171,3 +171,8 @@ output "global_accelerator_ip_addresses" {
   value       = aws_globalaccelerator_accelerator.main.ip_sets[0].ip_addresses
   description = "The IP addresses of the Global Accelerator"
 }
+
+output "redis_endpoint" {
+  value       = aws_elasticache_replication_group.redis.primary_endpoint_address
+  description = "The endpoint of the Redis ElastiCache cluster"
+}

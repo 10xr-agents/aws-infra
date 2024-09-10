@@ -9,7 +9,7 @@ public_subnet_cidrs = ["10.0.1.0/24", "10.0.2.0/24"]
 services = [
   {
     name              = "cnvrs-srv"
-    ecr_repo          = "761018882607.dkr.ecr.us-east-1.amazonaws.com/10xr/converse-server:0.0.1-demo"
+    ecr_repo          = "761018882607.dkr.ecr.us-east-1.amazonaws.com/10xr/converse-server:latest"
     cpu               = 1024
     memory            = 2048
     desired_count     = 2
@@ -33,7 +33,7 @@ services = [
   },
   {
     name              = "cnvrs-ui"
-    ecr_repo          = "761018882607.dkr.ecr.us-east-1.amazonaws.com/10xr/converse-ui:1.0.0"
+    ecr_repo          = "761018882607.dkr.ecr.us-east-1.amazonaws.com/10xr/converse-ui:latest"
     cpu               = 1024
     memory            = 2048
     desired_count     = 2
@@ -81,7 +81,7 @@ services = [
   },
   {
     name              = "cnvrs-agt"
-    ecr_repo          = "761018882607.dkr.ecr.us-east-1.amazonaws.com/10xr/conversation-agent:v1.0.0-demo"
+    ecr_repo          = "761018882607.dkr.ecr.us-east-1.amazonaws.com/10xr/conversation-agent:latest"
     cpu               = 2048
     memory            = 4096
     desired_count     = 2
@@ -104,7 +104,7 @@ services = [
   },
   {
     name              = "agt-anlytc"
-    ecr_repo          = "761018882607.dkr.ecr.us-east-1.amazonaws.com/10xr/agent-analytics:v1.0.0-demo"
+    ecr_repo          = "761018882607.dkr.ecr.us-east-1.amazonaws.com/10xr/agent-analytics:latest"
     cpu               = 2048
     memory            = 4096
     desired_count     = 2
