@@ -176,3 +176,28 @@ output "redis_endpoint" {
   value       = aws_elasticache_replication_group.redis.primary_endpoint_address
   description = "The endpoint of the Redis ElastiCache cluster"
 }
+
+output "eks_cluster_endpoint" {
+  description = "Endpoint for EKS control plane"
+  value       = aws_eks_cluster.main.endpoint
+}
+
+output "eks_cluster_security_group_id" {
+  description = "Security group ID attached to the EKS cluster"
+  value       = aws_eks_cluster.main.vpc_config[0].cluster_security_group_id
+}
+
+output "eks_cluster_name" {
+  description = "Kubernetes Cluster Name"
+  value       = aws_eks_cluster.main.name
+}
+
+output "eks_admin_role_arn" {
+  description = "ARN of the EKS admin role"
+  value       = aws_iam_role.eks_admin.arn
+}
+
+output "kubectl_config_command" {
+  description = "Command to configure kubectl"
+  value       = "aws eks get-token --cluster-name ${aws_eks_cluster.main.name} | kubectl apply -f -"
+}

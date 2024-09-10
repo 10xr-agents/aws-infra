@@ -44,6 +44,7 @@ resource "aws_vpc" "main" {
 
   tags = {
     Name = "${var.project_name}-vpc"
+    "kubernetes.io/cluster/${var.project_name}-eks-cluster" = "shared"
   }
 }
 
@@ -66,6 +67,8 @@ resource "aws_subnet" "public" {
 
   tags = {
     Name = "${var.project_name}-public-subnet-${count.index + 1}"
+    "kubernetes.io/cluster/${var.project_name}-eks-cluster" = "shared"
+    "kubernetes.io/role/elb"                       = "1"
   }
 }
 
@@ -1417,4 +1420,394 @@ resource "aws_iam_policy" "redis_access" {
       }
     ]
   })
+}
+
+########################################################################################################################
+########################################################################################################################
+########################################################################################################################
+########################################################################################################################
+########################################################################################################################
+
+# Helm provider
+provider "helm" {
+  kubernetes {
+    host                   = aws_eks_cluster.main.endpoint
+    cluster_ca_certificate = base64decode(aws_eks_cluster.main.certificate_authority[0].data)
+    exec {
+      api_version = "client.authentication.k8s.io/v1beta1"
+      args        = ["eks", "get-token", "--cluster-name", aws_eks_cluster.main.name]
+      command     = "aws"
+    }
+  }
+}
+
+# Kubernetes provider
+provider "kubernetes" {
+  host                   = aws_eks_cluster.main.endpoint
+  cluster_ca_certificate = base64decode(aws_eks_cluster.main.certificate_authority[0].data)
+  exec {
+    api_version = "client.authentication.k8s.io/v1beta1"
+    args        = ["eks", "get-token", "--cluster-name", aws_eks_cluster.main.name]
+    command     = "aws"
+  }
+}
+
+# EKS Cluster
+resource "aws_eks_cluster" "main" {
+  name     = "${var.project_name}-eks-cluster"
+  role_arn = aws_iam_role.eks_cluster.arn
+
+  vpc_config {
+    subnet_ids = aws_subnet.public[*].id
+  }
+
+  # Ensure that IAM Role permissions are created before and deleted after EKS Cluster handling.
+  depends_on = [
+    aws_iam_role_policy_attachment.eks_cluster_AmazonEKSClusterPolicy,
+    aws_iam_role_policy_attachment.eks_cluster_AmazonEKSVPCResourceController,
+  ]
+}
+
+# IAM Role for EKS Cluster
+resource "aws_iam_role" "eks_cluster" {
+  name = "${var.project_name}-eks-cluster-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "eks.amazonaws.com"
+        }
+      },
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "eks_cluster_AmazonEKSClusterPolicy" {
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy"
+  role       = aws_iam_role.eks_cluster.name
+}
+
+resource "aws_iam_role_policy_attachment" "eks_cluster_AmazonEKSVPCResourceController" {
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSVPCResourceController"
+  role       = aws_iam_role.eks_cluster.name
+}
+
+# EKS Node Group
+resource "aws_eks_node_group" "main" {
+  cluster_name    = aws_eks_cluster.main.name
+  node_group_name = "${var.project_name}-node-group"
+  node_role_arn   = aws_iam_role.eks_nodes.arn
+  subnet_ids      = aws_subnet.public[*].id
+
+  scaling_config {
+    desired_size = 2
+    max_size     = 3
+    min_size     = 1
+  }
+
+  # Ensure that IAM Role permissions are created before and deleted after EKS Node Group handling.
+  depends_on = [
+    aws_iam_role_policy_attachment.eks_nodes_AmazonEKSWorkerNodePolicy,
+    aws_iam_role_policy_attachment.eks_nodes_AmazonEKS_CNI_Policy,
+    aws_iam_role_policy_attachment.eks_nodes_AmazonEC2ContainerRegistryReadOnly,
+  ]
+}
+
+# IAM Role for EKS Node Group
+resource "aws_iam_role" "eks_nodes" {
+  name = "${var.project_name}-eks-node-group-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "ec2.amazonaws.com"
+        }
+      },
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "eks_nodes_AmazonEKSWorkerNodePolicy" {
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy"
+  role       = aws_iam_role.eks_nodes.name
+}
+
+resource "aws_iam_role_policy_attachment" "eks_nodes_AmazonEKS_CNI_Policy" {
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy"
+  role       = aws_iam_role.eks_nodes.name
+}
+
+resource "aws_iam_role_policy_attachment" "eks_nodes_AmazonEC2ContainerRegistryReadOnly" {
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
+  role       = aws_iam_role.eks_nodes.name
+}
+
+# OIDC Provider for EKS
+data "tls_certificate" "eks" {
+  url = aws_eks_cluster.main.identity[0].oidc[0].issuer
+}
+
+resource "aws_iam_openid_connect_provider" "eks" {
+  client_id_list  = ["sts.amazonaws.com"]
+  thumbprint_list = [data.tls_certificate.eks.certificates[0].sha1_fingerprint]
+  url             = aws_eks_cluster.main.identity[0].oidc[0].issuer
+}
+
+# IAM Role for AWS Load Balancer Controller
+resource "aws_iam_role" "aws_load_balancer_controller" {
+  name = "${var.project_name}-aws-load-balancer-controller"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRoleWithWebIdentity"
+        Effect = "Allow"
+        Principal = {
+          Federated = aws_iam_openid_connect_provider.eks.arn
+        }
+        Condition = {
+          StringEquals = {
+            "${replace(aws_iam_openid_connect_provider.eks.url, "https://", "")}:sub" : "system:serviceaccount:kube-system:aws-load-balancer-controller"
+          }
+        }
+      },
+    ]
+  })
+}
+
+# IAM Policy for AWS Load Balancer Controller
+resource "aws_iam_policy" "aws_load_balancer_controller" {
+  name        = "${var.project_name}-AWSLoadBalancerControllerIAMPolicy"
+  path        = "/"
+  description = "IAM policy for AWS Load Balancer Controller"
+
+  policy = file("${path.module}/AWSLoadBalancerControllerIAMPolicy.json")
+}
+
+resource "aws_iam_role_policy_attachment" "aws_load_balancer_controller" {
+  policy_arn = aws_iam_policy.aws_load_balancer_controller.arn
+  role       = aws_iam_role.aws_load_balancer_controller.name
+}
+
+# Helm release for AWS Load Balancer Controller
+resource "helm_release" "aws_load_balancer_controller" {
+  name       = "aws-load-balancer-controller"
+  repository = "https://aws.github.io/eks-charts"
+  chart      = "aws-load-balancer-controller"
+  namespace  = "kube-system"
+
+  set {
+    name  = "clusterName"
+    value = aws_eks_cluster.main.name
+  }
+
+  set {
+    name  = "serviceAccount.create"
+    value = "true"
+  }
+
+  set {
+    name  = "serviceAccount.name"
+    value = "aws-load-balancer-controller"
+  }
+
+  set {
+    name  = "serviceAccount.annotations.eks\\.amazonaws\\.com/role-arn"
+    value = aws_iam_role.aws_load_balancer_controller.arn
+  }
+}
+
+# IAM Role for EKS Admin Access
+resource "aws_iam_role" "eks_admin" {
+  name = "${var.project_name}-eks-admin-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          AWS = [
+            "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root",
+            data.aws_caller_identity.current.arn
+          ]
+        }
+      },
+    ]
+  })
+}
+
+# IAM Policy for EKS Admin Access
+resource "aws_iam_policy" "eks_admin" {
+  name        = "${var.project_name}-eks-admin-policy"
+  description = "Policy for EKS admin access"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "eks:*",
+          "ec2:DescribeInstances",
+          "ec2:DescribeNetworkInterfaces",
+          "ec2:DescribeSecurityGroups",
+          "ec2:DescribeSubnets",
+          "ec2:DescribeVpcs",
+          "iam:ListRoles",
+          "iam:GetRole",
+          "iam:ListAttachedRolePolicies"
+        ]
+        Resource = "*"
+      },
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "eks_admin" {
+  policy_arn = aws_iam_policy.eks_admin.arn
+  role       = aws_iam_role.eks_admin.name
+}
+
+# Grant EKS admin access to the current user and root account
+resource "aws_iam_role_policy_attachment" "current_user_eks_admin" {
+  policy_arn = aws_iam_policy.eks_admin.arn
+  role       = data.aws_caller_identity.current.user_id
+}
+
+resource "aws_iam_role_policy_attachment" "root_account_eks_admin" {
+  policy_arn = aws_iam_policy.eks_admin.arn
+  role       = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
+}
+
+# aws-auth ConfigMap to grant cluster-admin access
+resource "kubernetes_config_map" "aws_auth" {
+  metadata {
+    name      = "aws-auth"
+    namespace = "kube-system"
+  }
+
+  data = {
+    mapRoles = yamlencode(
+      concat(
+        [
+          {
+            rolearn  = aws_iam_role.eks_nodes.arn
+            username = "system:node:{{EC2PrivateDNSName}}"
+            groups   = ["system:bootstrappers", "system:nodes"]
+          },
+          {
+            rolearn  = aws_iam_role.eks_admin.arn
+            username = "admin"
+            groups   = ["system:masters"]
+          },
+        ],
+        [
+          {
+            rolearn  = data.aws_caller_identity.current.arn
+            username = data.aws_caller_identity.current.user_id
+            groups   = ["system:masters"]
+          },
+          {
+            rolearn  = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
+            username = "root"
+            groups   = ["system:masters"]
+          }
+        ]
+      )
+    )
+    mapUsers = yamlencode(
+      concat(
+        [
+          {
+            userarn  = data.aws_caller_identity.current.arn
+            username = data.aws_caller_identity.current.user_id
+            groups   = ["system:masters"]
+          },
+          {
+            userarn  = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
+            username = "root"
+            groups   = ["system:masters"]
+          }
+        ]
+      )
+    )
+    mapAccounts = yamlencode(
+      concat(
+        [
+          data.aws_caller_identity.current.account_id
+        ]
+      )
+    )
+  }
+
+  depends_on = [aws_eks_cluster.main]
+}
+
+# Allow EKS pods to access Redis
+resource "kubernetes_role" "redis_access" {
+  metadata {
+    name      = "redis-access"
+    namespace = "default"
+  }
+
+  rule {
+    api_groups = [""]
+    resources  = ["secrets"]
+    verbs      = ["get", "list"]
+  }
+}
+
+resource "kubernetes_role_binding" "redis_access" {
+  metadata {
+    name      = "redis-access"
+    namespace = "default"
+  }
+
+  role_ref {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "Role"
+    name      = kubernetes_role.redis_access.metadata[0].name
+  }
+
+  subject {
+    kind      = "Group"
+    name      = "system:serviceaccounts"
+    api_group = "rbac.authorization.k8s.io"
+  }
+}
+
+resource "kubernetes_secret" "redis_credentials" {
+  metadata {
+    name      = "redis-credentials"
+    namespace = "default"
+  }
+
+  data = {
+    host     = aws_elasticache_replication_group.redis.primary_endpoint_address
+    port     = "6379"
+    password = aws_elasticache_replication_group.redis.auth_token
+  }
+
+  type = "Opaque"
+}
+
+# Update security group to allow EKS nodes to access Redis
+resource "aws_security_group_rule" "redis_eks_access" {
+  type                     = "ingress"
+  from_port                = 6379
+  to_port                  = 6379
+  protocol                 = "tcp"
+  source_security_group_id = aws_eks_cluster.main.vpc_config[0].cluster_security_group_id
+  security_group_id        = aws_security_group.redis.id
 }
