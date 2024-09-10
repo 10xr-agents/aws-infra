@@ -1319,14 +1319,14 @@ resource "aws_security_group" "global_accelerator_endpoint" {
 
 # ElastiCache Subnet Group
 resource "aws_elasticache_subnet_group" "redis" {
-  name       = "${var.project_name}-redis-subnet-group"
+  name       = "redis-subnet-group-${var.project_name}"
   subnet_ids = aws_subnet.public[*].id
 }
 
 # ElastiCache Parameter Group
 resource "aws_elasticache_parameter_group" "redis" {
-  family = "redis6.x"
-  name   = "${var.project_name}-redis-params"
+  family = "redis7.x"
+  name   = "redis-params-${var.project_name}"
 
   parameter {
     name  = "maxmemory-policy"
@@ -1353,6 +1353,9 @@ resource "aws_elasticache_replication_group" "redis" {
   num_cache_clusters         = 2
   at_rest_encryption_enabled = true
   transit_encryption_enabled = true
+
+  engine               = "redis"
+  engine_version       = "7.1"
 
   log_delivery_configuration {
     destination      = aws_cloudwatch_log_group.redis_logs.name
