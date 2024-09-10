@@ -1510,6 +1510,51 @@ resource "helm_release" "metrics_server" {
   depends_on = [aws_eks_cluster.livekit_cluster]
 }
 
+provider "kubectl" {
+  host                   = aws_eks_cluster.livekit_cluster.endpoint
+  cluster_ca_certificate = base64decode(aws_eks_cluster.livekit_cluster.certificate_authority[0].data)
+  exec {
+    api_version = "client.authentication.k8s.io/v1beta1"
+    args        = ["eks", "get-token", "--cluster-name", aws_eks_cluster.livekit_cluster.name]
+    command     = "aws"
+  }
+}
+
+resource "kubernetes_config_map" "aws_auth" {
+  metadata {
+    name      = "aws-auth"
+    namespace = "kube-system"
+  }
+
+  data = {
+    mapRoles = yamlencode(
+      [
+        {
+          rolearn  = aws_iam_role.eks_node_role.arn
+          username = "system:node:{{EC2PrivateDNSName}}"
+          groups   = ["system:bootstrappers", "system:nodes"]
+        },
+      ]
+    )
+    mapUsers = yamlencode(
+      [
+        {
+          userarn  = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
+          username = "root"
+          groups   = ["system:masters"]
+        },
+        {
+          userarn  = data.aws_caller_identity.current.arn
+          username = "creator"
+          groups   = ["system:masters"]
+        }
+      ]
+    )
+  }
+
+  depends_on = [aws_iam_role.eks_node_role]
+}
+
 
 ### basic eks cluster setup done ###
 ########################################################################################################################
