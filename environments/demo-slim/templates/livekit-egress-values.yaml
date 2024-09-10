@@ -26,12 +26,6 @@ resources:
         cpu: 1000m
         memory: 1024Mi
 
-#serviceAccount:
-#    create: false
-#    annotations:
-#        eks.amazonaws.com/role-arn: ${livekit_pods_role}
-#    name: livekit-service-account
-
 podAnnotations:
     sidecar.istio.io/inject: "false"
     linkerd.io/inject: disabled

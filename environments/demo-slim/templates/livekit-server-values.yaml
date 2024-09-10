@@ -1,11 +1,5 @@
 replicaCount: 3
 
-#serviceAccount:
-#    create: false
-#    annotations:
-#        eks.amazonaws.com/role-arn: ${livekit_pods_role}
-#    name: livekit-service-account
-
 livekit:
     port: 7880
     log_level: debug
@@ -14,7 +8,6 @@ livekit:
         port_range_start: 50000
         port_range_end: 60000
         use_external_ip: true
-#        external_ip: ${aws_nlb_ip_address}
     redis:
          address: "${aws_redis_cluster}"
          username: "${livekit_redis_username}"
@@ -30,40 +23,6 @@ livekit:
         secretName: "${livekit_secret_name}"
         key_file: "tls.key"
         cert_file: "tls.crt"
-
-#service:
-#    type: LoadBalancer
-#    annotations:
-#        service.beta.kubernetes.io/aws-load-balancer-type: external
-#        service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: instance
-#        service.beta.kubernetes.io/aws-load-balancer-scheme: internet-facing
-#        service.beta.kubernetes.io/aws-load-balancer-attributes: load_balancing.cross_zone.enabled=true
-#        service.beta.kubernetes.io/aws-load-balancer-ssl-ports: "443,5349"
-#        service.beta.kubernetes.io/aws-load-balancer-ssl-cert: ${acm_certificate_arn}
-#        service.beta.kubernetes.io/aws-load-balancer-cross-zone-load-balancing-enabled: "true"
-#    ports:
-#        - port: 80
-#          targetPort: 7880
-#          protocol: TCP
-#        - port: 443
-#          targetPort: 7880
-#          protocol: TCP
-#        - port: 7880
-#          targetPort: 7880
-#          protocol: TCP
-#        - port: 7881
-#          targetPort: 7881
-#          protocol: TCP
-#        - port: 7882
-#          targetPort: 7882
-#          protocol: UDP
-#        - port: 3478
-#          targetPort: 3478
-#          protocol: UDP
-#        - port: 5349
-#          targetPort: 5349
-#          protocol: TCP
-#    externalTrafficPolicy: Local
 
 podHostNetwork: true
 

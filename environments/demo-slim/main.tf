@@ -1327,7 +1327,6 @@ resource "aws_eks_cluster" "livekit_cluster" {
 
   vpc_config {
     subnet_ids         = aws_subnet.public[*].id
-    security_group_ids = [aws_security_group.eks_cluster.id]
   }
 
   depends_on = [
@@ -1511,168 +1510,6 @@ resource "helm_release" "metrics_server" {
   depends_on = [aws_eks_cluster.livekit_cluster]
 }
 
-# Security Group for EKS
-#EKS Cluster Security Group
-resource "aws_security_group" "eks_cluster" {
-  name        = "${var.project_name}-eks-cluster-sg"
-  description = "Security group for EKS cluster control plane"
-  vpc_id      = aws_vpc.main.id
-
-  ingress {
-    description     = "Allow worker nodes to communicate with the cluster API Server"
-    from_port       = 443
-    to_port         = 443
-    protocol        = "tcp"
-    security_groups = [aws_security_group.eks_nodes.id]
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-    description = "Allow all outbound traffic"
-  }
-
-  tags = {
-    Name = "${var.project_name}-eks-cluster-sg"
-  }
-}
-
-# EKS Node Security Group
-resource "aws_security_group" "eks_nodes" {
-  name        = "${var.project_name}-eks-nodes-sg"
-  description = "Security group for EKS worker nodes"
-  vpc_id      = aws_vpc.main.id
-
-  ingress {
-    description     = "Allow inbound traffic from ALB"
-    from_port       = 80
-    to_port         = 80
-    protocol        = "tcp"
-    security_groups = [aws_security_group.alb.id]
-  }
-
-  ingress {
-    description     = "Allow inbound HTTPS traffic from ALB"
-    from_port       = 443
-    to_port         = 443
-    protocol        = "tcp"
-    security_groups = [aws_security_group.alb.id]
-  }
-
-  ingress {
-    description = "Allow inbound LiveKit traffic"
-    from_port   = 7880
-    to_port     = 7882
-    protocol    = "tcp"
-    cidr_blocks = [var.vpc_cidr]
-  }
-
-  ingress {
-    description = "Allow inbound LiveKit RTC traffic"
-    from_port   = 40000
-    to_port     = 65535
-    protocol    = "udp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  ingress {
-    description = "Allow inbound LiveKit TURN traffic"
-    from_port   = 3478
-    to_port     = 3478
-    protocol    = "udp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  ingress {
-    description = "Allow inbound LiveKit TURN TLS traffic"
-    from_port   = 5349
-    to_port     = 5349
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  ingress {
-    description = "Allow inbound LiveKit RTMP traffic"
-    from_port   = 1935
-    to_port     = 1935
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  ingress {
-    description = "Allow inbound LiveKit WHIP traffic"
-    from_port   = 8080
-    to_port     = 8080
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  ingress {
-    description     = "Allow node to communicate with each other"
-    from_port       = 0
-    to_port         = 65535
-    protocol        = "-1"
-    self            = true
-  }
-
-  ingress {
-    description     = "Allow worker Kubelets and pods to receive communication from the cluster control plane"
-    from_port       = 1025
-    to_port         = 65535
-    protocol        = "tcp"
-    security_groups = [aws_security_group.eks_cluster.id]
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-    description = "Allow all outbound traffic"
-  }
-
-  tags = {
-    Name = "${var.project_name}-eks-nodes-sg"
-  }
-}
-
-# ALB Security Group
-resource "aws_security_group" "alb" {
-  name        = "${var.project_name}-alb-sg"
-  description = "Security group for ALB"
-  vpc_id      = aws_vpc.main.id
-
-  ingress {
-    description = "Allow inbound HTTP traffic"
-    from_port   = 80
-    to_port     = 80
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  ingress {
-    description = "Allow inbound HTTPS traffic"
-    from_port   = 443
-    to_port     = 443
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-    description = "Allow all outbound traffic"
-  }
-
-  tags = {
-    Name = "${var.project_name}-alb-sg"
-  }
-}
-
 
 ### basic eks cluster setup done ###
 ########################################################################################################################
@@ -1842,40 +1679,6 @@ resource "aws_cloudwatch_log_group" "redis_logs" {
 }
 
 
-# Redis Security Group
-resource "aws_security_group" "redis" {
-  name        = "${var.project_name}-redis-sg"
-  description = "Security group for Redis cluster"
-  vpc_id      = aws_vpc.main.id
-
-  ingress {
-    from_port       = 6379
-    to_port         = 6379
-    protocol        = "tcp"
-    security_groups = [aws_security_group.eks_cluster.id]
-    description     = "Allow inbound Redis traffic from EKS cluster"
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-    description = "Allow all outbound traffic"
-  }
-}
-
-# Add this rule to allow EKS to access Redis
-resource "aws_security_group_rule" "eks_to_redis" {
-  type                     = "egress"
-  from_port                = 6379
-  to_port                  = 6379
-  protocol                 = "tcp"
-  source_security_group_id = aws_security_group.redis.id
-  security_group_id        = aws_security_group.eks_cluster.id
-  description              = "Allow outbound traffic from EKS to Redis"
-}
-
 # Create the ElastiCache Redis cluster
 resource "aws_elasticache_replication_group" "redis" {
   replication_group_id       = "redis-${var.project_name}"
@@ -1884,7 +1687,6 @@ resource "aws_elasticache_replication_group" "redis" {
   num_cache_clusters         = 2
   port                       = 6379
   subnet_group_name          = aws_elasticache_subnet_group.redis.name
-  security_group_ids         = [aws_security_group.redis.id]
   automatic_failover_enabled = true
 
   engine               = "redis"
@@ -1918,7 +1720,6 @@ resource "aws_vpc_endpoint" "elasticache" {
   service_name      = "com.amazonaws.${var.aws_region}.elasticache"
   vpc_endpoint_type = "Interface"
 
-  security_group_ids = [aws_security_group.eks_cluster.id]
   subnet_ids         = aws_subnet.public[*].id
 
   private_dns_enabled = true
