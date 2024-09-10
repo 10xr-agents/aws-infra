@@ -1624,6 +1624,24 @@ resource "helm_release" "aws_load_balancer_controller" {
     name  = "serviceAccount.annotations.eks\\.amazonaws\\.com/role-arn"
     value = aws_iam_role.aws_load_balancer_controller.arn
   }
+
+  # Add these new settings
+  set {
+    name  = "vpcId"
+    value = aws_vpc.main.id
+  }
+
+  set {
+    name  = "region"
+    value = var.aws_region
+  }
+
+  set {
+    name  = "enableServiceMutatorWebhook"
+    value = "false"
+  }
+
+  depends_on = [ aws_eks_node_group.main ]
 }
 
 # IAM Role for EKS Admin Access
@@ -1649,7 +1667,7 @@ resource "aws_iam_role" "eks_admin" {
 
 # IAM Policy for EKS Admin Access
 resource "aws_iam_policy" "eks_admin" {
-  name        = "${var.project_name}-eks-admin-policy"
+  name        = "eks-admin-policy-${var.project_name}"
   description = "Policy for EKS admin access"
 
   policy = jsonencode({
@@ -1810,4 +1828,41 @@ resource "aws_security_group_rule" "redis_eks_access" {
   protocol                 = "tcp"
   source_security_group_id = aws_eks_cluster.main.vpc_config[0].cluster_security_group_id
   security_group_id        = aws_security_group.redis.id
+}
+
+
+# Add CoreDNS add-on
+resource "aws_eks_addon" "coredns" {
+  cluster_name  = aws_eks_cluster.main.name
+  addon_name    = "coredns"
+  addon_version = "v1.11.3-eksbuild.1"
+
+  depends_on = [
+    aws_eks_node_group.main,
+    aws_iam_role_policy_attachment.eks_cluster_AmazonEKSVPCResourceController
+  ]
+}
+
+# Add kube-proxy add-on
+resource "aws_eks_addon" "kube_proxy" {
+  cluster_name  = aws_eks_cluster.main.name
+  addon_name    = "kube-proxy"
+  addon_version = "v1.30.3-eksbuild.2"
+
+  depends_on = [
+    aws_eks_node_group.main,
+    aws_iam_role_policy_attachment.eks_cluster_AmazonEKSVPCResourceController
+  ]
+}
+
+# Add vpc-cni add-on
+resource "aws_eks_addon" "vpc_cni" {
+  cluster_name  = aws_eks_cluster.main.name
+  addon_name    = "vpc-cni"
+  addon_version = "v1.18.3-eksbuild.2"
+
+  depends_on = [
+    aws_eks_node_group.main,
+    aws_iam_role_policy_attachment.eks_cluster_AmazonEKSVPCResourceController
+  ]
 }
