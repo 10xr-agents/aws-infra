@@ -1347,7 +1347,7 @@ resource "aws_security_group" "global_accelerator_endpoint" {
 resource "aws_instance" "livekit" {
   count    = 3
   ami      = "ami-06f555bf2f102b63c"
-  instance_type = "t3.medium"
+  instance_type = "t3.xlarge"
   key_name = aws_key_pair.livekit.key_name
   vpc_security_group_ids = [aws_security_group.livekit.id]
   subnet_id = aws_subnet.public[count.index % 2].id  # Distribute across 2 subnets
@@ -1470,119 +1470,21 @@ resource "aws_s3_bucket" "accelerator_logs" {
 }
 
 # Global Accelerator Listener
-resource "aws_globalaccelerator_listener" "livekit" {
-  accelerator_arn = aws_globalaccelerator_accelerator.livekit.id
-  client_affinity = "SOURCE_IP"
-  protocol        = "TCP"
-
-  port_range {
-    from_port = 80
-    to_port   = 80
-  }
-
-  port_range {
-    from_port = 443
-    to_port   = 443
-  }
-
-  port_range {
-    from_port = 7880
-    to_port   = 7880
-  }
-
-  port_range {
-    from_port = 7881
-    to_port   = 7881
-  }
-
-  port_range {
-    from_port = 3478
-    to_port   = 3478
-  }
-
-  port_range {
-    from_port = 50000
-    to_port   = 60000
-  }
-
-  port_range {
-    from_port = 1935
-    to_port   = 1935
-  }
-
-  port_range {
-    from_port = 7885
-    to_port   = 7885
-  }
+locals {
+  protocols = ["tcp", "udp"]
 }
 
-resource "aws_globalaccelerator_listener" "livekit_udp" {
-  accelerator_arn = aws_globalaccelerator_accelerator.livekit.id
-  client_affinity = "SOURCE_IP"
-  protocol        = "UDP"
-
-  port_range {
-    from_port = 80
-    to_port   = 80
-  }
-
-  port_range {
-    from_port = 443
-    to_port   = 443
-  }
-
-  port_range {
-    from_port = 7880
-    to_port   = 7880
-  }
-
-  port_range {
-    from_port = 7881
-    to_port   = 7881
-  }
-
-  port_range {
-    from_port = 3478
-    to_port   = 3478
-  }
-
-  port_range {
-    from_port = 50000
-    to_port   = 60000
-  }
-
-  port_range {
-    from_port = 1935
-    to_port   = 1935
-  }
-
-  port_range {
-    from_port = 7885
-    to_port   = 7885
-  }
-}
-
-
-# Global Accelerator Endpoint Group
 resource "aws_globalaccelerator_endpoint_group" "livekit" {
-  listener_arn = aws_globalaccelerator_listener.livekit.id
+  count        = length(local.protocols)
+  listener_arn = aws_globalaccelerator_listener.livekit[count.index].id
 
-  endpoint_configuration {
-    endpoint_id = aws_instance.livekit[0].id
-    weight      = 100
-    client_ip_preservation_enabled = true
-  }
-
-  endpoint_configuration {
-    endpoint_id = aws_instance.livekit[1].id
-    weight      = 100
-    client_ip_preservation_enabled = true
-  }
-
-  endpoint_configuration {
-    endpoint_id = aws_instance.livekit[2].id
-    weight      = 100
-    client_ip_preservation_enabled = true
+  dynamic "endpoint_configuration" {
+    for_each = aws_instance.livekit
+    content {
+      endpoint_id                    = endpoint_configuration.value.id
+      weight                         = 100
+      client_ip_preservation_enabled = true
+    }
   }
 
   health_check_path             = "/"
@@ -1592,32 +1494,52 @@ resource "aws_globalaccelerator_endpoint_group" "livekit" {
   traffic_dial_percentage       = 100
 }
 
-resource "aws_globalaccelerator_endpoint_group" "livekit_udp" {
-  listener_arn = aws_globalaccelerator_listener.livekit_udp.id
+# Global Accelerator Listeners
+resource "aws_globalaccelerator_listener" "livekit" {
+  count            = length(local.protocols)
+  accelerator_arn  = aws_globalaccelerator_accelerator.livekit.id
+  client_affinity  = "SOURCE_IP"
+  protocol         = upper(local.protocols[count.index])
 
-  endpoint_configuration {
-    endpoint_id = aws_instance.livekit[0].id
-    weight      = 100
-    client_ip_preservation_enabled = true
+  port_range {
+    from_port = 80
+    to_port   = 80
   }
 
-  endpoint_configuration {
-    endpoint_id = aws_instance.livekit[1].id
-    weight      = 100
-    client_ip_preservation_enabled = true
+  port_range {
+    from_port = 443
+    to_port   = 443
   }
 
-  endpoint_configuration {
-    endpoint_id = aws_instance.livekit[2].id
-    weight      = 100
-    client_ip_preservation_enabled = true
+  port_range {
+    from_port = 7880
+    to_port   = 7880
   }
 
-  health_check_path             = "/"
-  health_check_port             = 7880
-  health_check_protocol         = "HTTP"
-  threshold_count               = 3
-  traffic_dial_percentage       = 100
+  port_range {
+    from_port = 7881
+    to_port   = 7881
+  }
+
+  port_range {
+    from_port = 3478
+    to_port   = 3478
+  }
+
+  port_range {
+    from_port = 50000
+    to_port   = 60000
+  }
+
+  port_range {
+    from_port = 1935
+    to_port   = 1935
+  }
+
+  port_range {
+    from_port = 7885
+    to_port   = 7885
+  }
 }
 
 # Global Accelerator DNS entries
