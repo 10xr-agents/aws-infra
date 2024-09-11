@@ -1352,7 +1352,7 @@ resource "aws_instance" "livekit" {
   vpc_security_group_ids = [aws_security_group.livekit.id]
   subnet_id = aws_subnet.public[count.index % 2].id  # Distribute across 2 subnets
 
-  user_data = file("${path.module}/livekit.demo.10xr.co/cloud-init.amazon.yaml")
+  user_data = file("${path.module}/livekit.demo.10xr.co/cloud_init.amazon.yaml")
 
   tags = {
     Name = "LiveKit-Instance-${count.index + 1}"
