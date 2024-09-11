@@ -160,3 +160,8 @@ output "global_accelerator_ip_addresses" {
   value       = aws_globalaccelerator_accelerator.main.ip_sets[0].ip_addresses
   description = "The IP addresses of the Global Accelerator"
 }
+
+# Output the Global Accelerator DNS name
+output "global_accelerator_livekit_dns_name" {
+  value = aws_globalaccelerator_accelerator.livekit.dns_name
+}

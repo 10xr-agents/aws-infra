@@ -43,7 +43,7 @@ resource "aws_vpc" "main" {
   enable_dns_support   = true
 
   tags = {
-    Name                                                    = "${var.project_name}-vpc"
+    Name = "${var.project_name}-vpc"
   }
 }
 
@@ -65,7 +65,7 @@ resource "aws_subnet" "public" {
   availability_zone       = data.aws_availability_zones.available.names[count.index]
 
   tags = {
-    Name                                                    = "${var.project_name}-public-subnet-${count.index + 1}"
+    Name = "${var.project_name}-public-subnet-${count.index + 1}"
   }
 }
 
@@ -137,6 +137,15 @@ resource "aws_network_acl" "main" {
     cidr_block = "0.0.0.0/0"
     from_port  = 443
     to_port    = 443
+  }
+
+  ingress {
+    protocol   = "tcp"
+    rule_no    = 903
+    action     = "allow"
+    cidr_block = "0.0.0.0/0"
+    from_port  = 22
+    to_port    = 22
   }
 
   # Outbound rule for internet access (for updates, etc.)
@@ -1328,24 +1337,228 @@ resource "aws_security_group" "global_accelerator_endpoint" {
   }
 }
 
-data "aws_eks_cluster" "cluster" {
-  name = "10xr-demo-eks-cluster"
-}
+########################################################################################################################
+########################################################################################################################
+########################################################################################################################
+########################################################################################################################
 
-data "aws_eks_cluster_auth" "cluster" {
-  name = "10xr-demo-eks-cluster"
-}
 
-provider "kubernetes" {
-  host                   = data.aws_eks_cluster.cluster.endpoint
-  cluster_ca_certificate = base64decode(data.aws_eks_cluster.cluster.certificate_authority.0.data)
-  token                  = data.aws_eks_cluster_auth.cluster.token
-}
+# LiveKit EC2 Instances
+resource "aws_instance" "livekit" {
+  count    = 3
+  ami      = "ami-06f555bf2f102b63c"
+  instance_type = "t3.medium"
+  key_name = aws_key_pair.livekit.key_name
+  vpc_security_group_ids = [aws_security_group.livekit.id]
+  subnet_id = aws_subnet.public[count.index % 2].id  # Distribute across 2 subnets
 
-provider "helm" {
-  kubernetes {
-    host                   = data.aws_eks_cluster.cluster.endpoint
-    cluster_ca_certificate = base64decode(data.aws_eks_cluster.cluster.certificate_authority.0.data)
-    token                  = data.aws_eks_cluster_auth.cluster.token
+  user_data = file("${path.module}/livekit.demo.10xr.co/cloud-init.amazon.yaml")
+
+  tags = {
+    Name = "LiveKit-Instance-${count.index + 1}"
   }
 }
+
+# Security Group for LiveKit
+resource "aws_security_group" "livekit" {
+  name        = "livekit-sg"
+  description = "Security group for LiveKit servers"
+  vpc_id      = aws_vpc.main.id
+
+  # SSH ingress rule
+  ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]  # Be cautious with this. Ideally, restrict to your IP.
+    description = "Allow SSH access"
+  }
+
+  ingress {
+    from_port = 80
+    to_port   = 80
+    protocol  = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    from_port = 443
+    to_port   = 443
+    protocol  = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    from_port = 7881
+    to_port   = 7881
+    protocol  = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    from_port = 3478
+    to_port   = 3478
+    protocol  = "udp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    from_port = 50000
+    to_port   = 60000
+    protocol  = "udp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    from_port = 7885
+    to_port   = 7885
+    protocol  = "udp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    from_port = 1935
+    to_port   = 1935
+    protocol  = "udp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    from_port = 1935
+    to_port   = 1935
+    protocol  = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port = 0
+    to_port   = 0
+    protocol  = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+# Key Pair for SSH access
+resource "aws_key_pair" "livekit" {
+  key_name = "livekit-key"
+  public_key = file("${path.module}/livekit_key.pub")  # Make sure to create this key
+}
+
+# Global Accelerator
+resource "aws_globalaccelerator_accelerator" "livekit" {
+  name            = "livekit-accelerator"
+  ip_address_type = "IPV4"
+  enabled         = true
+
+  attributes {
+    flow_logs_enabled   = true
+    flow_logs_s3_bucket = aws_s3_bucket.accelerator_logs.bucket
+    flow_logs_s3_prefix = "flow-logs/"
+  }
+}
+
+# S3 bucket for Global Accelerator logs
+resource "aws_s3_bucket" "accelerator_logs" {
+  bucket = "livekit-accelerator-logs-${data.aws_caller_identity.current.account_id}"
+}
+
+# Global Accelerator Listener
+resource "aws_globalaccelerator_listener" "livekit" {
+  accelerator_arn = aws_globalaccelerator_accelerator.livekit.id
+  client_affinity = "SOURCE_IP"
+  protocol        = "TCP"
+
+  port_range {
+    from_port = 80
+    to_port   = 80
+  }
+
+  port_range {
+    from_port = 443
+    to_port   = 443
+  }
+
+  port_range {
+    from_port = 7881
+    to_port   = 7881
+  }
+
+  port_range {
+    from_port = 3478
+    to_port   = 3478
+  }
+
+  port_range {
+    from_port = 50000
+    to_port   = 60000
+  }
+
+  port_range {
+    from_port = 1935
+    to_port   = 1935
+  }
+
+  port_range {
+    from_port = 7885
+    to_port   = 7885
+  }
+}
+
+
+# Global Accelerator Endpoint Group
+resource "aws_globalaccelerator_endpoint_group" "livekit" {
+  listener_arn = aws_globalaccelerator_listener.livekit.id
+
+  endpoint_configuration {
+    endpoint_id = aws_instance.livekit[0].id
+    weight      = 100
+  }
+
+  endpoint_configuration {
+    endpoint_id = aws_instance.livekit[1].id
+    weight      = 100
+  }
+
+  endpoint_configuration {
+    endpoint_id = aws_instance.livekit[2].id
+    weight      = 100
+  }
+
+  health_check_path             = "/"
+  health_check_port             = 80
+  health_check_protocol         = "HTTP"
+  threshold_count               = 3
+  traffic_dial_percentage       = 100
+}
+
+# Get current AWS account ID
+data "aws_caller_identity" "current" {}
+
+# Global Accelerator DNS entries
+resource "cloudflare_record" "livekit_global" {
+  zone_id = var.cloudflare_zone_id
+  name    = "livekit.${var.environment}"
+  content   = aws_globalaccelerator_accelerator.livekit.dns_name
+  type    = "CNAME"
+  proxied = false
+}
+
+resource "cloudflare_record" "livekit_turn_global" {
+  zone_id = var.cloudflare_zone_id
+  name    = "livekit-turn.${var.environment}"
+  content   = aws_globalaccelerator_accelerator.livekit.dns_name
+  type    = "CNAME"
+  proxied = false
+}
+
+
+resource "cloudflare_record" "livekit_whip_global" {
+  zone_id = var.cloudflare_zone_id
+  name    = "livekit-whip.${var.environment}"
+  content   = aws_globalaccelerator_accelerator.livekit.dns_name
+  type    = "CNAME"
+  proxied = false
+}
+
+
+

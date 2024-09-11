@@ -178,13 +178,8 @@ variable "livekit_api_key" {
   type        = string
 }
 
-variable "livekit_domain_name" {
-  description = "LiveKit domain name"
-  type        = string
-}
-
-variable "livekit_turn_domain_name" {
-  description = "LiveKit TURN domain name"
+variable "livekit_api_secret" {
+  description = "LiveKit API secret"
   type        = string
 }
 
