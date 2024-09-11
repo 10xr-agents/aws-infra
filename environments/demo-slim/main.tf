@@ -1372,7 +1372,7 @@ resource "aws_elasticache_replication_group" "redis" {
   engine_version       = "7.1"
   parameter_group_name = "default.redis7"
 
-  auth_token                 = random_password.redis_password
+  auth_token                 = random_password.redis_password.result
   auth_token_update_strategy = "SET"
 
   log_delivery_configuration {
