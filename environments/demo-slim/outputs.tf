@@ -132,17 +132,6 @@ output "acm_validation_records" {
   description = "The DNS records to create in Cloudflare for ACM certificate validation"
 }
 
-output "livekit_api_key" {
-  description = "LiveKit API key"
-  value       = var.livekit_api_key
-}
-
-output "livekit_api_secret" {
-  description = "LiveKit API secret"
-  value       = random_password.livekit_api_secret
-  sensitive   = true
-}
-
 # Output the access keys (Be cautious with this in production environments)
 output "s3_external_access_key_id" {
   value = aws_iam_access_key.s3_external_access.id
@@ -170,34 +159,4 @@ output "global_accelerator_dns_name" {
 output "global_accelerator_ip_addresses" {
   value       = aws_globalaccelerator_accelerator.main.ip_sets[0].ip_addresses
   description = "The IP addresses of the Global Accelerator"
-}
-
-output "redis_endpoint" {
-  value       = aws_elasticache_replication_group.redis.primary_endpoint_address
-  description = "The endpoint of the Redis ElastiCache cluster"
-}
-
-output "eks_cluster_endpoint" {
-  description = "Endpoint for EKS control plane"
-  value       = aws_eks_cluster.main.endpoint
-}
-
-output "eks_cluster_security_group_id" {
-  description = "Security group ID attached to the EKS cluster"
-  value       = aws_eks_cluster.main.vpc_config[0].cluster_security_group_id
-}
-
-output "eks_cluster_name" {
-  description = "Kubernetes Cluster Name"
-  value       = aws_eks_cluster.main.name
-}
-
-output "eks_admin_role_arn" {
-  description = "ARN of the EKS admin role"
-  value       = aws_iam_role.eks_admin.arn
-}
-
-output "kubectl_config_command" {
-  description = "Command to configure kubectl"
-  value       = "aws eks get-token --cluster-name ${aws_eks_cluster.main.name} | kubectl apply -f -"
 }
