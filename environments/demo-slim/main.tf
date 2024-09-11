@@ -43,7 +43,7 @@ resource "aws_vpc" "main" {
   enable_dns_support   = true
 
   tags = {
-    Name = "${var.project_name}-vpc"
+    Name                                                    = "${var.project_name}-vpc"
     "kubernetes.io/cluster/${var.project_name}-eks-cluster" = "shared"
   }
 }
@@ -66,9 +66,9 @@ resource "aws_subnet" "public" {
   availability_zone       = data.aws_availability_zones.available.names[count.index]
 
   tags = {
-    Name = "${var.project_name}-public-subnet-${count.index + 1}"
+    Name                                                    = "${var.project_name}-public-subnet-${count.index + 1}"
     "kubernetes.io/cluster/${var.project_name}-eks-cluster" = "shared"
-    "kubernetes.io/role/elb"                       = "1"
+    "kubernetes.io/role/elb"                                = "1"
   }
 }
 
@@ -180,6 +180,16 @@ resource "aws_network_acl" "main" {
     to_port    = 443
   }
 
+  ingress {
+    protocol   = "tcp"
+    rule_no    = 203
+    action     = "allow"
+    cidr_block = var.vpc_cidr
+    from_port  = 6379
+    to_port    = 6379
+  }
+
+
   egress {
     protocol   = "tcp"
     rule_no    = 200
@@ -196,6 +206,15 @@ resource "aws_network_acl" "main" {
     cidr_block = var.vpc_cidr
     from_port  = 443
     to_port    = 443
+  }
+
+  egress {
+    protocol   = "tcp"
+    rule_no    = 203
+    action     = "allow"
+    cidr_block = var.vpc_cidr
+    from_port  = 6379
+    to_port    = 6379
   }
 
   # Allow ephemeral ports for outbound connections
@@ -1379,7 +1398,7 @@ resource "aws_security_group" "redis" {
     from_port   = 6379
     to_port     = 6379
     protocol    = "tcp"
-    security_groups = [aws_security_group.ecs_sg.id]
+    security_groups = [aws_security_group.ecs_sg.id, aws_security_group.eks_sg.id]
   }
 
   egress {
@@ -1431,11 +1450,11 @@ resource "aws_iam_policy" "redis_access" {
 # Helm provider
 provider "helm" {
   kubernetes {
-    host                   = aws_eks_cluster.main.endpoint
+    host = aws_eks_cluster.main.endpoint
     cluster_ca_certificate = base64decode(aws_eks_cluster.main.certificate_authority[0].data)
     exec {
       api_version = "client.authentication.k8s.io/v1beta1"
-      args        = ["eks", "get-token", "--cluster-name", aws_eks_cluster.main.name]
+      args = ["eks", "get-token", "--cluster-name", aws_eks_cluster.main.name]
       command     = "aws"
     }
   }
@@ -1443,12 +1462,46 @@ provider "helm" {
 
 # Kubernetes provider
 provider "kubernetes" {
-  host                   = aws_eks_cluster.main.endpoint
+  host = aws_eks_cluster.main.endpoint
   cluster_ca_certificate = base64decode(aws_eks_cluster.main.certificate_authority[0].data)
   exec {
     api_version = "client.authentication.k8s.io/v1beta1"
-    args        = ["eks", "get-token", "--cluster-name", aws_eks_cluster.main.name]
+    args = ["eks", "get-token", "--cluster-name", aws_eks_cluster.main.name]
     command     = "aws"
+  }
+}
+
+resource "aws_security_group" "eks_sg" {
+  name        = "${var.project_name}-eks-sg"
+  description = "Security group for EKS cluster and ALB"
+  vpc_id      = aws_vpc.main.id
+
+  ingress {
+    from_port   = 0
+    to_port     = 65535
+    protocol    = "tcp"
+    cidr_blocks = [var.vpc_cidr]
+    description = "Allow inbound HTTPS traffic"
+  }
+
+  ingress {
+    from_port   = 0
+    to_port     = 65535
+    protocol    = "tcp"
+    cidr_blocks = [var.mongodb_atlas_cidr_block]
+    description = "Allow inbound traffic from MongoDB Atlas"
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+    description = "Allow all outbound traffic"
+  }
+
+  tags = {
+    Name = "${var.project_name}-ecs-sg"
   }
 }
 
@@ -1556,9 +1609,9 @@ data "tls_certificate" "eks" {
 }
 
 resource "aws_iam_openid_connect_provider" "eks" {
-  client_id_list  = ["sts.amazonaws.com"]
+  client_id_list = ["sts.amazonaws.com"]
   thumbprint_list = [data.tls_certificate.eks.certificates[0].sha1_fingerprint]
-  url             = aws_eks_cluster.main.identity[0].oidc[0].issuer
+  url = aws_eks_cluster.main.identity[0].oidc[0].issuer
 }
 
 # IAM Role for AWS Load Balancer Controller
@@ -1641,7 +1694,7 @@ resource "helm_release" "aws_load_balancer_controller" {
     value = "false"
   }
 
-  depends_on = [ aws_eks_node_group.main ]
+  depends_on = [aws_eks_node_group.main]
 }
 
 # IAM Role for EKS Admin Access
@@ -1711,24 +1764,24 @@ resource "kubernetes_config_map" "aws_auth" {
           {
             rolearn  = aws_iam_role.eks_nodes.arn
             username = "system:node:{{EC2PrivateDNSName}}"
-            groups   = ["system:bootstrappers", "system:nodes"]
+            groups = ["system:bootstrappers", "system:nodes"]
           },
           {
             rolearn  = aws_iam_role.eks_admin.arn
             username = "admin"
-            groups   = ["system:masters"]
+            groups = ["system:masters"]
           },
         ],
         [
           {
             rolearn  = data.aws_caller_identity.current.arn
             username = data.aws_caller_identity.current.user_id
-            groups   = ["system:masters"]
+            groups = ["system:masters"]
           },
           {
             rolearn  = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
             username = "root"
-            groups   = ["system:masters"]
+            groups = ["system:masters"]
           }
         ]
       )
@@ -1739,12 +1792,12 @@ resource "kubernetes_config_map" "aws_auth" {
           {
             userarn  = data.aws_caller_identity.current.arn
             username = data.aws_caller_identity.current.user_id
-            groups   = ["system:masters"]
+            groups = ["system:masters"]
           },
           {
             userarn  = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
             username = "root"
-            groups   = ["system:masters"]
+            groups = ["system:masters"]
           }
         ]
       )
@@ -1770,8 +1823,8 @@ resource "kubernetes_role" "redis_access" {
 
   rule {
     api_groups = [""]
-    resources  = ["secrets"]
-    verbs      = ["get", "list"]
+    resources = ["secrets"]
+    verbs = ["get", "list"]
   }
 }
 
@@ -1811,11 +1864,12 @@ resource "kubernetes_secret" "redis_credentials" {
 
 # Update security group to allow EKS nodes to access Redis
 resource "aws_security_group_rule" "redis_eks_access" {
+  count = length(aws_eks_cluster.main.vpc_config)
   type                     = "ingress"
   from_port                = 6379
   to_port                  = 6379
   protocol                 = "tcp"
-  source_security_group_id = aws_eks_cluster.main.vpc_config[0].cluster_security_group_id
+  source_security_group_id = aws_eks_cluster.main.vpc_config[count.index].cluster_security_group_id
   security_group_id        = aws_security_group.redis.id
 }
 
