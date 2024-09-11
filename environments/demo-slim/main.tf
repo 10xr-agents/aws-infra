@@ -1531,9 +1531,6 @@ resource "aws_globalaccelerator_endpoint_group" "livekit" {
   traffic_dial_percentage       = 100
 }
 
-# Get current AWS account ID
-data "aws_caller_identity" "current" {}
-
 # Global Accelerator DNS entries
 resource "cloudflare_record" "livekit_global" {
   zone_id = var.cloudflare_zone_id
