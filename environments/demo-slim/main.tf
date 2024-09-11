@@ -1350,6 +1350,10 @@ resource "aws_cloudwatch_log_group" "redis_logs" {
   retention_in_days = 30 # Adjust retention period as needed
 }
 
+resource "random_password" "redis_password" {
+  length  = 64
+  special = false
+}
 
 # ElastiCache Replication Group (Redis Cluster)
 resource "aws_elasticache_replication_group" "redis" {
@@ -1367,6 +1371,9 @@ resource "aws_elasticache_replication_group" "redis" {
   engine               = "redis"
   engine_version       = "7.1"
   parameter_group_name = "default.redis7"
+
+  auth_token                 = random_password.redis_password
+  auth_token_update_strategy = "SET"
 
   log_delivery_configuration {
     destination      = aws_cloudwatch_log_group.redis_logs.name
