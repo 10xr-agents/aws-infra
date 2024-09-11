@@ -1,30 +1,33 @@
+# Default values for egress.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
 replicaCount: 3
 
 egress:
     log_level: debug
     health_port: 8080
     prometheus_port: 9090
-    api_key: ${livekit_api_key}
-    api_secret: ${livekit_api_secret}
-    ws_url: wss://${livekit_domain_name}:7880
-    redis:
-        address: ${aws_redis_cluster}
-        username: ${livekit_redis_username}
-        password: ${livekit_redis_password}
-        use_tls: false
 
 terminationGracePeriodSeconds: 3600
 
-autoscaling:
-    enabled: false
+nameOverride: ""
+fullnameOverride: ""
 
-resources:
-    requests:
-        cpu: 500m
-        memory: 512Mi
-    limits:
-        cpu: 1000m
-        memory: 1024Mi
+autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 80
+
+nodeSelector: {}
+
+resources: {}
+
+serviceAccount:
+    create: false
+    annotations: {}
+    name: ""
 
 podAnnotations:
     sidecar.istio.io/inject: "false"
@@ -37,13 +40,3 @@ securityContext: {}
 tolerations: []
 
 affinity: {}
-
-extraVolumes:
-    - name: tls-cert
-      secret:
-          secretName: "${livekit_secret_name}"
-
-extraVolumeMounts:
-    - name: tls-cert
-      mountPath: /etc/lkcert
-      readOnly: true

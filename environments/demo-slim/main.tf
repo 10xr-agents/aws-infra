@@ -1855,3 +1855,94 @@ resource "aws_eks_addon" "vpc_cni" {
     aws_iam_role_policy_attachment.eks_cluster_AmazonEKSVPCResourceController
   ]
 }
+
+# livekit setup
+resource "random_password" "livekit_api_secret" {
+  length  = 256
+  special = false
+}
+
+# Create Kubernetes secret directly from the generated files
+resource "kubernetes_secret" "tls_secret" {
+  metadata {
+    name      = "turn-tls-secret"
+    namespace = "kube-system"
+  }
+
+  type = "kubernetes.io/tls"
+
+  data = {
+    "tls.crt" = base64encode(
+      file("${path.module}/certificate.txt")
+    )
+    "tls.key" = base64encode(
+      file("${path.module}/private_key.txt")
+    )
+  }
+}
+
+
+resource "helm_release" "livekit_server" {
+  name       = "livekit-server"
+  repository = "https://helm.livekit.io"
+  chart      = "livekit-server"
+  namespace  = "kube-system"
+
+  values = [
+    templatefile("${path.module}/templates/livekit-server-values.yaml", {
+      livekit_api_key          = var.livekit_api_key
+      livekit_api_secret       = random_password.livekit_api_secret.result
+      livekit_turn_domain_name = var.livekit_turn_domain_name
+      aws_redis_cluster        = "${aws_elasticache_replication_group.redis.primary_endpoint_address}:6379"
+      livekit_redis_username   = "default"
+      livekit_redis_password   = aws_elasticache_replication_group.redis.auth_token
+      livekit_secret_name      = kubernetes_secret.tls_secret.metadata[0].name
+    })
+  ]
+
+  depends_on = [aws_eks_node_group.main, helm_release.aws_load_balancer_controller]
+}
+
+# LiveKit Ingress Helm Chart
+resource "helm_release" "livekit_ingress" {
+  name       = "livekit-ingress"
+  repository = "https://helm.livekit.io"
+  chart      = "ingress"
+  namespace  = "kube-system"
+
+  values = [
+    templatefile("${path.module}/templates/livekit-ingress-values.yaml", {
+      livekit_api_key        = var.livekit_api_key
+      livekit_api_secret     = random_password.livekit_api_secret.result
+      livekit_domain_name    = var.livekit_domain_name
+      aws_redis_cluster      = "${aws_elasticache_replication_group.redis.primary_endpoint_address}:6379"
+      livekit_redis_username = "default"
+      livekit_redis_password = aws_elasticache_replication_group.redis.auth_token
+      livekit_secret_name    = kubernetes_secret.tls_secret.metadata[0].name
+    })
+  ]
+
+  depends_on = [helm_release.livekit_server]
+}
+
+# LiveKit Egress Helm Chart
+resource "helm_release" "livekit_egress" {
+  name       = "livekit-egress"
+  repository = "https://helm.livekit.io"
+  chart      = "egress"
+  namespace  = "kube-system"
+
+  values = [
+    templatefile("${path.module}/templates/livekit-egress-values.yaml", {
+      livekit_api_key        = var.livekit_api_key
+      livekit_api_secret     = random_password.livekit_api_secret.result
+      livekit_domain_name    = var.livekit_domain_name
+      aws_redis_cluster      = "${aws_elasticache_replication_group.redis.primary_endpoint_address}:6379"
+      livekit_redis_username = "default"
+      livekit_redis_password = aws_elasticache_replication_group.redis.auth_token
+      livekit_secret_name    = kubernetes_secret.tls_secret.metadata[0].name
+    })
+  ]
+
+  depends_on = [helm_release.livekit_server]
+}

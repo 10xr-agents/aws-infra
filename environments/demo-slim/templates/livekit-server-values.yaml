@@ -9,10 +9,10 @@ livekit:
         port_range_end: 60000
         use_external_ip: true
     redis:
-         address: "${aws_redis_cluster}"
-         username: "${livekit_redis_username}"
-         password: "${livekit_redis_password}"
-         use_tls: false
+        address: "${aws_redis_cluster}"
+        username: "${livekit_redis_username}"
+        password: "${livekit_redis_password}"
+        use_tls: false
     keys:
         "${livekit_api_key}": "${livekit_api_secret}"
     turn:
@@ -21,8 +21,8 @@ livekit:
         external_tls: true
         domain: "${livekit_turn_domain_name}"
         secretName: "${livekit_secret_name}"
-        key_file: "tls.key"
-        cert_file: "tls.crt"
+        key_file: "tls.key"    # Matches the key in the secret
+        cert_file: "tls.crt"   # Matches the key in the secret
 
 podHostNetwork: true
 

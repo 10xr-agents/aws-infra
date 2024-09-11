@@ -137,11 +137,11 @@ output "livekit_api_key" {
   value       = var.livekit_api_key
 }
 
-# output "livekit_api_secret" {
-#   description = "LiveKit API secret"
-#   value       = random_password.livekit_api_secret
-#   sensitive   = true
-# }
+output "livekit_api_secret" {
+  description = "LiveKit API secret"
+  value       = random_password.livekit_api_secret
+  sensitive   = true
+}
 
 # Output the access keys (Be cautious with this in production environments)
 output "s3_external_access_key_id" {
