@@ -1373,7 +1373,7 @@ resource "aws_elasticache_replication_group" "redis" {
   parameter_group_name = "default.redis7"
 
   auth_token                 = random_password.redis_password.result
-  auth_token_update_strategy = "SET"
+  auth_token_update_strategy = "ROTATE"
 
   log_delivery_configuration {
     destination      = aws_cloudwatch_log_group.redis_logs.name
