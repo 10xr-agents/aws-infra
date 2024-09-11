@@ -1327,3 +1327,17 @@ resource "aws_security_group" "global_accelerator_endpoint" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 }
+
+data "aws_eks_cluster" "cluster" {
+  name = "10xr-demo-eks-cluster"
+}
+
+data "aws_eks_cluster_auth" "cluster" {
+  name = "10xr-demo-eks-cluster"
+}
+
+provider "kubernetes" {
+  host                   = data.aws_eks_cluster.cluster.endpoint
+  cluster_ca_certificate = base64decode(data.aws_eks_cluster.cluster.certificate_authority.0.data)
+  token                  = data.aws_eks_cluster_auth.cluster.token
+}
