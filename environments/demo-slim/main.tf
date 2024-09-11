@@ -436,14 +436,6 @@ resource "aws_ecs_task_definition" "service" {
         {
           name  = "MONGO_DB_URI"
           value = "${mongodbatlas_cluster.cluster.connection_strings[0].standard_srv}/${var.mongodb_database_name}?authMechanism=MONGODB-AWS&authSource=$external"
-        },
-        {
-          name  = "REDIS_HOST"
-          value = aws_elasticache_replication_group.redis.primary_endpoint_address
-        },
-        {
-          name  = "REDIS_PORT"
-          value = "6379"
         }
       ], [
         for key, value in var.services[count.index].environment_variables :
@@ -1359,7 +1351,7 @@ resource "random_password" "redis_password" {
 resource "aws_elasticache_replication_group" "redis" {
   replication_group_id       = "redis-cluster-${var.project_name}"
   description                = "Redis cluster for ${var.project_name}"
-  node_type                  = "cache.r4.4xlarge"
+  node_type                  = "cache.r7g.xlarge"
   port                       = 6379
   subnet_group_name          = aws_elasticache_subnet_group.redis.name
   security_group_ids = [aws_security_group.redis.id]
@@ -1405,7 +1397,7 @@ resource "aws_security_group" "redis" {
     from_port   = 6379
     to_port     = 6379
     protocol    = "tcp"
-    security_groups = [aws_security_group.ecs_sg.id, aws_security_group.eks_sg.id]
+    security_groups = [aws_security_group.eks_sg.id]
   }
 
   egress {
@@ -1418,34 +1410,6 @@ resource "aws_security_group" "redis" {
   tags = {
     Name = "${var.project_name}-redis-sg"
   }
-}
-
-# Update ECS Task Role to allow access to Redis
-resource "aws_iam_role_policy_attachment" "ecs_task_redis_policy" {
-  count = length(var.services)
-  role       = aws_iam_role.ecs_task_role[count.index].name
-  policy_arn = aws_iam_policy.redis_access.arn
-}
-
-# IAM Policy for Redis access
-resource "aws_iam_policy" "redis_access" {
-  name        = "${var.project_name}-redis-access-policy"
-  description = "Policy to allow ECS tasks to access Redis"
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Action = [
-          "elasticache:DescribeReplicationGroups",
-          "elasticache:DescribeCacheClusters",
-          "elasticache:ListTagsForResource"
-        ]
-        Resource = "*"
-      }
-    ]
-  })
 }
 
 ########################################################################################################################
@@ -1494,6 +1458,14 @@ resource "aws_security_group" "eks_sg" {
   ingress {
     from_port   = 0
     to_port     = 65535
+    protocol    = "udp"
+    cidr_blocks = [var.vpc_cidr]
+    description = "Allow inbound HTTPS traffic"
+  }
+
+  ingress {
+    from_port   = 0
+    to_port     = 65535
     protocol    = "tcp"
     cidr_blocks = [var.mongodb_atlas_cidr_block]
     description = "Allow inbound traffic from MongoDB Atlas"
@@ -1519,6 +1491,7 @@ resource "aws_eks_cluster" "main" {
 
   vpc_config {
     subnet_ids = aws_subnet.public[*].id
+    security_group_ids = [aws_security_group.eks_sg.id]
   }
 
   # Ensure that IAM Role permissions are created before and deleted after EKS Cluster handling.
