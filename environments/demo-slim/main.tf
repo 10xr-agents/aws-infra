@@ -1504,6 +1504,47 @@ resource "aws_globalaccelerator_listener" "livekit" {
   }
 }
 
+resource "aws_globalaccelerator_listener" "livekit_udp" {
+  accelerator_arn = aws_globalaccelerator_accelerator.livekit.id
+  client_affinity = "SOURCE_IP"
+  protocol        = "UDP"
+
+  port_range {
+    from_port = 80
+    to_port   = 80
+  }
+
+  port_range {
+    from_port = 443
+    to_port   = 443
+  }
+
+  port_range {
+    from_port = 7881
+    to_port   = 7881
+  }
+
+  port_range {
+    from_port = 3478
+    to_port   = 3478
+  }
+
+  port_range {
+    from_port = 50000
+    to_port   = 60000
+  }
+
+  port_range {
+    from_port = 1935
+    to_port   = 1935
+  }
+
+  port_range {
+    from_port = 7885
+    to_port   = 7885
+  }
+}
+
 
 # Global Accelerator Endpoint Group
 resource "aws_globalaccelerator_endpoint_group" "livekit" {
@@ -1512,16 +1553,47 @@ resource "aws_globalaccelerator_endpoint_group" "livekit" {
   endpoint_configuration {
     endpoint_id = aws_instance.livekit[0].id
     weight      = 100
+    client_ip_preservation_enabled = true
   }
 
   endpoint_configuration {
     endpoint_id = aws_instance.livekit[1].id
     weight      = 100
+    client_ip_preservation_enabled = true
   }
 
   endpoint_configuration {
     endpoint_id = aws_instance.livekit[2].id
     weight      = 100
+    client_ip_preservation_enabled = true
+  }
+
+  health_check_path             = "/"
+  health_check_port             = 80
+  health_check_protocol         = "HTTP"
+  threshold_count               = 3
+  traffic_dial_percentage       = 100
+}
+
+resource "aws_globalaccelerator_endpoint_group" "livekit_udp" {
+  listener_arn = aws_globalaccelerator_listener.livekit_udp.id
+
+  endpoint_configuration {
+    endpoint_id = aws_instance.livekit[0].id
+    weight      = 100
+    client_ip_preservation_enabled = true
+  }
+
+  endpoint_configuration {
+    endpoint_id = aws_instance.livekit[1].id
+    weight      = 100
+    client_ip_preservation_enabled = true
+  }
+
+  endpoint_configuration {
+    endpoint_id = aws_instance.livekit[2].id
+    weight      = 100
+    client_ip_preservation_enabled = true
   }
 
   health_check_path             = "/"
