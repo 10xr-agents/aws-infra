@@ -1382,6 +1382,13 @@ resource "aws_security_group" "livekit" {
   }
 
   ingress {
+    from_port = 7880
+    to_port   = 7880
+    protocol  = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
     from_port = 443
     to_port   = 443
     protocol  = "tcp"
@@ -1479,6 +1486,11 @@ resource "aws_globalaccelerator_listener" "livekit" {
   }
 
   port_range {
+    from_port = 7880
+    to_port   = 7880
+  }
+
+  port_range {
     from_port = 7881
     to_port   = 7881
   }
@@ -1517,6 +1529,11 @@ resource "aws_globalaccelerator_listener" "livekit_udp" {
   port_range {
     from_port = 443
     to_port   = 443
+  }
+
+  port_range {
+    from_port = 7880
+    to_port   = 7880
   }
 
   port_range {
@@ -1569,7 +1586,7 @@ resource "aws_globalaccelerator_endpoint_group" "livekit" {
   }
 
   health_check_path             = "/"
-  health_check_port             = 80
+  health_check_port             = 7880
   health_check_protocol         = "HTTP"
   threshold_count               = 3
   traffic_dial_percentage       = 100
@@ -1597,7 +1614,7 @@ resource "aws_globalaccelerator_endpoint_group" "livekit_udp" {
   }
 
   health_check_path             = "/"
-  health_check_port             = 80
+  health_check_port             = 7880
   health_check_protocol         = "HTTP"
   threshold_count               = 3
   traffic_dial_percentage       = 100
