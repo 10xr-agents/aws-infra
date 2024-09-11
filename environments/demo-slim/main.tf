@@ -1359,7 +1359,7 @@ resource "random_password" "redis_password" {
 resource "aws_elasticache_replication_group" "redis" {
   replication_group_id       = "redis-cluster-${var.project_name}"
   description                = "Redis cluster for ${var.project_name}"
-  node_type                  = "cache.t3.micro"
+  node_type                  = "cache.r4.4xlarge"
   port                       = 6379
   subnet_group_name          = aws_elasticache_subnet_group.redis.name
   security_group_ids = [aws_security_group.redis.id]
