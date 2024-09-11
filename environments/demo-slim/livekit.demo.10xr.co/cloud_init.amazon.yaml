@@ -7,6 +7,7 @@ repo_upgrade: all
 
 packages:
   - docker
+  - amazon-cloudwatch-agent
 
 bootcmd:
   - mkdir -p /opt/livekit/caddy_data
@@ -110,6 +111,43 @@ write_files:
       sed -i.orig -r "s/\\\"(.+)(\:5349)/\\\"$ip\2/" /opt/livekit/caddy.yaml
       
 
+  - path: /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json
+    content: |
+      {
+        "agent": {
+          "metrics_collection_interval": 60,
+          "run_as_user": "root"
+        },
+        "logs": {
+          "logs_collected": {
+            "files": {
+              "collect_list": [
+                {
+                  "file_path": "/var/log/livekit/livekit.log",
+                  "log_group_name": "/ec2/livekit",
+                  "log_stream_name": "{instance_id}"
+                },
+                {
+                  "file_path": "/var/log/caddy/caddy.log",
+                  "log_group_name": "/ec2/caddy",
+                  "log_stream_name": "{instance_id}"
+                },
+                {
+                  "file_path": "/var/log/livekit/egress.log",
+                  "log_group_name": "/ec2/livekit-egress",
+                  "log_stream_name": "{instance_id}"
+                },
+                {
+                  "file_path": "/var/log/livekit/ingress.log",
+                  "log_group_name": "/ec2/livekit-ingress",
+                  "log_stream_name": "{instance_id}"
+                }
+              ]
+            }
+          }
+        }
+      }
+
   - path: /opt/livekit/docker-compose.yaml
     content: |
       # This docker-compose requires host networking, which is only available on Linux
@@ -123,6 +161,11 @@ write_files:
           volumes:
             - ./caddy.yaml:/etc/caddy.yaml
             - ./caddy_data:/data
+          logging:
+            driver: "json-file"
+            options:
+              max-size: "100m"
+              max-file: "5"
         livekit:
           image: livekit/livekit-server:latest
           command: --config /etc/livekit.yaml
@@ -130,6 +173,11 @@ write_files:
           network_mode: "host"
           volumes:
             - ./livekit.yaml:/etc/livekit.yaml
+          logging:
+            driver: "json-file"
+            options:
+              max-size: "100m"
+              max-file: "5"
         redis:
           image: redis:7-alpine
           command: redis-server /etc/redis.conf
@@ -137,6 +185,11 @@ write_files:
           network_mode: "host"
           volumes:
             - ./redis.conf:/etc/redis.conf
+          logging:
+            driver: "json-file"
+            options:
+              max-size: "100m"
+              max-file: "5"
         egress:
           image: livekit/egress:latest
           restart: unless-stopped
@@ -147,6 +200,11 @@ write_files:
             - ./egress.yaml:/etc/egress.yaml
           cap_add:
             - CAP_SYS_ADMIN
+          logging:
+            driver: "json-file"
+            options:
+              max-size: "100m"
+              max-file: "5"
         ingress:
           image: livekit/ingress:latest
           restart: unless-stopped
@@ -155,6 +213,11 @@ write_files:
           network_mode: "host"
           volumes:
             - ./ingress.yaml:/etc/ingress.yaml
+          logging:
+            driver: "json-file"
+            options:
+              max-size: "100m"
+              max-file: "5"
       
 
   - path: /etc/systemd/system/livekit-docker.service
@@ -241,7 +304,32 @@ runcmd:
   - chmod 755 /usr/local/bin/docker-compose
   - chmod 755 /opt/livekit/update_ip.sh
   - /opt/livekit/update_ip.sh
+  # Start CloudWatch agent
+  - systemctl enable amazon-cloudwatch-agent
+  - systemctl start amazon-cloudwatch-agent
+  # Ensure log directories exist
+  - mkdir -p /var/log/livekit
+  - mkdir -p /var/log/caddy
+  # Set up log rotation for Docker containers
+  - echo '#!/bin/sh' > /etc/logrotate.d/docker-containers
+  - echo '/var/lib/docker/containers/*/*.log {' >> /etc/logrotate.d/docker-containers
+  - echo '  rotate 7' >> /etc/logrotate.d/docker-containers
+  - echo '  daily' >> /etc/logrotate.d/docker-containers
+  - echo '  compress' >> /etc/logrotate.d/docker-containers
+  - echo '  size=100M' >> /etc/logrotate.d/docker-containers
+  - echo '  missingok' >> /etc/logrotate.d/docker-containers
+  - echo '  delaycompress' >> /etc/logrotate.d/docker-containers
+  - echo '  copytruncate' >> /etc/logrotate.d/docker-containers
+  - echo '}' >> /etc/logrotate.d/docker-containers
+  # Start services
   - systemctl enable docker
   - systemctl start docker
   - systemctl enable livekit-docker
   - systemctl start livekit-docker
+  # Set up log symlinks for CloudWatch agent
+  - ln -sf /var/lib/docker/containers/$(docker ps -aqf "name=livekit-docker_livekit")/*-json.log /var/log/livekit/livekit.log
+  - ln -sf /var/lib/docker/containers/$(docker ps -aqf "name=livekit-docker_caddy")/*-json.log /var/log/caddy/caddy.log
+  - ln -sf /var/lib/docker/containers/$(docker ps -aqf "name=livekit-docker_egress")/*-json.log /var/log/livekit/egress.log
+  - ln -sf /var/lib/docker/containers/$(docker ps -aqf "name=livekit-docker_ingress")/*-json.log /var/log/livekit/ingress.log
+  # Restart CloudWatch agent to pick up new log files
+  - systemctl restart amazon-cloudwatch-agent

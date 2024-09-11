@@ -1453,7 +1453,7 @@ resource "aws_key_pair" "livekit" {
 
 # Global Accelerator
 resource "aws_globalaccelerator_accelerator" "livekit" {
-  name            = "livekit-accelerator"
+  name            = "${var.project_name}-livekit-accelerator"
   ip_address_type = "IPV4"
   enabled         = true
 
