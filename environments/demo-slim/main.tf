@@ -1364,16 +1364,16 @@ resource "aws_security_group" "redis" {
   vpc_id      = aws_vpc.main.id
 
   ingress {
-    from_port       = 6379
-    to_port         = 6379
-    protocol        = "tcp"
+    from_port = 6379
+    to_port   = 6379
+    protocol  = "tcp"
     security_groups = [aws_security_group.livekit.id]
   }
 
   egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
+    from_port = 0
+    to_port   = 0
+    protocol  = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
 }
@@ -1382,14 +1382,14 @@ resource "aws_security_group" "redis" {
 resource "aws_elasticache_cluster" "livekit" {
   cluster_id           = "redis-${var.project_name}"
   engine               = "redis"
-  node_type            = "cache.t3.micro"  # Adjust as needed
+  node_type = "cache.t3.micro"  # Adjust as needed
   num_cache_nodes      = 1
   parameter_group_name = aws_elasticache_parameter_group.redis_auth.name
   engine_version       = "7.0"
   port                 = 6379
 
-  subnet_group_name    = aws_elasticache_subnet_group.livekit.name
-  security_group_ids   = [aws_security_group.redis.id]
+  subnet_group_name = aws_elasticache_subnet_group.livekit.name
+  security_group_ids = [aws_security_group.redis.id]
 }
 
 # ElastiCache Parameter Group for Redis authentication
@@ -1413,12 +1413,29 @@ resource "aws_security_group_rule" "livekit_to_redis" {
   security_group_id        = aws_security_group.livekit.id
 }
 
+data "aws_ami" "amazon_linux_2" {
+  most_recent = true
+
+  filter {
+    name = "name"
+    values = ["amzn2-ami-hvm-*-x86_64-gp2"]
+  }
+
+  filter {
+    name = "virtualization-type"
+    values = ["hvm"]
+  }
+
+  owners = ["137112412989"] # Amazon
+}
+
+
 # LiveKit EC2 Instances
 resource "aws_instance" "livekit" {
-  count    = 3
-  ami      = "ami-06f555bf2f102b63c"
+  count         = 3
+  ami           = data.aws_ami.amazon_linux_2.id
   instance_type = "t3.xlarge"
-  key_name = aws_key_pair.livekit.key_name
+  key_name      = aws_key_pair.livekit.key_name
   vpc_security_group_ids = [aws_security_group.livekit.id]
   subnet_id = aws_subnet.public[count.index % 2].id  # Distribute across 2 subnets
 
@@ -1605,7 +1622,7 @@ locals {
 }
 
 resource "aws_globalaccelerator_endpoint_group" "livekit" {
-  count        = length(local.protocols)
+  count = length(local.protocols)
   listener_arn = aws_globalaccelerator_listener.livekit[count.index].id
 
   dynamic "endpoint_configuration" {
@@ -1617,19 +1634,19 @@ resource "aws_globalaccelerator_endpoint_group" "livekit" {
     }
   }
 
-  health_check_path             = "/"
-  health_check_port             = 7880
-  health_check_protocol         = "HTTP"
-  threshold_count               = 3
-  traffic_dial_percentage       = 100
+  health_check_path       = "/"
+  health_check_port       = 7880
+  health_check_protocol   = "HTTP"
+  threshold_count         = 3
+  traffic_dial_percentage = 100
 }
 
 # Global Accelerator Listeners
 resource "aws_globalaccelerator_listener" "livekit" {
-  count            = length(local.protocols)
-  accelerator_arn  = aws_globalaccelerator_accelerator.livekit.id
-  client_affinity  = "SOURCE_IP"
-  protocol         = upper(local.protocols[count.index])
+  count = length(local.protocols)
+  accelerator_arn = aws_globalaccelerator_accelerator.livekit.id
+  client_affinity = "SOURCE_IP"
+  protocol = upper(local.protocols[count.index])
 
   port_range {
     from_port = 80
@@ -1676,7 +1693,7 @@ resource "aws_globalaccelerator_listener" "livekit" {
 resource "cloudflare_record" "livekit_global" {
   zone_id = var.cloudflare_zone_id
   name    = "livekit.${var.environment}"
-  content   = aws_globalaccelerator_accelerator.livekit.dns_name
+  content = aws_globalaccelerator_accelerator.livekit.dns_name
   type    = "CNAME"
   proxied = false
 }
@@ -1684,7 +1701,7 @@ resource "cloudflare_record" "livekit_global" {
 resource "cloudflare_record" "livekit_turn_global" {
   zone_id = var.cloudflare_zone_id
   name    = "livekit-turn.${var.environment}"
-  content   = aws_globalaccelerator_accelerator.livekit.dns_name
+  content = aws_globalaccelerator_accelerator.livekit.dns_name
   type    = "CNAME"
   proxied = false
 }
@@ -1693,7 +1710,7 @@ resource "cloudflare_record" "livekit_turn_global" {
 resource "cloudflare_record" "livekit_whip_global" {
   zone_id = var.cloudflare_zone_id
   name    = "livekit-whip.${var.environment}"
-  content   = aws_globalaccelerator_accelerator.livekit.dns_name
+  content = aws_globalaccelerator_accelerator.livekit.dns_name
   type    = "CNAME"
   proxied = false
 }
