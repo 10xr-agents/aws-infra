@@ -1427,7 +1427,7 @@ resource "aws_instance" "livekit" {
   instance_type = "t3.xlarge"
   key_name      = aws_key_pair.livekit.key_name
   vpc_security_group_ids = [aws_security_group.livekit.id]
-  subnet_id = aws_subnet.public[count.index % 2].id  # Distribute across 2 subnets
+  subnet_id = aws_subnet.public[count.index % 2].id
 
   user_data = templatefile("${path.module}/../templates/cloud_init.amazon.yaml.tpl", {
     redis_address  = "${aws_elasticache_cluster.livekit.cache_nodes[0].address}:${aws_elasticache_cluster.livekit.cache_nodes[0].port}"
