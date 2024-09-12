@@ -8,6 +8,8 @@ repo_upgrade: all
 packages:
   - docker
   - amazon-cloudwatch-agent
+  - nvidia-cuda-toolkit
+  - libcuda1
   - libavcodec-extra
   - libavformat-extra
   - libsndfile1
@@ -16,8 +18,11 @@ packages:
   - gstreamer1.0-plugins-good
   - gstreamer1.0-plugins-bad
   - gstreamer1.0-plugins-ugly
+  - gstreamer1.0-plugins-bad-freeworld
   - gstreamer1.0-libav
   - ffmpeg
+  - mesa-libGL
+  - xorg-x11-server-Xvfb
 
 bootcmd:
   - mkdir -p /opt/livekit/caddy_data
@@ -294,11 +299,31 @@ write_files:
 
 runcmd:
   - amazon-linux-extras install -y epel
-  - yum install -y ffmpeg gstreamer1 gstreamer1-plugins-base gstreamer1-plugins-good gstreamer1-plugins-bad-free gstreamer1-plugins-ugly
+  - yum install -y ffmpeg gstreamer1 gstreamer1-plugins-base gstreamer1-plugins-good gstreamer1-plugins-bad-free gstreamer1-plugins-bad-freeworld gstreamer1-plugins-ugly gstreamer1-libav
+  - yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+  - yum install -y --enablerepo=epel gstreamer1-plugins-bad-freeworld
+  - yum install -y mesa-libGL xorg-x11-server-Xvfb
+
+  # Install NVIDIA driver and CUDA
+  - amazon-linux-extras install -y nvidia
+  - yum install -y nvidia-driver nvidia-driver-libs nvidia-driver-cuda
+  - yum install -y cuda-drivers
+
+  # Download and install CUDA Toolkit
+  - wget https://developer.download.nvidia.com/compute/cuda/11.7.1/local_installers/cuda-repo-rhel7-11-7-local-11.7.1_515.65.01-1.x86_64.rpm
+  - rpm -i cuda-repo-rhel7-11-7-local-11.7.1_515.65.01-1.x86_64.rpm
+  - yum clean all
+  - yum install -y cuda
+
+  # Set up CUDA environment variables
+  - echo 'export PATH=/usr/local/cuda-11.7/bin${PATH:+:${PATH}}' >> /etc/profile.d/cuda.sh
+  - echo 'export LD_LIBRARY_PATH=/usr/local/cuda-11.7/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}' >> /etc/profile.d/cuda.sh
+
   - curl -L "https://github.com/docker/compose/releases/download/v2.20.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
   - chmod 755 /usr/local/bin/docker-compose
   - chmod 755 /opt/livekit/update_ip.sh
   - /opt/livekit/update_ip.sh
+  - nvidia-smi
   - ldconfig
   # Start CloudWatch agent
   - systemctl enable amazon-cloudwatch-agent
@@ -323,9 +348,14 @@ runcmd:
   - systemctl enable livekit-docker
   - systemctl start livekit-docker
   # Set up log symlinks for CloudWatch agent
-  - ln -sf /var/lib/docker/containers/$(docker ps -aqf "name=livekit")/*-json.log /var/log/livekit/livekit.log
-  - ln -sf /var/lib/docker/containers/$(docker ps -aqf "name=caddy")/*-json.log /var/log/caddy/caddy.log
-  - ln -sf /var/lib/docker/containers/$(docker ps -aqf "name=egress")/*-json.log /var/log/livekit/egress.log
-  - ln -sf /var/lib/docker/containers/$(docker ps -aqf "name=ingress")/*-json.log /var/log/livekit/ingress.log
+  - sleep 5s
+  - LIVEKIT_CONTAINER_ID=$(docker ps -aqf "name=livekit" --no-trunc)
+  - CADDY_CONTAINER_ID=$(docker ps -aqf "name=caddy" --no-trunc)
+  - EGRESS_CONTAINER_ID=$(docker ps -aqf "name=egress" --no-trunc)
+  - INGRESS_CONTAINER_ID=$(docker ps -aqf "name=ingress" --no-trunc)
+  - ln -sf /var/lib/docker/containers/${LIVEKIT_CONTAINER_ID}/*-json.log /var/log/livekit/livekit.log
+  - ln -sf /var/lib/docker/containers/${CADDY_CONTAINER_ID}/*-json.log /var/log/caddy/caddy.log
+  - ln -sf /var/lib/docker/containers/${EGRESS_CONTAINER_ID}/*-json.log /var/log/livekit/egress.log
+  - ln -sf /var/lib/docker/containers/${INGRESS_CONTAINER_ID}/*-json.log /var/log/livekit/ingress.log
   # Restart CloudWatch agent to pick up new log files
   - systemctl restart amazon-cloudwatch-agent
