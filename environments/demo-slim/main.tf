@@ -1346,62 +1346,62 @@ resource "aws_security_group" "global_accelerator_endpoint" {
 
 ### elastic cache ###
 
-resource "random_password" "redis_auth_token" {
-  length  = 64
-  special = false
-}
-
-# ElastiCache Subnet Group
-resource "aws_elasticache_subnet_group" "livekit" {
-  name       = "cache-subnet-${var.project_name}"
-  subnet_ids = aws_subnet.public[*].id
-}
-
-# ElastiCache Security Group
-resource "aws_security_group" "redis" {
-  name        = "redis-sg-${var.project_name}"
-  description = "Security group for Redis cluster"
-  vpc_id      = aws_vpc.main.id
-
-  ingress {
-    from_port = 6379
-    to_port   = 6379
-    protocol  = "tcp"
-    security_groups = [aws_security_group.livekit.id]
-  }
-
-  egress {
-    from_port = 0
-    to_port   = 0
-    protocol  = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-}
-
-# ElastiCache Redis Cluster
-resource "aws_elasticache_cluster" "livekit" {
-  cluster_id           = "redis-${var.project_name}"
-  engine               = "redis"
-  node_type = "cache.t3.micro"  # Adjust as needed
-  num_cache_nodes      = 1
-  parameter_group_name = aws_elasticache_parameter_group.redis_auth.name
-  engine_version       = "7.0"
-  port                 = 6379
-
-  subnet_group_name = aws_elasticache_subnet_group.livekit.name
-  security_group_ids = [aws_security_group.redis.id]
-}
-
-# ElastiCache Parameter Group for Redis authentication
-resource "aws_elasticache_parameter_group" "redis_auth" {
-  family = "redis7"
-  name   = "redis-auth-${var.project_name}"
-
-  parameter {
-    name  = "maxmemory-policy"
-    value = "allkeys-lru"
-  }
-}
+# resource "random_password" "redis_auth_token" {
+#   length  = 64
+#   special = false
+# }
+#
+# # ElastiCache Subnet Group
+# resource "aws_elasticache_subnet_group" "livekit" {
+#   name       = "cache-subnet-${var.project_name}"
+#   subnet_ids = aws_subnet.public[*].id
+# }
+#
+# # ElastiCache Security Group
+# resource "aws_security_group" "redis" {
+#   name        = "redis-sg-${var.project_name}"
+#   description = "Security group for Redis cluster"
+#   vpc_id      = aws_vpc.main.id
+#
+#   ingress {
+#     from_port = 6379
+#     to_port   = 6379
+#     protocol  = "tcp"
+#     security_groups = [aws_security_group.livekit.id]
+#   }
+#
+#   egress {
+#     from_port = 0
+#     to_port   = 0
+#     protocol  = "-1"
+#     cidr_blocks = ["0.0.0.0/0"]
+#   }
+# }
+#
+# # ElastiCache Redis Cluster
+# resource "aws_elasticache_cluster" "livekit" {
+#   cluster_id           = "redis-${var.project_name}"
+#   engine               = "redis"
+#   node_type = "cache.t3.micro"  # Adjust as needed
+#   num_cache_nodes      = 1
+#   parameter_group_name = aws_elasticache_parameter_group.redis_auth.name
+#   engine_version       = "7.0"
+#   port                 = 6379
+#
+#   subnet_group_name = aws_elasticache_subnet_group.livekit.name
+#   security_group_ids = [aws_security_group.redis.id]
+# }
+#
+# # ElastiCache Parameter Group for Redis authentication
+# resource "aws_elasticache_parameter_group" "redis_auth" {
+#   family = "redis7"
+#   name   = "redis-auth-${var.project_name}"
+#
+#   parameter {
+#     name  = "maxmemory-policy"
+#     value = "allkeys-lru"
+#   }
+# }
 
 # data "aws_ami" "amazon_linux_2" {
 #   most_recent = true
