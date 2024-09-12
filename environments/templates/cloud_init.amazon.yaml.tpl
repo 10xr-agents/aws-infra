@@ -254,7 +254,21 @@ write_files:
       
       [Install]
       WantedBy=multi-user.target
-      
+
+  - path: /etc/systemd/system/amazon-cloudwatch-agent.service
+    content: |
+      [Unit]
+         Description=Amazon CloudWatch Agent
+         After=network.target
+
+         [Service]
+         Type=simple
+         ExecStart=/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json
+         Restart=on-failure
+         RestartSec=60s
+
+         [Install]
+         WantedBy=multi-user.target
 
   - path: /opt/livekit/egress.yaml
     content: |
