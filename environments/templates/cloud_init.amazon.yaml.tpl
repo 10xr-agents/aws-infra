@@ -330,7 +330,6 @@ runcmd:
   - chmod 755 /usr/local/bin/docker-compose
   - chmod 755 /opt/livekit/update_ip.sh
   - /opt/livekit/update_ip.sh
-  - nvidia-smi
   - ldconfig
   # Start CloudWatch agent
   - echo "starting cloud watch agents"

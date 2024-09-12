@@ -1424,7 +1424,7 @@ data "aws_ami" "amazon_linux_2" {
 resource "aws_instance" "livekit" {
   count         = 3
   ami           = data.aws_ami.amazon_linux_2.id
-  instance_type = "t3.large"
+  instance_type = "t3.xlarge"
   key_name      = aws_key_pair.livekit.key_name
   vpc_security_group_ids = [aws_security_group.livekit.id]
   subnet_id = aws_subnet.public[count.index % 2].id  # Distribute across 2 subnets
