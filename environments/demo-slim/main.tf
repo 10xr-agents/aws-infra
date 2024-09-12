@@ -1395,7 +1395,7 @@ resource "aws_elasticache_cluster" "livekit" {
 # ElastiCache Parameter Group for Redis authentication
 resource "aws_elasticache_parameter_group" "redis_auth" {
   family = "redis7"
-  name   = "${var.project_name}-redis-auth"
+  name   = "redis-auth-${var.project_name}"
 
   parameter {
     name  = "maxmemory-policy"
@@ -1491,7 +1491,7 @@ resource "aws_iam_instance_profile" "ec2_cloudwatch" {
 
 # Security Group for LiveKit
 resource "aws_security_group" "livekit" {
-  name        = "livekit-sg"
+  name        = "livekit-sg-${var.project_name}"
   description = "Security group for LiveKit servers"
   vpc_id      = aws_vpc.main.id
 
