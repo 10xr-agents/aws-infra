@@ -1353,13 +1353,13 @@ resource "random_password" "redis_auth_token" {
 
 # ElastiCache Subnet Group
 resource "aws_elasticache_subnet_group" "livekit" {
-  name       = "${var.project_name}-cache-subnet"
+  name       = "cache-subnet-${var.project_name}"
   subnet_ids = aws_subnet.public[*].id
 }
 
 # ElastiCache Security Group
 resource "aws_security_group" "redis" {
-  name        = "${var.project_name}-redis-sg"
+  name        = "redis-sg-${var.project_name}"
   description = "Security group for Redis cluster"
   vpc_id      = aws_vpc.main.id
 
