@@ -1440,6 +1440,11 @@ resource "aws_instance" "livekit" {
     api_secret     = var.livekit_api_secret
   })
 
+  root_block_device {
+    volume_size = 32
+    volume_type = "gp3"
+  }
+
   tags = {
     Name = "LiveKit-Instance-${count.index + 1}"
   }

@@ -305,19 +305,22 @@ runcmd:
   - yum install -y --enablerepo=epel gstreamer1-plugins-bad-freeworld
   - yum install -y mesa-libGL xorg-x11-server-Xvfb
   - echo "INSTALLED EPEL LIBRARIES"
+  - rm -rf /var/cache/yum
 
   # Install NVIDIA driver and CUDA
   - amazon-linux-extras install -y nvidia
   - sudo yum install -y --disableplugin=priorities nvidia-driver nvidia-driver-libs nvidia-driver-cuda
   - sudo yum install -y --disableplugin=priorities cuda-drivers
   - echo "INSTALLED CUDA NVIDIA DRIVERS LIBRARIES"
+  - rm -rf /var/cache/yum
 
   # Download and install CUDA Toolkit
   - wget https://developer.download.nvidia.com/compute/cuda/11.7.1/local_installers/cuda-repo-rhel7-11-7-local-11.7.1_515.65.01-1.x86_64.rpm
   - rpm -i cuda-repo-rhel7-11-7-local-11.7.1_515.65.01-1.x86_64.rpm
   - yum clean all
-  - yum install -y cuda
+  - yum install --disableplugin=priorities -y cuda
   - echo "INSTALLED CUDA NVIDIA REPO LIBRARIES"
+  - rm -rf /var/cache/yum
 
   # Set up CUDA environment variables
   - echo 'export PATH=/usr/local/cuda-11.7/bin:$PATH' >> /etc/profile.d/cuda.sh
@@ -325,14 +328,16 @@ runcmd:
   - source /etc/profile.d/cuda.sh
   - ldconfig
   - echo "ADDED LD LIBRARY PATH"
+  - rm -rf /var/cache/yum
 
   - curl -L "https://github.com/docker/compose/releases/download/v2.20.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
   - chmod 755 /usr/local/bin/docker-compose
   - chmod 755 /opt/livekit/update_ip.sh
   - /opt/livekit/update_ip.sh
   - ldconfig
+  - rm -rf /var/cache/yum
+
   # Start CloudWatch agent
-  - echo "starting cloud watch agents"
   - systemctl enable amazon-cloudwatch-agent
   - systemctl start amazon-cloudwatch-agent
   # Ensure log directories exist
@@ -349,20 +354,59 @@ runcmd:
   - echo '  delaycompress' >> /etc/logrotate.d/docker-containers
   - echo '  copytruncate' >> /etc/logrotate.d/docker-containers
   - echo '}' >> /etc/logrotate.d/docker-containers
+  - echo "STARTED CLOUD WATCH AGENTS"
+  - rm -rf /var/cache/yum
+
   # Start services
   - systemctl enable docker
   - systemctl start docker
   - systemctl enable livekit-docker
   - systemctl start livekit-docker
+  - echo "STARTED DOCKER PROCESS"
+
+  # Define wait_for_containers function
+  - |
+    wait_for_containers() {
+      local required_containers=("caddy" "livekit" "egress" "ingress")
+      local all_up=false
+
+      echo "Waiting for containers to start..."
+
+      for attempt in {1..30}; do
+        # Check how many containers are up
+        up_containers=$(docker ps --format '{{.Names}}')
+
+        all_up=true
+        for container in "${required_containers[@]}"; do
+          if [[ ! "$up_containers" =~ $container ]]; then
+            all_up=false
+            break
+          fi
+        done
+
+        if [ "$all_up" = true ]; then
+          echo "All containers are up."
+          break
+        else
+          echo "Waiting for all containers to come up (attempt $attempt)..."
+          sleep 10
+        fi
+      done
+
+      if [ "$all_up" = false ]; then
+        echo "Timeout: Not all containers are up after waiting."
+        exit 1
+      fi
+    }
+  # Wait for the containers to start
+  - wait_for_containers
+
   # Set up log symlinks for CloudWatch agent
-  - sleep 5s
-  - LIVEKIT_CONTAINER_ID=$(docker ps -aqf "name=livekit" --no-trunc)
-  - CADDY_CONTAINER_ID=$(docker ps -aqf "name=caddy" --no-trunc)
-  - EGRESS_CONTAINER_ID=$(docker ps -aqf "name=egress" --no-trunc)
-  - INGRESS_CONTAINER_ID=$(docker ps -aqf "name=ingress" --no-trunc)
-  - ln -sf /var/lib/docker/containers/$LIVEKIT_CONTAINER_ID/*-json.log /var/log/livekit/livekit.log
-  - ln -sf /var/lib/docker/containers/$CADDY_CONTAINER_ID/*-json.log /var/log/caddy/caddy.log
-  - ln -sf /var/lib/docker/containers/$EGRESS_CONTAINER_ID/*-json.log /var/log/livekit/egress.log
-  - ln -sf /var/lib/docker/containers/$INGRESS_CONTAINER_ID/*-json.log /var/log/livekit/ingress.log
+  - ln -sf /var/lib/docker/containers/$(docker ps -aqf "name=livekit" --no-trunc)/*-json.log /var/log/livekit/livekit.log
+  - ln -sf /var/lib/docker/containers/$(docker ps -aqf "name=caddy" --no-trunc)/*-json.log /var/log/caddy/caddy.log
+  - ln -sf /var/lib/docker/containers/$(docker ps -aqf "name=egress" --no-trunc)/*-json.log /var/log/livekit/egress.log
+  - ln -sf /var/lib/docker/containers/$(docker ps -aqf "name=ingress" --no-trunc)/*-json.log /var/log/livekit/ingress.log
   # Restart CloudWatch agent to pick up new log files
   - systemctl restart amazon-cloudwatch-agent
+  - echo "INITIATE CLOUD WATCH PROCESS"
+
