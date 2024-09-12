@@ -14,12 +14,13 @@ packages:
   - libavformat-extra
   - libsndfile1
   - libgstreamer1.0-0
-  - gstreamer1.0-plugins-base
-  - gstreamer1.0-plugins-good
-  - gstreamer1.0-plugins-bad
-  - gstreamer1.0-plugins-ugly
-  - gstreamer1.0-plugins-bad-freeworld
-  - gstreamer1.0-libav
+  - gstreamer1-plugins-base
+  - gstreamer1-plugins-good
+  - gstreamer1-plugins-bad
+  - gstreamer1-plugins-ugly
+  - gstreamer1-plugins-bad-free
+  - gstreamer1-plugins-bad-freeworld
+  - gstreamer1-libav
   - ffmpeg
   - mesa-libGL
   - xorg-x11-server-Xvfb
@@ -298,7 +299,9 @@ write_files:
 
 
 runcmd:
+runcmd:
   - amazon-linux-extras install -y epel
+  - yum install -y epel-release
   - yum install -y ffmpeg gstreamer1 gstreamer1-plugins-base gstreamer1-plugins-good gstreamer1-plugins-bad-free gstreamer1-plugins-bad-freeworld gstreamer1-plugins-ugly gstreamer1-libav
   - yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
   - yum install -y --enablerepo=epel gstreamer1-plugins-bad-freeworld
@@ -316,10 +319,10 @@ runcmd:
   - yum install -y cuda
 
   # Set up CUDA environment variables
-  - cat << EOF > /etc/profile.d/cuda.sh
-  - export PATH=/usr/local/cuda-11.7/bin:\$PATH
-  - export LD_LIBRARY_PATH=/usr/local/cuda-11.7/lib64:\$LD_LIBRARY_PATH
-  - EOF
+  - echo 'export PATH=/usr/local/cuda-11.7/bin:$PATH' >> /etc/profile.d/cuda.sh
+  - echo 'export LD_LIBRARY_PATH=/usr/local/cuda-11.7/lib64:$LD_LIBRARY_PATH' >> /etc/profile.d/cuda.sh
+  - source /etc/profile.d/cuda.sh
+  - ldconfig
 
   - curl -L "https://github.com/docker/compose/releases/download/v2.20.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
   - chmod 755 /usr/local/bin/docker-compose

@@ -1421,29 +1421,29 @@ data "aws_ami" "amazon_linux_2" {
 
 
 # LiveKit EC2 Instances
-resource "aws_instance" "livekit" {
-  count         = 3
-  ami           = data.aws_ami.amazon_linux_2.id
-  instance_type = "t3.large"
-  key_name      = aws_key_pair.livekit.key_name
-  vpc_security_group_ids = [aws_security_group.livekit.id]
-  subnet_id = aws_subnet.public[count.index % 2].id  # Distribute across 2 subnets
-
-  user_data = templatefile("${path.module}/../templates/cloud_init.amazon.yaml.tpl", {
-    redis_address  = "${aws_elasticache_cluster.livekit.cache_nodes[0].address}:${aws_elasticache_cluster.livekit.cache_nodes[0].port}"
-    redis_username = "default"
-    redis_password = random_password.redis_auth_token.result
-    livekit_domain = "livekit.${var.domain_name}"
-    turn_domain    = "livekit-turn.${var.domain_name}"
-    whip_domain    = "livekit-whip.${var.domain_name}"
-    api_key        = var.livekit_api_key
-    api_secret     = var.livekit_api_secret
-  })
-
-  tags = {
-    Name = "LiveKit-Instance-${count.index + 1}"
-  }
-}
+# resource "aws_instance" "livekit" {
+#   count         = 3
+#   ami           = data.aws_ami.amazon_linux_2.id
+#   instance_type = "t3.large"
+#   key_name      = aws_key_pair.livekit.key_name
+#   vpc_security_group_ids = [aws_security_group.livekit.id]
+#   subnet_id = aws_subnet.public[count.index % 2].id  # Distribute across 2 subnets
+#
+#   user_data = templatefile("${path.module}/../templates/cloud_init.amazon.yaml.tpl", {
+#     redis_address  = "${aws_elasticache_cluster.livekit.cache_nodes[0].address}:${aws_elasticache_cluster.livekit.cache_nodes[0].port}"
+#     redis_username = "default"
+#     redis_password = random_password.redis_auth_token.result
+#     livekit_domain = "livekit.${var.domain_name}"
+#     turn_domain    = "livekit-turn.${var.domain_name}"
+#     whip_domain    = "livekit-whip.${var.domain_name}"
+#     api_key        = var.livekit_api_key
+#     api_secret     = var.livekit_api_secret
+#   })
+#
+#   tags = {
+#     Name = "LiveKit-Instance-${count.index + 1}"
+#   }
+# }
 
 # CloudWatch Log Groups
 resource "aws_cloudwatch_log_group" "livekit" {
@@ -1611,25 +1611,25 @@ locals {
   protocols = ["tcp", "udp"]
 }
 
-resource "aws_globalaccelerator_endpoint_group" "livekit" {
-  count = length(local.protocols)
-  listener_arn = aws_globalaccelerator_listener.livekit[count.index].id
-
-  dynamic "endpoint_configuration" {
-    for_each = aws_instance.livekit
-    content {
-      endpoint_id                    = endpoint_configuration.value.id
-      weight                         = 100
-      client_ip_preservation_enabled = true
-    }
-  }
-
-  health_check_path       = "/"
-  health_check_port       = 7880
-  health_check_protocol   = "HTTP"
-  threshold_count         = 3
-  traffic_dial_percentage = 100
-}
+# resource "aws_globalaccelerator_endpoint_group" "livekit" {
+#   count = length(local.protocols)
+#   listener_arn = aws_globalaccelerator_listener.livekit[count.index].id
+#
+#   dynamic "endpoint_configuration" {
+#     for_each = aws_instance.livekit
+#     content {
+#       endpoint_id                    = endpoint_configuration.value.id
+#       weight                         = 100
+#       client_ip_preservation_enabled = true
+#     }
+#   }
+#
+#   health_check_path       = "/"
+#   health_check_port       = 7880
+#   health_check_protocol   = "HTTP"
+#   threshold_count         = 3
+#   traffic_dial_percentage = 100
+# }
 
 # Global Accelerator Listeners
 resource "aws_globalaccelerator_listener" "livekit" {
