@@ -1435,7 +1435,7 @@ resource "aws_instance" "livekit" {
     redis_password = random_password.redis_auth_token.result
     livekit_domain = "livekit.${var.domain_name}"
     turn_domain    = "livekit-turn.${var.domain_name}"
-    whip_domain    = "livekit-whip.${var.domain_name}."
+    whip_domain    = "livekit-whip.${var.domain_name}"
     api_key        = var.livekit_api_key
     api_secret     = var.livekit_api_secret
   })
