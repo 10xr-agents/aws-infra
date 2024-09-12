@@ -1403,16 +1403,6 @@ resource "aws_elasticache_parameter_group" "redis_auth" {
   }
 }
 
-# Update the LiveKit security group to allow outbound access to Redis
-resource "aws_security_group_rule" "livekit_to_redis" {
-  type                     = "egress"
-  from_port                = 6379
-  to_port                  = 6379
-  protocol                 = "tcp"
-  source_security_group_id = aws_security_group.redis.id
-  security_group_id        = aws_security_group.livekit.id
-}
-
 data "aws_ami" "amazon_linux_2" {
   most_recent = true
 
@@ -1582,6 +1572,20 @@ resource "aws_security_group" "livekit" {
     to_port   = 1935
     protocol  = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    from_port = 6379
+    to_port   = 6379
+    protocol  = "tcp"
+    security_groups = [aws_security_group.redis.id]
+  }
+
+  egress {
+    from_port = 6379
+    to_port   = 6379
+    protocol  = "tcp"
+    security_groups = [aws_security_group.redis.id]
   }
 
   egress {
