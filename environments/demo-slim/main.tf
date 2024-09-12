@@ -1345,358 +1345,358 @@ resource "aws_security_group" "global_accelerator_endpoint" {
 ########################################################################################################################
 
 ### elastic cache ###
-
-resource "random_password" "redis_auth_token" {
-  length  = 64
-  special = false
-}
-
-# ElastiCache Subnet Group
-resource "aws_elasticache_subnet_group" "livekit" {
-  name       = "cache-subnet-${var.project_name}"
-  subnet_ids = aws_subnet.public[*].id
-}
-
-# ElastiCache Security Group
-resource "aws_security_group" "redis" {
-  name        = "redis-sg-${var.project_name}"
-  description = "Security group for Redis cluster"
-  vpc_id      = aws_vpc.main.id
-
-  ingress {
-    from_port       = 6379
-    to_port         = 6379
-    protocol        = "tcp"
-    security_groups = [aws_security_group.livekit.id]
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-}
-
-# ElastiCache Redis Cluster
-resource "aws_elasticache_cluster" "livekit" {
-  cluster_id           = "redis-${var.project_name}"
-  engine               = "redis"
-  node_type            = "cache.t3.micro"  # Adjust as needed
-  num_cache_nodes      = 1
-  parameter_group_name = aws_elasticache_parameter_group.redis_auth.name
-  engine_version       = "7.0"
-  port                 = 6379
-
-  subnet_group_name    = aws_elasticache_subnet_group.livekit.name
-  security_group_ids   = [aws_security_group.redis.id]
-}
-
-# ElastiCache Parameter Group for Redis authentication
-resource "aws_elasticache_parameter_group" "redis_auth" {
-  family = "redis7"
-  name   = "redis-auth-${var.project_name}"
-
-  parameter {
-    name  = "maxmemory-policy"
-    value = "allkeys-lru"
-  }
-}
-
-# Update the LiveKit security group to allow outbound access to Redis
-resource "aws_security_group_rule" "livekit_to_redis" {
-  type                     = "egress"
-  from_port                = 6379
-  to_port                  = 6379
-  protocol                 = "tcp"
-  source_security_group_id = aws_security_group.redis.id
-  security_group_id        = aws_security_group.livekit.id
-}
-
-# LiveKit EC2 Instances
-resource "aws_instance" "livekit" {
-  count    = 3
-  ami      = "ami-06f555bf2f102b63c"
-  instance_type = "t3.xlarge"
-  key_name = aws_key_pair.livekit.key_name
-  vpc_security_group_ids = [aws_security_group.livekit.id]
-  subnet_id = aws_subnet.public[count.index % 2].id  # Distribute across 2 subnets
-
-  user_data = templatefile("${path.module}/../templates/cloud_init.amazon.yaml.tpl", {
-    redis_address  = "${aws_elasticache_cluster.livekit.cache_nodes[0].address}:${aws_elasticache_cluster.livekit.cache_nodes[0].port}"
-    redis_username = "default"
-    redis_password = random_password.redis_auth_token.result
-    livekit_domain = "livekit.${var.domain_name}"
-    turn_domain    = "livekit-turn.${var.domain_name}"
-    whip_domain    = "livekit-whip.${var.domain_name}."
-    api_key        = var.livekit_api_key
-    api_secret     = var.livekit_api_secret
-  })
-
-  tags = {
-    Name = "LiveKit-Instance-${count.index + 1}"
-  }
-}
-
-# CloudWatch Log Groups
-resource "aws_cloudwatch_log_group" "livekit" {
-  name              = "/ec2/livekit"
-  retention_in_days = 30
-}
-
-resource "aws_cloudwatch_log_group" "caddy" {
-  name              = "/ec2/caddy"
-  retention_in_days = 30
-}
-
-resource "aws_cloudwatch_log_group" "livekit_egress" {
-  name              = "/ec2/livekit-egress"
-  retention_in_days = 30
-}
-
-resource "aws_cloudwatch_log_group" "livekit_ingress" {
-  name              = "/ec2/livekit-ingress"
-  retention_in_days = 30
-}
-
-# IAM role for EC2 instances to access CloudWatch
-resource "aws_iam_role" "ec2_cloudwatch" {
-  name = "EC2CloudWatchRole"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Action = "sts:AssumeRole"
-        Effect = "Allow"
-        Principal = {
-          Service = "ec2.amazonaws.com"
-        }
-      }
-    ]
-  })
-}
-
-# Attach CloudWatch policy to the role
-resource "aws_iam_role_policy_attachment" "cloudwatch_policy" {
-  policy_arn = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
-  role       = aws_iam_role.ec2_cloudwatch.name
-}
-
-# Create an instance profile
-resource "aws_iam_instance_profile" "ec2_cloudwatch" {
-  name = "EC2CloudWatchProfile"
-  role = aws_iam_role.ec2_cloudwatch.name
-}
-
-# Security Group for LiveKit
-resource "aws_security_group" "livekit" {
-  name        = "livekit-sg-${var.project_name}"
-  description = "Security group for LiveKit servers"
-  vpc_id      = aws_vpc.main.id
-
-  # SSH ingress rule
-  ingress {
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]  # Be cautious with this. Ideally, restrict to your IP.
-    description = "Allow SSH access"
-  }
-
-  ingress {
-    from_port = 80
-    to_port   = 80
-    protocol  = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  ingress {
-    from_port = 7880
-    to_port   = 7880
-    protocol  = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  ingress {
-    from_port = 443
-    to_port   = 443
-    protocol  = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  ingress {
-    from_port = 7881
-    to_port   = 7881
-    protocol  = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  ingress {
-    from_port = 3478
-    to_port   = 3478
-    protocol  = "udp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  ingress {
-    from_port = 50000
-    to_port   = 60000
-    protocol  = "udp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  ingress {
-    from_port = 7885
-    to_port   = 7885
-    protocol  = "udp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  ingress {
-    from_port = 1935
-    to_port   = 1935
-    protocol  = "udp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  ingress {
-    from_port = 1935
-    to_port   = 1935
-    protocol  = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  egress {
-    from_port = 0
-    to_port   = 0
-    protocol  = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-}
-
-# Key Pair for SSH access
-resource "aws_key_pair" "livekit" {
-  key_name = "livekit-key"
-  public_key = file("${path.module}/livekit_key.pub")  # Make sure to create this key
-}
-
-# Global Accelerator
-resource "aws_globalaccelerator_accelerator" "livekit" {
-  name            = "${var.project_name}-livekit-accelerator"
-  ip_address_type = "IPV4"
-  enabled         = true
-
-  attributes {
-    flow_logs_enabled   = true
-    flow_logs_s3_bucket = aws_s3_bucket.accelerator_logs.bucket
-    flow_logs_s3_prefix = "flow-logs/"
-  }
-}
-
-# S3 bucket for Global Accelerator logs
-resource "aws_s3_bucket" "accelerator_logs" {
-  bucket = "livekit-accelerator-logs-${data.aws_caller_identity.current.account_id}"
-}
-
-# Global Accelerator Listener
-locals {
-  protocols = ["tcp", "udp"]
-}
-
-resource "aws_globalaccelerator_endpoint_group" "livekit" {
-  count        = length(local.protocols)
-  listener_arn = aws_globalaccelerator_listener.livekit[count.index].id
-
-  dynamic "endpoint_configuration" {
-    for_each = aws_instance.livekit
-    content {
-      endpoint_id                    = endpoint_configuration.value.id
-      weight                         = 100
-      client_ip_preservation_enabled = true
-    }
-  }
-
-  health_check_path             = "/"
-  health_check_port             = 7880
-  health_check_protocol         = "HTTP"
-  threshold_count               = 3
-  traffic_dial_percentage       = 100
-}
-
-# Global Accelerator Listeners
-resource "aws_globalaccelerator_listener" "livekit" {
-  count            = length(local.protocols)
-  accelerator_arn  = aws_globalaccelerator_accelerator.livekit.id
-  client_affinity  = "SOURCE_IP"
-  protocol         = upper(local.protocols[count.index])
-
-  port_range {
-    from_port = 80
-    to_port   = 80
-  }
-
-  port_range {
-    from_port = 443
-    to_port   = 443
-  }
-
-  port_range {
-    from_port = 7880
-    to_port   = 7880
-  }
-
-  port_range {
-    from_port = 7881
-    to_port   = 7881
-  }
-
-  port_range {
-    from_port = 3478
-    to_port   = 3478
-  }
-
-  port_range {
-    from_port = 50000
-    to_port   = 60000
-  }
-
-  port_range {
-    from_port = 1935
-    to_port   = 1935
-  }
-
-  port_range {
-    from_port = 7885
-    to_port   = 7885
-  }
-}
-
-# Global Accelerator DNS entries
-resource "cloudflare_record" "livekit_global" {
-  zone_id = var.cloudflare_zone_id
-  name    = "livekit.${var.environment}"
-  content   = aws_globalaccelerator_accelerator.livekit.dns_name
-  type    = "CNAME"
-  proxied = false
-}
-
-resource "cloudflare_record" "livekit_turn_global" {
-  zone_id = var.cloudflare_zone_id
-  name    = "livekit-turn.${var.environment}"
-  content   = aws_globalaccelerator_accelerator.livekit.dns_name
-  type    = "CNAME"
-  proxied = false
-}
-
-
-resource "cloudflare_record" "livekit_whip_global" {
-  zone_id = var.cloudflare_zone_id
-  name    = "livekit-whip.${var.environment}"
-  content   = aws_globalaccelerator_accelerator.livekit.dns_name
-  type    = "CNAME"
-  proxied = false
-}
-
-
-
+#
+# resource "random_password" "redis_auth_token" {
+#   length  = 64
+#   special = false
+# }
+#
+# # ElastiCache Subnet Group
+# resource "aws_elasticache_subnet_group" "livekit" {
+#   name       = "cache-subnet-${var.project_name}"
+#   subnet_ids = aws_subnet.public[*].id
+# }
+#
+# # ElastiCache Security Group
+# resource "aws_security_group" "redis" {
+#   name        = "redis-sg-${var.project_name}"
+#   description = "Security group for Redis cluster"
+#   vpc_id      = aws_vpc.main.id
+#
+#   ingress {
+#     from_port       = 6379
+#     to_port         = 6379
+#     protocol        = "tcp"
+#     security_groups = [aws_security_group.livekit.id]
+#   }
+#
+#   egress {
+#     from_port   = 0
+#     to_port     = 0
+#     protocol    = "-1"
+#     cidr_blocks = ["0.0.0.0/0"]
+#   }
+# }
+#
+# # ElastiCache Redis Cluster
+# resource "aws_elasticache_cluster" "livekit" {
+#   cluster_id           = "redis-${var.project_name}"
+#   engine               = "redis"
+#   node_type            = "cache.t3.micro"  # Adjust as needed
+#   num_cache_nodes      = 1
+#   parameter_group_name = aws_elasticache_parameter_group.redis_auth.name
+#   engine_version       = "7.0"
+#   port                 = 6379
+#
+#   subnet_group_name    = aws_elasticache_subnet_group.livekit.name
+#   security_group_ids   = [aws_security_group.redis.id]
+# }
+#
+# # ElastiCache Parameter Group for Redis authentication
+# resource "aws_elasticache_parameter_group" "redis_auth" {
+#   family = "redis7"
+#   name   = "redis-auth-${var.project_name}"
+#
+#   parameter {
+#     name  = "maxmemory-policy"
+#     value = "allkeys-lru"
+#   }
+# }
+#
+# # Update the LiveKit security group to allow outbound access to Redis
+# resource "aws_security_group_rule" "livekit_to_redis" {
+#   type                     = "egress"
+#   from_port                = 6379
+#   to_port                  = 6379
+#   protocol                 = "tcp"
+#   source_security_group_id = aws_security_group.redis.id
+#   security_group_id        = aws_security_group.livekit.id
+# }
+#
+# # LiveKit EC2 Instances
+# resource "aws_instance" "livekit" {
+#   count    = 3
+#   ami      = "ami-06f555bf2f102b63c"
+#   instance_type = "t3.xlarge"
+#   key_name = aws_key_pair.livekit.key_name
+#   vpc_security_group_ids = [aws_security_group.livekit.id]
+#   subnet_id = aws_subnet.public[count.index % 2].id  # Distribute across 2 subnets
+#
+#   user_data = templatefile("${path.module}/../templates/cloud_init.amazon.yaml.tpl", {
+#     redis_address  = "${aws_elasticache_cluster.livekit.cache_nodes[0].address}:${aws_elasticache_cluster.livekit.cache_nodes[0].port}"
+#     redis_username = "default"
+#     redis_password = random_password.redis_auth_token.result
+#     livekit_domain = "livekit.${var.domain_name}"
+#     turn_domain    = "livekit-turn.${var.domain_name}"
+#     whip_domain    = "livekit-whip.${var.domain_name}."
+#     api_key        = var.livekit_api_key
+#     api_secret     = var.livekit_api_secret
+#   })
+#
+#   tags = {
+#     Name = "LiveKit-Instance-${count.index + 1}"
+#   }
+# }
+#
+# # CloudWatch Log Groups
+# resource "aws_cloudwatch_log_group" "livekit" {
+#   name              = "/ec2/livekit"
+#   retention_in_days = 30
+# }
+#
+# resource "aws_cloudwatch_log_group" "caddy" {
+#   name              = "/ec2/caddy"
+#   retention_in_days = 30
+# }
+#
+# resource "aws_cloudwatch_log_group" "livekit_egress" {
+#   name              = "/ec2/livekit-egress"
+#   retention_in_days = 30
+# }
+#
+# resource "aws_cloudwatch_log_group" "livekit_ingress" {
+#   name              = "/ec2/livekit-ingress"
+#   retention_in_days = 30
+# }
+#
+# # IAM role for EC2 instances to access CloudWatch
+# resource "aws_iam_role" "ec2_cloudwatch" {
+#   name = "EC2CloudWatchRole"
+#
+#   assume_role_policy = jsonencode({
+#     Version = "2012-10-17"
+#     Statement = [
+#       {
+#         Action = "sts:AssumeRole"
+#         Effect = "Allow"
+#         Principal = {
+#           Service = "ec2.amazonaws.com"
+#         }
+#       }
+#     ]
+#   })
+# }
+#
+# # Attach CloudWatch policy to the role
+# resource "aws_iam_role_policy_attachment" "cloudwatch_policy" {
+#   policy_arn = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
+#   role       = aws_iam_role.ec2_cloudwatch.name
+# }
+#
+# # Create an instance profile
+# resource "aws_iam_instance_profile" "ec2_cloudwatch" {
+#   name = "EC2CloudWatchProfile"
+#   role = aws_iam_role.ec2_cloudwatch.name
+# }
+#
+# # Security Group for LiveKit
+# resource "aws_security_group" "livekit" {
+#   name        = "livekit-sg-${var.project_name}"
+#   description = "Security group for LiveKit servers"
+#   vpc_id      = aws_vpc.main.id
+#
+#   # SSH ingress rule
+#   ingress {
+#     from_port   = 22
+#     to_port     = 22
+#     protocol    = "tcp"
+#     cidr_blocks = ["0.0.0.0/0"]  # Be cautious with this. Ideally, restrict to your IP.
+#     description = "Allow SSH access"
+#   }
+#
+#   ingress {
+#     from_port = 80
+#     to_port   = 80
+#     protocol  = "tcp"
+#     cidr_blocks = ["0.0.0.0/0"]
+#   }
+#
+#   ingress {
+#     from_port = 7880
+#     to_port   = 7880
+#     protocol  = "tcp"
+#     cidr_blocks = ["0.0.0.0/0"]
+#   }
+#
+#   ingress {
+#     from_port = 443
+#     to_port   = 443
+#     protocol  = "tcp"
+#     cidr_blocks = ["0.0.0.0/0"]
+#   }
+#
+#   ingress {
+#     from_port = 7881
+#     to_port   = 7881
+#     protocol  = "tcp"
+#     cidr_blocks = ["0.0.0.0/0"]
+#   }
+#
+#   ingress {
+#     from_port = 3478
+#     to_port   = 3478
+#     protocol  = "udp"
+#     cidr_blocks = ["0.0.0.0/0"]
+#   }
+#
+#   ingress {
+#     from_port = 50000
+#     to_port   = 60000
+#     protocol  = "udp"
+#     cidr_blocks = ["0.0.0.0/0"]
+#   }
+#
+#   ingress {
+#     from_port = 7885
+#     to_port   = 7885
+#     protocol  = "udp"
+#     cidr_blocks = ["0.0.0.0/0"]
+#   }
+#
+#   ingress {
+#     from_port = 1935
+#     to_port   = 1935
+#     protocol  = "udp"
+#     cidr_blocks = ["0.0.0.0/0"]
+#   }
+#
+#   ingress {
+#     from_port = 1935
+#     to_port   = 1935
+#     protocol  = "tcp"
+#     cidr_blocks = ["0.0.0.0/0"]
+#   }
+#
+#   egress {
+#     from_port = 0
+#     to_port   = 0
+#     protocol  = "-1"
+#     cidr_blocks = ["0.0.0.0/0"]
+#   }
+# }
+#
+# # Key Pair for SSH access
+# resource "aws_key_pair" "livekit" {
+#   key_name = "livekit-key"
+#   public_key = file("${path.module}/livekit_key.pub")  # Make sure to create this key
+# }
+#
+# # Global Accelerator
+# resource "aws_globalaccelerator_accelerator" "livekit" {
+#   name            = "${var.project_name}-livekit-accelerator"
+#   ip_address_type = "IPV4"
+#   enabled         = true
+#
+#   attributes {
+#     flow_logs_enabled   = true
+#     flow_logs_s3_bucket = aws_s3_bucket.accelerator_logs.bucket
+#     flow_logs_s3_prefix = "flow-logs/"
+#   }
+# }
+#
+# # S3 bucket for Global Accelerator logs
+# resource "aws_s3_bucket" "accelerator_logs" {
+#   bucket = "livekit-accelerator-logs-${data.aws_caller_identity.current.account_id}"
+# }
+#
+# # Global Accelerator Listener
+# locals {
+#   protocols = ["tcp", "udp"]
+# }
+#
+# resource "aws_globalaccelerator_endpoint_group" "livekit" {
+#   count        = length(local.protocols)
+#   listener_arn = aws_globalaccelerator_listener.livekit[count.index].id
+#
+#   dynamic "endpoint_configuration" {
+#     for_each = aws_instance.livekit
+#     content {
+#       endpoint_id                    = endpoint_configuration.value.id
+#       weight                         = 100
+#       client_ip_preservation_enabled = true
+#     }
+#   }
+#
+#   health_check_path             = "/"
+#   health_check_port             = 7880
+#   health_check_protocol         = "HTTP"
+#   threshold_count               = 3
+#   traffic_dial_percentage       = 100
+# }
+#
+# # Global Accelerator Listeners
+# resource "aws_globalaccelerator_listener" "livekit" {
+#   count            = length(local.protocols)
+#   accelerator_arn  = aws_globalaccelerator_accelerator.livekit.id
+#   client_affinity  = "SOURCE_IP"
+#   protocol         = upper(local.protocols[count.index])
+#
+#   port_range {
+#     from_port = 80
+#     to_port   = 80
+#   }
+#
+#   port_range {
+#     from_port = 443
+#     to_port   = 443
+#   }
+#
+#   port_range {
+#     from_port = 7880
+#     to_port   = 7880
+#   }
+#
+#   port_range {
+#     from_port = 7881
+#     to_port   = 7881
+#   }
+#
+#   port_range {
+#     from_port = 3478
+#     to_port   = 3478
+#   }
+#
+#   port_range {
+#     from_port = 50000
+#     to_port   = 60000
+#   }
+#
+#   port_range {
+#     from_port = 1935
+#     to_port   = 1935
+#   }
+#
+#   port_range {
+#     from_port = 7885
+#     to_port   = 7885
+#   }
+# }
+#
+# # Global Accelerator DNS entries
+# resource "cloudflare_record" "livekit_global" {
+#   zone_id = var.cloudflare_zone_id
+#   name    = "livekit.${var.environment}"
+#   content   = aws_globalaccelerator_accelerator.livekit.dns_name
+#   type    = "CNAME"
+#   proxied = false
+# }
+#
+# resource "cloudflare_record" "livekit_turn_global" {
+#   zone_id = var.cloudflare_zone_id
+#   name    = "livekit-turn.${var.environment}"
+#   content   = aws_globalaccelerator_accelerator.livekit.dns_name
+#   type    = "CNAME"
+#   proxied = false
+# }
+#
+#
+# resource "cloudflare_record" "livekit_whip_global" {
+#   zone_id = var.cloudflare_zone_id
+#   name    = "livekit-whip.${var.environment}"
+#   content   = aws_globalaccelerator_accelerator.livekit.dns_name
+#   type    = "CNAME"
+#   proxied = false
+# }
+#
+#
+#
