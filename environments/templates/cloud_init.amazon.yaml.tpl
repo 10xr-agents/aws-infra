@@ -367,8 +367,8 @@ runcmd:
   # Define wait_for_containers function
   - |
     wait_for_containers() {
-      local required_containers=("caddy" "livekit" "egress" "ingress")
-      local all_up=false
+      required_containers=("caddy" "livekit" "egress" "ingress")
+      all_up=false
 
       echo "Waiting for containers to start..."
 
@@ -377,7 +377,7 @@ runcmd:
         up_containers=$(docker ps --format '{{.Names}}')
 
         all_up=true
-        for container in "${required_containers[@]}"; do
+        for container in caddy livekit egress ingress; do
           if [[ ! "$up_containers" =~ $container ]]; then
             all_up=false
             break
