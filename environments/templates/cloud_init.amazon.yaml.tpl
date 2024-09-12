@@ -297,8 +297,6 @@ write_files:
           enable_loopback_candidate: false
       
 
-
-runcmd:
 runcmd:
   - amazon-linux-extras install -y epel
   - yum install -y epel-release
@@ -306,23 +304,27 @@ runcmd:
   - yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
   - yum install -y --enablerepo=epel gstreamer1-plugins-bad-freeworld
   - yum install -y mesa-libGL xorg-x11-server-Xvfb
+  - echo "INSTALLED EPEL LIBRARIES"
 
   # Install NVIDIA driver and CUDA
   - amazon-linux-extras install -y nvidia
-  - yum install -y nvidia-driver nvidia-driver-libs nvidia-driver-cuda
-  - yum install -y cuda-drivers
+  - sudo yum install -y --disableplugin=priorities nvidia-driver nvidia-driver-libs nvidia-driver-cuda
+  - sudo yum install -y --disableplugin=priorities cuda-drivers
+  - echo "INSTALLED CUDA NVIDIA DRIVERS LIBRARIES"
 
   # Download and install CUDA Toolkit
   - wget https://developer.download.nvidia.com/compute/cuda/11.7.1/local_installers/cuda-repo-rhel7-11-7-local-11.7.1_515.65.01-1.x86_64.rpm
   - rpm -i cuda-repo-rhel7-11-7-local-11.7.1_515.65.01-1.x86_64.rpm
   - yum clean all
   - yum install -y cuda
+  - echo "INSTALLED CUDA NVIDIA REPO LIBRARIES"
 
   # Set up CUDA environment variables
   - echo 'export PATH=/usr/local/cuda-11.7/bin:$PATH' >> /etc/profile.d/cuda.sh
   - echo 'export LD_LIBRARY_PATH=/usr/local/cuda-11.7/lib64:$LD_LIBRARY_PATH' >> /etc/profile.d/cuda.sh
   - source /etc/profile.d/cuda.sh
   - ldconfig
+  - echo "ADDED LD LIBRARY PATH"
 
   - curl -L "https://github.com/docker/compose/releases/download/v2.20.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
   - chmod 755 /usr/local/bin/docker-compose
@@ -331,6 +333,7 @@ runcmd:
   - nvidia-smi
   - ldconfig
   # Start CloudWatch agent
+  - echo "starting cloud watch agents"
   - systemctl enable amazon-cloudwatch-agent
   - systemctl start amazon-cloudwatch-agent
   # Ensure log directories exist
