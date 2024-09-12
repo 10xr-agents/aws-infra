@@ -8,6 +8,16 @@ repo_upgrade: all
 packages:
   - docker
   - amazon-cloudwatch-agent
+  - libavcodec-extra
+  - libavformat-extra
+  - libsndfile1
+  - libgstreamer1.0-0
+  - gstreamer1.0-plugins-base
+  - gstreamer1.0-plugins-good
+  - gstreamer1.0-plugins-bad
+  - gstreamer1.0-plugins-ugly
+  - gstreamer1.0-libav
+  - ffmpeg
 
 bootcmd:
   - mkdir -p /opt/livekit/caddy_data
@@ -155,6 +165,7 @@ write_files:
       services:
         caddy:
           image: livekit/caddyl4
+          container_name: caddy
           command: run --config /etc/caddy.yaml --adapter yaml
           restart: unless-stopped
           network_mode: "host"
@@ -168,6 +179,7 @@ write_files:
               max-file: "5"
         livekit:
           image: livekit/livekit-server:latest
+          container_name: livekit
           command: --config /etc/livekit.yaml
           restart: unless-stopped
           network_mode: "host"
@@ -180,6 +192,7 @@ write_files:
               max-file: "5"
         egress:
           image: livekit/egress:latest
+          container_name: egress
           restart: unless-stopped
           environment:
             - EGRESS_CONFIG_FILE=/etc/egress.yaml
@@ -195,6 +208,7 @@ write_files:
               max-file: "5"
         ingress:
           image: livekit/ingress:latest
+          container_name: ingress
           restart: unless-stopped
           environment:
             - INGRESS_CONFIG_FILE=/etc/ingress.yaml
@@ -279,10 +293,13 @@ write_files:
 
 
 runcmd:
+  - amazon-linux-extras install -y epel
+  - yum install -y ffmpeg gstreamer1 gstreamer1-plugins-base gstreamer1-plugins-good gstreamer1-plugins-bad-free gstreamer1-plugins-ugly
   - curl -L "https://github.com/docker/compose/releases/download/v2.20.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
   - chmod 755 /usr/local/bin/docker-compose
   - chmod 755 /opt/livekit/update_ip.sh
   - /opt/livekit/update_ip.sh
+  - ldconfig
   # Start CloudWatch agent
   - systemctl enable amazon-cloudwatch-agent
   - systemctl start amazon-cloudwatch-agent
@@ -306,9 +323,9 @@ runcmd:
   - systemctl enable livekit-docker
   - systemctl start livekit-docker
   # Set up log symlinks for CloudWatch agent
-  - ln -sf /var/lib/docker/containers/$(docker ps -aqf "name=livekit-docker_livekit")/*-json.log /var/log/livekit/livekit.log
-  - ln -sf /var/lib/docker/containers/$(docker ps -aqf "name=livekit-docker_caddy")/*-json.log /var/log/caddy/caddy.log
-  - ln -sf /var/lib/docker/containers/$(docker ps -aqf "name=livekit-docker_egress")/*-json.log /var/log/livekit/egress.log
-  - ln -sf /var/lib/docker/containers/$(docker ps -aqf "name=livekit-docker_ingress")/*-json.log /var/log/livekit/ingress.log
+  - ln -sf /var/lib/docker/containers/$(docker ps -aqf "name=livekit")/*-json.log /var/log/livekit/livekit.log
+  - ln -sf /var/lib/docker/containers/$(docker ps -aqf "name=caddy")/*-json.log /var/log/caddy/caddy.log
+  - ln -sf /var/lib/docker/containers/$(docker ps -aqf "name=egress")/*-json.log /var/log/livekit/egress.log
+  - ln -sf /var/lib/docker/containers/$(docker ps -aqf "name=ingress")/*-json.log /var/log/livekit/ingress.log
   # Restart CloudWatch agent to pick up new log files
   - systemctl restart amazon-cloudwatch-agent
