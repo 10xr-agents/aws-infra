@@ -316,8 +316,10 @@ runcmd:
   - yum install -y cuda
 
   # Set up CUDA environment variables
-  - echo 'export PATH=/usr/local/cuda-11.7/bin${PATH:+:${PATH}}' >> /etc/profile.d/cuda.sh
-  - echo 'export LD_LIBRARY_PATH=/usr/local/cuda-11.7/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}' >> /etc/profile.d/cuda.sh
+  - cat << EOF > /etc/profile.d/cuda.sh
+  - export PATH=/usr/local/cuda-11.7/bin:\$PATH
+  - export LD_LIBRARY_PATH=/usr/local/cuda-11.7/lib64:\$LD_LIBRARY_PATH
+  - EOF
 
   - curl -L "https://github.com/docker/compose/releases/download/v2.20.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
   - chmod 755 /usr/local/bin/docker-compose
@@ -353,9 +355,9 @@ runcmd:
   - CADDY_CONTAINER_ID=$(docker ps -aqf "name=caddy" --no-trunc)
   - EGRESS_CONTAINER_ID=$(docker ps -aqf "name=egress" --no-trunc)
   - INGRESS_CONTAINER_ID=$(docker ps -aqf "name=ingress" --no-trunc)
-  - ln -sf /var/lib/docker/containers/${LIVEKIT_CONTAINER_ID}/*-json.log /var/log/livekit/livekit.log
-  - ln -sf /var/lib/docker/containers/${CADDY_CONTAINER_ID}/*-json.log /var/log/caddy/caddy.log
-  - ln -sf /var/lib/docker/containers/${EGRESS_CONTAINER_ID}/*-json.log /var/log/livekit/egress.log
-  - ln -sf /var/lib/docker/containers/${INGRESS_CONTAINER_ID}/*-json.log /var/log/livekit/ingress.log
+  - ln -sf /var/lib/docker/containers/$LIVEKIT_CONTAINER_ID/*-json.log /var/log/livekit/livekit.log
+  - ln -sf /var/lib/docker/containers/$CADDY_CONTAINER_ID/*-json.log /var/log/caddy/caddy.log
+  - ln -sf /var/lib/docker/containers/$EGRESS_CONTAINER_ID/*-json.log /var/log/livekit/egress.log
+  - ln -sf /var/lib/docker/containers/$INGRESS_CONTAINER_ID/*-json.log /var/log/livekit/ingress.log
   # Restart CloudWatch agent to pick up new log files
   - systemctl restart amazon-cloudwatch-agent
