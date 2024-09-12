@@ -1425,7 +1425,7 @@ resource "aws_instance" "livekit" {
   user_data = templatefile("${path.module}/../templates/cloud_init.amazon.yaml.tpl", {
     redis_address  = "${aws_elasticache_cluster.livekit.cache_nodes[0].address}:${aws_elasticache_cluster.livekit.cache_nodes[0].port}"
     redis_username = "default"
-    redis_password = random_password.redis_auth_token
+    redis_password = random_password.redis_auth_token.result
     livekit_domain = "livekit.${var.domain_name}"
     turn_domain    = "livekit-turn.${var.domain_name}"
     whip_domain    = "livekit-whip.${var.domain_name}."
