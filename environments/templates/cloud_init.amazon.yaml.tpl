@@ -85,6 +85,11 @@ write_files:
               - ${livekit_domain}
               - ${turn_domain}
               - ${whip_domain}
+          automation:
+            policies:
+              - issuers:
+                - module: zerossl
+                  api_key: ${zero_ssl_api_key}
         layer4:
           servers:
             main:

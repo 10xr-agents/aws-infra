@@ -157,6 +157,8 @@ mongodb_database_name      = "converse-server"
 livekit_api_key    = "APIaSovFA9uQ4p5"
 livekit_api_secret = "lTxgQzxS0e2n1vqwOhaiFUiwKWvYeyJukHvnJegbITmA"
 
+zero_ssl_api_key = "5f89d0f3cedd83b843db733d7b6ce958"
+
 cloudflare_api_token  = "jTm01UhNhNDE-Md4jrQwBS0w3vHsqVikxC9cop9r"
 cloudflare_zone_id    = "3ae048b26df2c81c175c609f802feafb"
 cloudflare_account_id = "929c1d893cb7bb8455e151ae08f3b538"
