@@ -154,8 +154,8 @@ mongodb_atlas_region       = "US_EAST_1"
 mongodb_atlas_cidr_block   = "192.168.248.0/21"
 mongodb_database_name      = "converse-server"
 
-livekit_api_key          = "APIaSovFA9uQ4p5"
-livekit_api_secret          = "lTxgQzxS0e2n1vqwOhaiFUiwKWvYeyJukHvnJegbITmA"
+livekit_api_key    = "APIaSovFA9uQ4p5"
+livekit_api_secret = "lTxgQzxS0e2n1vqwOhaiFUiwKWvYeyJukHvnJegbITmA"
 
 cloudflare_api_token  = "jTm01UhNhNDE-Md4jrQwBS0w3vHsqVikxC9cop9r"
 cloudflare_zone_id    = "3ae048b26df2c81c175c609f802feafb"

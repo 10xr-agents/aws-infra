@@ -149,6 +149,16 @@ output "s3_external_access_bucket_name" {
   description = "Name of the S3 bucket for external access"
 }
 
+# Output the Redis endpoint
+output "redis_endpoint" {
+  value = aws_elasticache_cluster.livekit.cache_nodes[0].address
+}
+
+# Output the Redis port
+output "redis_port" {
+  value = aws_elasticache_cluster.livekit.cache_nodes[0].port
+}
+
 # Output the Global Accelerator DNS name
 output "global_accelerator_dns_name" {
   value       = aws_globalaccelerator_accelerator.main.dns_name

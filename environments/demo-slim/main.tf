@@ -36,6 +36,8 @@ provider "aws" {
   region = var.aws_region
 }
 
+provider "random" {}
+
 # VPC
 resource "aws_vpc" "main" {
   cidr_block           = var.vpc_cidr
@@ -1342,6 +1344,74 @@ resource "aws_security_group" "global_accelerator_endpoint" {
 ########################################################################################################################
 ########################################################################################################################
 
+### elastic cache ###
+
+resource "random_password" "redis_auth_token" {
+  length  = 64
+  special = false
+}
+
+# ElastiCache Subnet Group
+resource "aws_elasticache_subnet_group" "livekit" {
+  name       = "${var.project_name}-cache-subnet"
+  subnet_ids = aws_subnet.public[*].id
+}
+
+# ElastiCache Security Group
+resource "aws_security_group" "redis" {
+  name        = "${var.project_name}-redis-sg"
+  description = "Security group for Redis cluster"
+  vpc_id      = aws_vpc.main.id
+
+  ingress {
+    from_port       = 6379
+    to_port         = 6379
+    protocol        = "tcp"
+    security_groups = [aws_security_group.livekit.id]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+# ElastiCache Redis Cluster
+resource "aws_elasticache_cluster" "livekit" {
+  cluster_id           = "${var.project_name}-redis"
+  engine               = "redis"
+  node_type            = "cache.t3.micro"  # Adjust as needed
+  num_cache_nodes      = 1
+  parameter_group_name = aws_elasticache_parameter_group.redis_auth.name
+  engine_version       = "7.0"
+  port                 = 6379
+
+  subnet_group_name    = aws_elasticache_subnet_group.livekit.name
+  security_group_ids   = [aws_security_group.redis.id]
+}
+
+# ElastiCache Parameter Group for Redis authentication
+resource "aws_elasticache_parameter_group" "redis_auth" {
+  family = "redis7"
+  name   = "${var.project_name}-redis-auth"
+
+  parameter {
+    name  = "maxmemory-policy"
+    value = "allkeys-lru"
+  }
+}
+
+# Update the LiveKit security group to allow outbound access to Redis
+resource "aws_security_group_rule" "livekit_to_redis" {
+  type                     = "egress"
+  from_port                = 6379
+  to_port                  = 6379
+  protocol                 = "tcp"
+  source_security_group_id = aws_security_group.redis.id
+  security_group_id        = aws_security_group.livekit.id
+}
 
 # LiveKit EC2 Instances
 resource "aws_instance" "livekit" {
@@ -1352,11 +1422,71 @@ resource "aws_instance" "livekit" {
   vpc_security_group_ids = [aws_security_group.livekit.id]
   subnet_id = aws_subnet.public[count.index % 2].id  # Distribute across 2 subnets
 
-  user_data = file("${path.module}/livekit.demo.10xr.co/cloud_init.amazon.yaml")
+  user_data = templatefile("${path.module}/../templates/cloud_init.amazon.yaml.tpl", {
+    redis_address  = "${aws_elasticache_cluster.livekit.cache_nodes[0].address}:${aws_elasticache_cluster.livekit.cache_nodes[0].port}"
+    redis_username = "default"
+    redis_password = random_password.redis_auth_token
+    livekit_domain = "livekit.${var.domain_name}"
+    turn_domain    = "livekit-turn.${var.domain_name}"
+    whip_domain    = "livekit-whip.${var.domain_name}."
+    api_key        = var.livekit_api_key
+    api_secret     = var.livekit_api_secret
+  })
 
   tags = {
     Name = "LiveKit-Instance-${count.index + 1}"
   }
+}
+
+# CloudWatch Log Groups
+resource "aws_cloudwatch_log_group" "livekit" {
+  name              = "/ec2/livekit"
+  retention_in_days = 30
+}
+
+resource "aws_cloudwatch_log_group" "caddy" {
+  name              = "/ec2/caddy"
+  retention_in_days = 30
+}
+
+resource "aws_cloudwatch_log_group" "livekit_egress" {
+  name              = "/ec2/livekit-egress"
+  retention_in_days = 30
+}
+
+resource "aws_cloudwatch_log_group" "livekit_ingress" {
+  name              = "/ec2/livekit-ingress"
+  retention_in_days = 30
+}
+
+# IAM role for EC2 instances to access CloudWatch
+resource "aws_iam_role" "ec2_cloudwatch" {
+  name = "EC2CloudWatchRole"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "ec2.amazonaws.com"
+        }
+      }
+    ]
+  })
+}
+
+# Attach CloudWatch policy to the role
+resource "aws_iam_role_policy_attachment" "cloudwatch_policy" {
+  policy_arn = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
+  role       = aws_iam_role.ec2_cloudwatch.name
+}
+
+# Create an instance profile
+resource "aws_iam_instance_profile" "ec2_cloudwatch" {
+  name = "EC2CloudWatchProfile"
+  role = aws_iam_role.ec2_cloudwatch.name
 }
 
 # Security Group for LiveKit

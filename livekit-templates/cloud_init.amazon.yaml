@@ -178,18 +178,6 @@ write_files:
             options:
               max-size: "100m"
               max-file: "5"
-        redis:
-          image: redis:7-alpine
-          command: redis-server /etc/redis.conf
-          restart: unless-stopped
-          network_mode: "host"
-          volumes:
-            - ./redis.conf:/etc/redis.conf
-          logging:
-            driver: "json-file"
-            options:
-              max-size: "100m"
-              max-file: "5"
         egress:
           image: livekit/egress:latest
           restart: unless-stopped
@@ -238,15 +226,6 @@ write_files:
       
       [Install]
       WantedBy=multi-user.target
-      
-
-  - path: /opt/livekit/redis.conf
-    content: |
-      bind 127.0.0.1 ::1
-      protected-mode yes
-      port 6379
-      timeout 0
-      tcp-keepalive 300
       
 
   - path: /opt/livekit/egress.yaml
