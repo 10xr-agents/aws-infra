@@ -14,13 +14,13 @@ packages:
   - libavformat-extra
   - libsndfile1
   - libgstreamer1.0-0
-  - gstreamer1-plugins-base
-  - gstreamer1-plugins-good
-  - gstreamer1-plugins-bad
-  - gstreamer1-plugins-ugly
-  - gstreamer1-plugins-bad-free
-  - gstreamer1-plugins-bad-freeworld
-  - gstreamer1-libav
+  - gstreamer1.0-plugins-base
+  - gstreamer1.0-plugins-good
+  - gstreamer1.0-plugins-bad
+  - gstreamer1.0-plugins-ugly
+  - gstreamer1.0-plugins-bad-free
+  - gstreamer1.0-plugins-bad-freeworld
+  - gstreamer1.0-libav
   - ffmpeg
   - mesa-libGL
   - xorg-x11-server-Xvfb
@@ -64,7 +64,10 @@ write_files:
           whip_base_url: https://${whip_domain}/w
       keys:
           ${api_key}: ${api_secret}
-      
+      webhook:
+        api_key: ${api_key}
+        urls:
+          - ${webhook_events_url}
 
   - path: /opt/livekit/caddy.yaml
     content: |
