@@ -1380,7 +1380,7 @@ resource "aws_security_group" "redis" {
 
 # ElastiCache Redis Cluster
 resource "aws_elasticache_cluster" "livekit" {
-  cluster_id           = "${var.project_name}-redis"
+  cluster_id           = "redis-${var.project_name}"
   engine               = "redis"
   node_type            = "cache.t3.micro"  # Adjust as needed
   num_cache_nodes      = 1
