@@ -1448,8 +1448,8 @@ resource "null_resource" "export_cloudflare_vars" {
 
 # Create Certificate Signing Request (CSR)
 resource "acme_certificate" "livekit" {
-  account_key_pem           = acme_registration.reg.account_key_pem
-  common_name               = "livekit.${var.domain_name}"
+  account_key_pem = acme_registration.reg.account_key_pem
+  common_name     = "livekit.${var.domain_name}"
   subject_alternative_names = [
     "livekit-turn.${var.domain_name}",
     "livekit-whip.${var.domain_name}",
@@ -1458,7 +1458,11 @@ resource "acme_certificate" "livekit" {
   dns_challenge {
     provider = "cloudflare"
     config = {
-      CF_API_TOKEN   = var.cloudflare_api_token
+      CLOUDFLARE_EMAIL      = var.email_address
+      CLOUDFLARE_API_TOKEN  = var.cloudflare_api_token
+      CLOUDFLARE_ZONE_ID    = var.cloudflare_zone_id
+      CLOUDFLARE_ACCOUNT_ID = var.cloudflare_account_id
+      CF_API_TOKEN          = var.cloudflare_api_token
     }
   }
 
@@ -1466,9 +1470,9 @@ resource "acme_certificate" "livekit" {
 }
 
 resource "aws_acm_certificate" "livekit" {
-  private_key        = acme_certificate.livekit.private_key_pem
-  certificate_body   = acme_certificate.livekit.certificate_pem
-  certificate_chain  = acme_certificate.livekit.issuer_pem
+  private_key       = acme_certificate.livekit.private_key_pem
+  certificate_body  = acme_certificate.livekit.certificate_pem
+  certificate_chain = acme_certificate.livekit.issuer_pem
 
   lifecycle {
     create_before_destroy = true
@@ -1492,7 +1496,7 @@ resource "cloudflare_record" "cert_livekit_validation" {
   zone_id = var.cloudflare_zone_id
   name    = tolist(aws_acm_certificate.livekit.domain_validation_options)[count.index].resource_record_name
   type    = tolist(aws_acm_certificate.livekit.domain_validation_options)[count.index].resource_record_type
-  content   = tolist(aws_acm_certificate.livekit.domain_validation_options)[count.index].resource_record_value
+  content = tolist(aws_acm_certificate.livekit.domain_validation_options)[count.index].resource_record_value
   ttl     = 60
   proxied = false
 }
