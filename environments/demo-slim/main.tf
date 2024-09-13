@@ -627,7 +627,10 @@ resource "aws_acm_certificate" "main" {
     "services.${var.domain_name}",
     "app.${var.domain_name}",
     "api.${var.domain_name}",
-    "proxy.${var.domain_name}"
+    "proxy.${var.domain_name}",
+    "livekit.${var.domain_name}",
+    "livekit-turn.${var.domain_name}",
+    "livekit-whip.${var.domain_name}"
   ]
 
   lifecycle {
@@ -1470,35 +1473,6 @@ resource "aws_acm_certificate" "livekit" {
   }
 }
 
-resource "null_resource" "wait_for_acm" {
-  triggers = {
-    cert_arn = aws_acm_certificate.livekit.arn
-  }
-
-  provisioner "local-exec" {
-    command = "echo 'ACM certificate created. Now you can use its domain validation options.'"
-  }
-}
-
-# Cloudflare DNS record for certificate validation
-resource "cloudflare_record" "cert_livekit_validation" {
-  count = 3  # Assuming 3 domains: livekit, livekit-turn, livekit-whip
-
-  zone_id = var.cloudflare_zone_id
-  name    = tolist(aws_acm_certificate.livekit.domain_validation_options)[count.index].resource_record_name
-  type    = tolist(aws_acm_certificate.livekit.domain_validation_options)[count.index].resource_record_type
-  content = tolist(aws_acm_certificate.livekit.domain_validation_options)[count.index].resource_record_value
-  ttl     = 60
-  proxied = false
-}
-
-# Certificate Validation
-resource "aws_acm_certificate_validation" "livekit" {
-  certificate_arn         = aws_acm_certificate.livekit.arn
-  validation_record_fqdns = cloudflare_record.cert_livekit_validation[*].hostname
-}
-
-
 # S3 bucket for certificate storage
 resource "aws_s3_bucket" "cert_bucket" {
   bucket = "livekit-certificates-${var.project_name}"
@@ -1542,7 +1516,9 @@ resource "aws_lambda_function" "export_cert" {
   environment {
     variables = {
       S3_BUCKET       = aws_s3_bucket.cert_bucket.id
-      CERTIFICATE_ARN = aws_acm_certificate.livekit.arn
+      CERTIFICATE_BODY    = acme_certificate.livekit.certificate_pem
+      PRIVATE_KEY         = acme_certificate.livekit.private_key_pem
+      CERTIFICATE_CHAIN   = acme_certificate.livekit.issuer_pem
     }
   }
 }
