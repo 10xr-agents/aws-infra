@@ -619,7 +619,10 @@ resource "aws_acm_certificate" "main" {
     "services.${var.domain_name}",
     "app.${var.domain_name}",
     "api.${var.domain_name}",
-    "proxy.${var.domain_name}"
+    "proxy.${var.domain_name}",
+    "livekit.${var.domain_name}",
+    "livekit-turn.${var.domain_name}",
+    "livekit-whip.${var.domain_name}",
   ]
 
   lifecycle {
@@ -1424,7 +1427,6 @@ data "aws_ami" "amazon_linux_2" {
 # ACM Certificate
 resource "aws_acm_certificate" "livekit" {
   domain_name               = "livekit.${var.domain_name}"
-  validation_method         = "DNS"
   certificate_authority_arn = var.certificate_authority_10xr
   subject_alternative_names = [
     "*.livekit*.${var.domain_name}",
@@ -1435,31 +1437,6 @@ resource "aws_acm_certificate" "livekit" {
   lifecycle {
     create_before_destroy = true
   }
-}
-
-# Cloudflare DNS record for certificate validation
-resource "cloudflare_record" "livekit_cert_validation" {
-  for_each = {
-    for dvo in aws_acm_certificate.livekit.domain_validation_options : dvo.domain_name => {
-      name   = dvo.resource_record_name
-      record = dvo.resource_record_value
-      type   = dvo.resource_record_type
-    }
-    if dvo.domain_name != "*.livekit*.${var.domain_name}"
-  }
-
-  zone_id = var.cloudflare_zone_id
-  name    = each.value.name
-  content = each.value.record
-  type    = each.value.type
-  ttl     = 60
-  proxied = false
-}
-
-# Certificate Validation
-resource "aws_acm_certificate_validation" "livekit" {
-  certificate_arn         = aws_acm_certificate.livekit.arn
-  validation_record_fqdns = [for record in cloudflare_record.cert_validation : record.hostname]
 }
 
 # S3 bucket for certificate storage
