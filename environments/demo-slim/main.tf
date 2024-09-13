@@ -1489,7 +1489,6 @@ resource "cloudflare_record" "cert_livekit_validation" {
       record = dvo.resource_record_value
       type   = dvo.resource_record_type
     }
-    if dvo.domain_name != "*.${var.domain_name}"
   }
 
   zone_id = var.cloudflare_zone_id
