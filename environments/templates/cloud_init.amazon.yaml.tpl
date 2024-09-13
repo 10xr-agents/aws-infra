@@ -41,8 +41,8 @@ write_files:
       aws s3 cp s3://${cert_bucket}/cert.pem /etc/caddy/certs/cert.pem
       aws s3 cp s3://${cert_bucket}/key.pem /etc/caddy/certs/key.pem
       aws s3 cp s3://${cert_bucket}/chain.pem /etc/caddy/certs/chain.pem
-      systemctl restart caddy
-      chmod 600 /etc/caddy/certs/key.pem
+      chmod 755 /etc/caddy/certs/key.pem
+      chmod 755 /etc/caddy/certs/cert.pem
 
   - path: /opt/livekit/livekit.yaml
     content: |
@@ -195,6 +195,9 @@ write_files:
           volumes:
             - ./caddy.yaml:/etc/caddy.yaml
             - ./caddy_data:/data
+            - /etc/caddy/certs/cert.pem:/etc/caddy/certs/cert.pem
+            - /etc/caddy/certs/key.pem:/etc/caddy/certs/key.pem
+            - /etc/caddy/certs/chain.pem:/etc/caddy/certs/chain.pem
           logging:
             driver: "json-file"
             options:
