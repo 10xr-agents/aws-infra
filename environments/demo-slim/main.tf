@@ -1439,27 +1439,27 @@ resource "aws_acm_certificate" "livekit" {
 }
 
 # S3 bucket for certificate storage
-resource "aws_s3_bucket" "cert_bucket" {
-  bucket = "livekit-certificates-${var.project_name}"
-}
+# resource "aws_s3_bucket" "cert_bucket" {
+#   bucket = "livekit-certificates-${var.project_name}"
+# }
 
-resource "aws_s3_bucket_policy" "cert_bucket_policy" {
-  bucket = aws_s3_bucket.cert_bucket.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Principal = {
-          AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/ec2-role-${var.project_name}"
-        }
-        Action   = "s3:GetObject"
-        Resource = "arn:aws:s3:::${aws_s3_bucket.cert_bucket.id}/*"
-      }
-    ]
-  })
-}
+# resource "aws_s3_bucket_policy" "cert_bucket_policy" {
+#   bucket = aws_s3_bucket.cert_bucket.id
+#
+#   policy = jsonencode({
+#     Version = "2012-10-17"
+#     Statement = [
+#       {
+#         Effect = "Allow"
+#         Principal = {
+#           AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/ec2-role-${var.project_name}"
+#         }
+#         Action   = "s3:GetObject"
+#         Resource = "arn:aws:s3:::${aws_s3_bucket.cert_bucket.id}/*"
+#       }
+#     ]
+#   })
+# }
 
 # Creating Lambda Function archive/zip file
 data "archive_file" "init" {
@@ -1469,70 +1469,70 @@ data "archive_file" "init" {
 }
 
 # Lambda function to export ACM cert
-resource "aws_lambda_function" "export_cert" {
-  filename      = data.archive_file.init.output_path
-  function_name = "export_acm_cert_${var.project_name}"
-  role          = aws_iam_role.lambda_exec.arn
-  handler       = "acm_cert_uploader.lambda_handler"
-  source_code_hash = filebase64sha256(data.archive_file.init.output_path)
-  runtime       = "python3.8"
-  timeout       = 300
-
-  environment {
-    variables = {
-      S3_BUCKET       = aws_s3_bucket.cert_bucket.id
-      CERTIFICATE_ARN = aws_acm_certificate.livekit.arn
-    }
-  }
-}
+# resource "aws_lambda_function" "export_cert" {
+#   filename      = data.archive_file.init.output_path
+#   function_name = "export_acm_cert_${var.project_name}"
+#   role          = aws_iam_role.lambda_exec.arn
+#   handler       = "acm_cert_uploader.lambda_handler"
+#   source_code_hash = filebase64sha256(data.archive_file.init.output_path)
+#   runtime       = "python3.8"
+#   timeout       = 300
+#
+#   environment {
+#     variables = {
+#       S3_BUCKET       = aws_s3_bucket.cert_bucket.id
+#       CERTIFICATE_ARN = aws_acm_certificate.livekit.arn
+#     }
+#   }
+# }
 
 # IAM Role for Lambda
-resource "aws_iam_role" "lambda_exec" {
-  name = "lambda_exec_role_${var.project_name}"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Action = "sts:AssumeRole"
-        Effect = "Allow"
-        Principal = {
-          Service = "lambda.amazonaws.com"
-        }
-      }
-    ]
-  })
-}
+# resource "aws_iam_role" "lambda_exec" {
+#   name = "lambda_exec_role_${var.project_name}"
+#
+#   assume_role_policy = jsonencode({
+#     Version = "2012-10-17"
+#     Statement = [
+#       {
+#         Action = "sts:AssumeRole"
+#         Effect = "Allow"
+#         Principal = {
+#           Service = "lambda.amazonaws.com"
+#         }
+#       }
+#     ]
+#   })
+# }
 
 # IAM Policy for Lambda
-resource "aws_iam_role_policy" "lambda_exec_policy" {
-  name = "lambda_exec_policy_${var.project_name}"
-  role = aws_iam_role.lambda_exec.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Action = [
-          "acm:ExportCertificate",
-          "s3:PutObject",
-          "s3:PutObjectAcl"
-        ]
-        Resource = "*"
-      },
-      {
-        Effect = "Allow"
-        Action = [
-          "logs:CreateLogGroup",
-          "logs:CreateLogStream",
-          "logs:PutLogEvents"
-        ]
-        Resource = "arn:aws:logs:*:*:*"
-      }
-    ]
-  })
-}
+# resource "aws_iam_role_policy" "lambda_exec_policy" {
+#   name = "lambda_exec_policy_${var.project_name}"
+#   role = aws_iam_role.lambda_exec.id
+#
+#   policy = jsonencode({
+#     Version = "2012-10-17"
+#     Statement = [
+#       {
+#         Effect = "Allow"
+#         Action = [
+#           "acm:ExportCertificate",
+#           "s3:PutObject",
+#           "s3:PutObjectAcl"
+#         ]
+#         Resource = "*"
+#       },
+#       {
+#         Effect = "Allow"
+#         Action = [
+#           "logs:CreateLogGroup",
+#           "logs:CreateLogStream",
+#           "logs:PutLogEvents"
+#         ]
+#         Resource = "arn:aws:logs:*:*:*"
+#       }
+#     ]
+#   })
+# }
 
 # resource "aws_lambda_invocation" "invoke_lambda" {
 #   function_name = aws_lambda_function.export_cert.function_name
