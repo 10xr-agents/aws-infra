@@ -1458,14 +1458,12 @@ resource "acme_certificate" "livekit" {
 
   dns_challenge {
     provider = "cloudflare"
-    config = {
-      api_token             = var.cloudflare_api_token
-      CLOUDFLARE_EMAIL      = var.email_address
-      CLOUDFLARE_API_TOKEN  = var.cloudflare_api_token
-      CLOUDFLARE_ZONE_ID    = var.cloudflare_zone_id
-      CLOUDFLARE_ACCOUNT_ID = var.cloudflare_account_id
-      CF_API_TOKEN          = var.cloudflare_api_token
-    }
+    config   = {
+      CF_API_EMAIL      = var.email_address
+      CF_ZONE_API_TOKEN = var.cloudflare_zone_id
+      CF_API_KEY        = var.cloudflare_account_id
+      CF_DNS_API_TOKEN  = var.cloudflare_api_token
+    }.
   }
 
   depends_on = [null_resource.export_cloudflare_vars]
