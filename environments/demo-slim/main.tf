@@ -1496,103 +1496,42 @@ resource "aws_s3_bucket_policy" "cert_bucket_policy" {
   })
 }
 
-# Creating Lambda Function archive/zip file
-data "archive_file" "init" {
-  type        = "zip"
-  source_dir  = "${path.module}/../../python"
-  output_path = "${path.module}/deployment_package.zip"
-}
 
 resource "local_file" "certificate_body" {
   content  = acme_certificate.livekit.certificate_pem
-  filename = "${path.module}/../../python/cert.pem"
+  filename = "${path.module}/cert.pem"
 }
 
 resource "local_file" "private_key" {
   content  = acme_certificate.livekit.private_key_pem
-  filename = "${path.module}/../../python/key.pem"
+  filename = "${path.module}/key.pem"
 }
 
 resource "local_file" "certificate_chain" {
   content  = acme_certificate.livekit.issuer_pem
-  filename = "${path.module}/../../python/chain.pem"
+  filename = "${path.module}/chain.pem"
 }
 
-# Lambda function to export ACM cert
-resource "aws_lambda_function" "export_cert" {
-  filename      = data.archive_file.init.output_path
-  function_name = "export_acm_cert_${var.project_name}"
-  role          = aws_iam_role.lambda_exec.arn
-  handler       = "acm_cert_uploader.lambda_handler"
-  source_code_hash = filebase64sha256(data.archive_file.init.output_path)
-  runtime       = "python3.8"
-  timeout       = 300
-
-  environment {
-    variables = {
-      S3_BUCKET       = aws_s3_bucket.cert_bucket.id
-    }
-  }
-
-  depends_on = [local_file.certificate_body, local_file.private_key, local_file.certificate_chain]
+# Upload certificate files to S3
+resource "aws_s3_object" "cert_body" {
+  bucket  = aws_s3_bucket.cert_bucket.id
+  key     = "cert.pem"
+  source  = local_file.certificate_body.filename
+  acl     = "private"
 }
 
-# IAM Role for Lambda
-resource "aws_iam_role" "lambda_exec" {
-  name = "lambda_exec_role_${var.project_name}"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Action = "sts:AssumeRole"
-        Effect = "Allow"
-        Principal = {
-          Service = "lambda.amazonaws.com"
-        }
-      }
-    ]
-  })
+resource "aws_s3_object" "private_key" {
+  bucket  = aws_s3_bucket.cert_bucket.id
+  key     = "key.pem"
+  source  = local_file.private_key.filename
+  acl     = "private"
 }
 
-# IAM Policy for Lambda
-resource "aws_iam_role_policy" "lambda_exec_policy" {
-  name = "lambda_exec_policy_${var.project_name}"
-  role = aws_iam_role.lambda_exec.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Action = [
-          "acm:ExportCertificate",
-          "s3:PutObject",
-          "s3:PutObjectAcl"
-        ]
-        Resource = "*"
-      },
-      {
-        Effect = "Allow"
-        Action = [
-          "logs:CreateLogGroup",
-          "logs:CreateLogStream",
-          "logs:PutLogEvents"
-        ]
-        Resource = "arn:aws:logs:*:*:*"
-      }
-    ]
-  })
-}
-
-resource "aws_lambda_invocation" "invoke_lambda" {
-  function_name = aws_lambda_function.export_cert.function_name
-  input = jsonencode({
-    certificate_arn = aws_acm_certificate.livekit.arn
-    s3_bucket       = aws_s3_bucket.cert_bucket.id
-  })
-
-  depends_on = [aws_acm_certificate.livekit, aws_lambda_function.export_cert]
+resource "aws_s3_object" "certificate_chain" {
+  bucket  = aws_s3_bucket.cert_bucket.id
+  key     = "chain.pem"
+  source  = local_file.certificate_chain.filename
+  acl     = "private"
 }
 
 # LiveKit EC2 Instances
@@ -1628,7 +1567,7 @@ resource "aws_instance" "livekit" {
     Name = "LiveKit-Instance-${count.index + 1}"
   }
 
-  depends_on = [aws_lambda_invocation.invoke_lambda]
+  depends_on = [aws_s3_object.cert_body, aws_s3_object.certificate_chain, aws_s3_object.private_key]
 }
 
 # CloudWatch Log Groups
