@@ -1484,10 +1484,10 @@ resource "null_resource" "wait_for_acm" {
 # Cloudflare DNS record for certificate validation
 resource "cloudflare_record" "cert_livekit_validation" {
   for_each = {
-    for dvo in aws_acm_certificate.livekit.domain_validation_options : dvo.domain_name => {
-      name   = dvo.resource_record_name
-      record = dvo.resource_record_value
-      type   = dvo.resource_record_type
+    for dvo_lk in aws_acm_certificate.livekit.domain_validation_options : dvo_lk.domain_name => {
+      name   = dvo_lk.resource_record_name
+      record = dvo_lk.resource_record_value
+      type   = dvo_lk.resource_record_type
     }
   }
 
