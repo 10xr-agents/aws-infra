@@ -1454,7 +1454,7 @@ resource "aws_s3_bucket_policy" "cert_bucket_policy" {
         Principal = {
           AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/ec2-role-${var.project_name}"
         }
-        Action = "s3:GetObject"
+        Action   = "s3:GetObject"
         Resource = "arn:aws:s3:::${aws_s3_bucket.cert_bucket.id}/*"
       }
     ]
