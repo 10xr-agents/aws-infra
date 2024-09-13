@@ -175,3 +175,13 @@ output "global_accelerator_ip_addresses" {
 output "global_accelerator_livekit_dns_name" {
   value = aws_globalaccelerator_accelerator.livekit.dns_name
 }
+
+# Output the private key and certificate for download
+output "private_key" {
+  value     = tls_private_key.livekit.private_key_pem
+  sensitive = true
+}
+
+output "certificate" {
+  value = tls_self_signed_cert.livekit.cert_pem
+}
