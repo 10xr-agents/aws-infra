@@ -1443,6 +1443,24 @@ resource "aws_s3_bucket" "cert_bucket" {
   bucket = "livekit-certificates-${var.project_name}"
 }
 
+resource "aws_s3_bucket_policy" "cert_bucket_policy" {
+  bucket = aws_s3_bucket.cert_bucket.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Principal = {
+          AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/ec2-role-${var.project_name}"
+        }
+        Action = "s3:GetObject"
+        Resource = "arn:aws:s3:::${aws_s3_bucket.cert_bucket.id}/*"
+      }
+    ]
+  })
+}
+
 # Creating Lambda Function archive/zip file
 data "archive_file" "init" {
   type        = "zip"
@@ -1527,40 +1545,40 @@ resource "aws_lambda_invocation" "invoke_lambda" {
 }
 
 # LiveKit EC2 Instances
-# resource "aws_instance" "livekit" {
-#   count                = 3
-#   ami                  = data.aws_ami.amazon_linux_2.id
-#   instance_type        = "t3.2xlarge"
-#   key_name             = aws_key_pair.livekit.key_name
-#   vpc_security_group_ids = [aws_security_group.livekit.id]
-#   subnet_id            = aws_subnet.public[count.index % 2].id
-#   iam_instance_profile = aws_iam_instance_profile.ecs_instance_profile.name
-#
-#   user_data = templatefile("${path.module}/../templates/cloud_init.amazon.yaml.tpl", {
-#     redis_address      = "${aws_elasticache_cluster.livekit.cache_nodes[0].address}:${aws_elasticache_cluster.livekit.cache_nodes[0].port}"
-#     redis_username     = "default"
-#     redis_password     = random_password.redis_auth_token.result
-#     livekit_domain     = "livekit.${var.domain_name}"
-#     turn_domain        = "livekit-turn.${var.domain_name}"
-#     whip_domain        = "livekit-whip.${var.domain_name}"
-#     api_key            = var.livekit_api_key
-#     api_secret         = var.livekit_api_secret
-#     webhook_events_url = "https://proxy.${var.domain_name}/api/v1/live-kit/webhook-events"
-#     cert_bucket        = aws_s3_bucket.cert_bucket.id
-#     aws_region         = var.aws_region
-#   })
-#
-#   root_block_device {
-#     volume_size = 32
-#     volume_type = "gp3"
-#   }
-#
-#   tags = {
-#     Name = "LiveKit-Instance-${count.index + 1}"
-#   }
-#
-#   depends_on = [aws_lambda_invocation.invoke_lambda]
-# }
+resource "aws_instance" "livekit" {
+  count                = 3
+  ami                  = data.aws_ami.amazon_linux_2.id
+  instance_type        = "t3.2xlarge"
+  key_name             = aws_key_pair.livekit.key_name
+  vpc_security_group_ids = [aws_security_group.livekit.id]
+  subnet_id            = aws_subnet.public[count.index % 2].id
+  iam_instance_profile = aws_iam_instance_profile.ecs_instance_profile.name
+
+  user_data = templatefile("${path.module}/../templates/cloud_init.amazon.yaml.tpl", {
+    redis_address      = "${aws_elasticache_cluster.livekit.cache_nodes[0].address}:${aws_elasticache_cluster.livekit.cache_nodes[0].port}"
+    redis_username     = "default"
+    redis_password     = random_password.redis_auth_token.result
+    livekit_domain     = "livekit.${var.domain_name}"
+    turn_domain        = "livekit-turn.${var.domain_name}"
+    whip_domain        = "livekit-whip.${var.domain_name}"
+    api_key            = var.livekit_api_key
+    api_secret         = var.livekit_api_secret
+    webhook_events_url = "https://proxy.${var.domain_name}/api/v1/live-kit/webhook-events"
+    cert_bucket        = aws_s3_bucket.cert_bucket.id
+    aws_region         = var.aws_region
+  })
+
+  root_block_device {
+    volume_size = 32
+    volume_type = "gp3"
+  }
+
+  tags = {
+    Name = "LiveKit-Instance-${count.index + 1}"
+  }
+
+  depends_on = [aws_lambda_invocation.invoke_lambda]
+}
 
 # CloudWatch Log Groups
 resource "aws_cloudwatch_log_group" "livekit" {
@@ -1830,25 +1848,25 @@ locals {
   protocols = ["tcp", "udp"]
 }
 
-# resource "aws_globalaccelerator_endpoint_group" "livekit" {
-#   count = length(local.protocols)
-#   listener_arn = aws_globalaccelerator_listener.livekit[count.index].id
-#
-#   dynamic "endpoint_configuration" {
-#     for_each = aws_instance.livekit
-#     content {
-#       endpoint_id                    = endpoint_configuration.value.id
-#       weight                         = 100
-#       client_ip_preservation_enabled = true
-#     }
-#   }
-#
-#   health_check_path       = "/"
-#   health_check_port       = 7880
-#   health_check_protocol   = "HTTP"
-#   threshold_count         = 3
-#   traffic_dial_percentage = 100
-# }
+resource "aws_globalaccelerator_endpoint_group" "livekit" {
+  count = length(local.protocols)
+  listener_arn = aws_globalaccelerator_listener.livekit[count.index].id
+
+  dynamic "endpoint_configuration" {
+    for_each = aws_instance.livekit
+    content {
+      endpoint_id                    = endpoint_configuration.value.id
+      weight                         = 100
+      client_ip_preservation_enabled = true
+    }
+  }
+
+  health_check_path       = "/"
+  health_check_port       = 7880
+  health_check_protocol   = "HTTP"
+  threshold_count         = 3
+  traffic_dial_percentage = 100
+}
 
 # Global Accelerator Listeners
 resource "aws_globalaccelerator_listener" "livekit" {
@@ -1914,7 +1932,6 @@ resource "cloudflare_record" "livekit_turn_global" {
   type    = "CNAME"
   proxied = false
 }
-
 
 resource "cloudflare_record" "livekit_whip_global" {
   zone_id = var.cloudflare_zone_id
