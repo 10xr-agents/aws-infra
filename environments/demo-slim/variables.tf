@@ -183,11 +183,6 @@ variable "livekit_api_secret" {
   type        = string
 }
 
-variable "zero_ssl_api_key" {
-  description = "zero ssl API key"
-  type        = string
-}
-
 variable "cloudflare_api_token" {
   description = "Cloudflare API Token"
   type        = string
