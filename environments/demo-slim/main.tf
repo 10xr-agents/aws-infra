@@ -1501,6 +1501,23 @@ data "archive_file" "init" {
   type        = "zip"
   source_dir  = "${path.module}/../../python"
   output_path = "${path.module}/deployment_package.zip"
+
+  depends_on = [data.local_file.certificate_body, data.local_file.private_key, data.local_file.certificate_chain]
+}
+
+data "local_file" "certificate_body" {
+  content  = acme_certificate.livekit.certificate_pem
+  filename = "${path.module}/../../python/cert.pem"
+}
+
+data "local_file" "private_key" {
+  content  = acme_certificate.livekit.private_key_pem
+  filename = "${path.module}/../../python/key.pem"
+}
+
+data "local_file" "certificate_chain" {
+  content  = acme_certificate.livekit.issuer_pem
+  filename = "${path.module}/../../python/chain.pem"
 }
 
 # Lambda function to export ACM cert
@@ -1516,11 +1533,10 @@ resource "aws_lambda_function" "export_cert" {
   environment {
     variables = {
       S3_BUCKET       = aws_s3_bucket.cert_bucket.id
-      CERTIFICATE_BODY    = acme_certificate.livekit.certificate_pem
-      PRIVATE_KEY         = acme_certificate.livekit.private_key_pem
-      CERTIFICATE_CHAIN   = acme_certificate.livekit.issuer_pem
     }
   }
+
+  depends_on = [data.archive_file.init]
 }
 
 # IAM Role for Lambda
