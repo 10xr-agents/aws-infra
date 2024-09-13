@@ -96,9 +96,8 @@ write_files:
         tls:
           certificates:
             load_files:
-              - certificate_file: /etc/caddy/certs/cert.pem
-                key_file: /etc/caddy/certs/key.pem
-                chain_file: /etc/caddy/certs/chain.pem
+              - certificate: /etc/caddy/certs/cert.pem
+                key: /etc/caddy/certs/key.pem
 
         layer4:
           servers:
