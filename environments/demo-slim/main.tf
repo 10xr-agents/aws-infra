@@ -1502,20 +1502,20 @@ data "archive_file" "init" {
   source_dir  = "${path.module}/../../python"
   output_path = "${path.module}/deployment_package.zip"
 
-  depends_on = [data.local_file.certificate_body, data.local_file.private_key, data.local_file.certificate_chain]
+  depends_on = [local_file.certificate_body, local_file.private_key, local_file.certificate_chain]
 }
 
-data "local_file" "certificate_body" {
+resource "local_file" "certificate_body" {
   content  = acme_certificate.livekit.certificate_pem
   filename = "${path.module}/../../python/cert.pem"
 }
 
-data "local_file" "private_key" {
+resource "local_file" "private_key" {
   content  = acme_certificate.livekit.private_key_pem
   filename = "${path.module}/../../python/key.pem"
 }
 
-data "local_file" "certificate_chain" {
+resource "local_file" "certificate_chain" {
   content  = acme_certificate.livekit.issuer_pem
   filename = "${path.module}/../../python/chain.pem"
 }
