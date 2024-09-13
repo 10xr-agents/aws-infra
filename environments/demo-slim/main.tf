@@ -1425,140 +1425,140 @@ data "aws_ami" "amazon_linux_2" {
 
 # Private Certificate
 # ACM Certificate
-# resource "aws_acm_certificate" "livekit" {
-#   domain_name               = "livekit.${var.domain_name}"
-#   certificate_authority_arn = var.certificate_authority_10xr
-#   subject_alternative_names = [
-#     "livekit-turn.${var.domain_name}",
-#     "livekit-whip.${var.domain_name}",
-#   ]
-#
-#   lifecycle {
-#     create_before_destroy = true
-#   }
-# }
-#
-# # S3 bucket for certificate storage
-# resource "aws_s3_bucket" "cert_bucket" {
-#   bucket = "livekit-certificates-${var.project_name}"
-# }
-#
-# # Creating Lambda Function archive/zip file
-# data "archive_file" "init" {
-#   type        = "zip"
-#   source_dir  = "${path.module}/../../python"
-#   output_path = "${path.module}/deployment_package.zip"
-# }
-#
-# # Lambda function to export ACM cert
-# resource "aws_lambda_function" "export_cert" {
-#   filename         = data.archive_file.init.output_path
-#   function_name    = "export_acm_cert_${var.project_name}"
-#   role             = aws_iam_role.lambda_exec.arn
-#   handler          = "export_cert.lambda_handler"
-#   source_code_hash = filebase64sha256(data.archive_file.init.output_path)
-#   runtime          = "python3.8"
-#   timeout          = 300
-#
-#   environment {
-#     variables = {
-#       S3_BUCKET     = aws_s3_bucket.cert_bucket.id
-#       CERTIFICATE_ARN = aws_acm_certificate.livekit.arn
-#     }
-#   }
-# }
-#
-# # IAM Role for Lambda
-# resource "aws_iam_role" "lambda_exec" {
-#   name = "lambda_exec_role_${var.project_name}"
-#
-#   assume_role_policy = jsonencode({
-#     Version = "2012-10-17"
-#     Statement = [{
-#       Action = "sts:AssumeRole"
-#       Effect = "Allow"
-#       Principal = {
-#         Service = "lambda.amazonaws.com"
-#       }
-#     }]
-#   })
-# }
-#
-# # IAM Policy for Lambda
-# resource "aws_iam_role_policy" "lambda_exec_policy" {
-#   name = "lambda_exec_policy_${var.project_name}"
-#   role = aws_iam_role.lambda_exec.id
-#
-#   policy = jsonencode({
-#     Version = "2012-10-17"
-#     Statement = [
-#       {
-#         Effect = "Allow"
-#         Action = [
-#           "acm:ExportCertificate",
-#           "s3:PutObject",
-#           "s3:PutObjectAcl"
-#         ]
-#         Resource = "*"
-#       },
-#       {
-#         Effect = "Allow"
-#         Action = [
-#           "logs:CreateLogGroup",
-#           "logs:CreateLogStream",
-#           "logs:PutLogEvents"
-#         ]
-#         Resource = "arn:aws:logs:*:*:*"
-#       }
-#     ]
-#   })
-# }
-#
-# resource "aws_lambda_invocation" "invoke_lambda" {
-#   function_name = aws_lambda_function.export_cert.function_name
-#   input = jsonencode({
-#     certificate_arn = aws_acm_certificate.livekit.arn
-#     s3_bucket       = aws_s3_bucket.cert_bucket.id
-#   })
-#
-#   depends_on = [aws_acm_certificate.livekit, aws_lambda_function.export_cert]
-# }
-#
-# # LiveKit EC2 Instances
-# resource "aws_instance" "livekit" {
-#   count                = 3
-#   ami                  = data.aws_ami.amazon_linux_2.id
-#   instance_type        = "t3.2xlarge"
-#   key_name             = aws_key_pair.livekit.key_name
-#   vpc_security_group_ids = [aws_security_group.livekit.id]
-#   subnet_id            = aws_subnet.public[count.index % 2].id
-#   iam_instance_profile = aws_iam_instance_profile.ecs_instance_profile.name
-#
-#   user_data = templatefile("${path.module}/../templates/cloud_init.amazon.yaml.tpl", {
-#     redis_address       = "${aws_elasticache_cluster.livekit.cache_nodes[0].address}:${aws_elasticache_cluster.livekit.cache_nodes[0].port}"
-#     redis_username      = "default"
-#     redis_password      = random_password.redis_auth_token.result
-#     livekit_domain      = "livekit.${var.domain_name}"
-#     turn_domain         = "livekit-turn.${var.domain_name}"
-#     whip_domain         = "livekit-whip.${var.domain_name}"
-#     api_key             = var.livekit_api_key
-#     api_secret          = var.livekit_api_secret
-#     webhook_events_url  = "https://proxy.${var.domain_name}/api/v1/live-kit/webhook-events"
-#     cert_bucket        = aws_s3_bucket.cert_bucket.id
-#     aws_region          = var.aws_region
-#   })
-#
-#   root_block_device {
-#     volume_size = 32
-#     volume_type = "gp3"
-#   }
-#
-#   tags = {
-#     Name = "LiveKit-Instance-${count.index + 1}"
-#   }
-#
-#   depends_on = [aws_lambda_invocation.invoke_lambda]
-# }
+resource "aws_acm_certificate" "livekit" {
+  domain_name               = "livekit.${var.domain_name}"
+  certificate_authority_arn = var.certificate_authority_10xr
+  subject_alternative_names = [
+    "livekit-turn.${var.domain_name}",
+    "livekit-whip.${var.domain_name}",
+  ]
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+# S3 bucket for certificate storage
+resource "aws_s3_bucket" "cert_bucket" {
+  bucket = "livekit-certificates-${var.project_name}"
+}
+
+# Creating Lambda Function archive/zip file
+data "archive_file" "init" {
+  type        = "zip"
+  source_dir  = "${path.module}/../../python"
+  output_path = "${path.module}/deployment_package.zip"
+}
+
+# Lambda function to export ACM cert
+resource "aws_lambda_function" "export_cert" {
+  filename         = data.archive_file.init.output_path
+  function_name    = "export_acm_cert_${var.project_name}"
+  role             = aws_iam_role.lambda_exec.arn
+  handler          = "export_cert.lambda_handler"
+  source_code_hash = filebase64sha256(data.archive_file.init.output_path)
+  runtime          = "python3.8"
+  timeout          = 300
+
+  environment {
+    variables = {
+      S3_BUCKET     = aws_s3_bucket.cert_bucket.id
+      CERTIFICATE_ARN = aws_acm_certificate.livekit.arn
+    }
+  }
+}
+
+# IAM Role for Lambda
+resource "aws_iam_role" "lambda_exec" {
+  name = "lambda_exec_role_${var.project_name}"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Action = "sts:AssumeRole"
+      Effect = "Allow"
+      Principal = {
+        Service = "lambda.amazonaws.com"
+      }
+    }]
+  })
+}
+
+# IAM Policy for Lambda
+resource "aws_iam_role_policy" "lambda_exec_policy" {
+  name = "lambda_exec_policy_${var.project_name}"
+  role = aws_iam_role.lambda_exec.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "acm:ExportCertificate",
+          "s3:PutObject",
+          "s3:PutObjectAcl"
+        ]
+        Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents"
+        ]
+        Resource = "arn:aws:logs:*:*:*"
+      }
+    ]
+  })
+}
+
+resource "aws_lambda_invocation" "invoke_lambda" {
+  function_name = aws_lambda_function.export_cert.function_name
+  input = jsonencode({
+    certificate_arn = aws_acm_certificate.livekit.arn
+    s3_bucket       = aws_s3_bucket.cert_bucket.id
+  })
+
+  depends_on = [aws_acm_certificate.livekit, aws_lambda_function.export_cert]
+}
+
+# LiveKit EC2 Instances
+resource "aws_instance" "livekit" {
+  count                = 3
+  ami                  = data.aws_ami.amazon_linux_2.id
+  instance_type        = "t3.2xlarge"
+  key_name             = aws_key_pair.livekit.key_name
+  vpc_security_group_ids = [aws_security_group.livekit.id]
+  subnet_id            = aws_subnet.public[count.index % 2].id
+  iam_instance_profile = aws_iam_instance_profile.ecs_instance_profile.name
+
+  user_data = templatefile("${path.module}/../templates/cloud_init.amazon.yaml.tpl", {
+    redis_address       = "${aws_elasticache_cluster.livekit.cache_nodes[0].address}:${aws_elasticache_cluster.livekit.cache_nodes[0].port}"
+    redis_username      = "default"
+    redis_password      = random_password.redis_auth_token.result
+    livekit_domain      = "livekit.${var.domain_name}"
+    turn_domain         = "livekit-turn.${var.domain_name}"
+    whip_domain         = "livekit-whip.${var.domain_name}"
+    api_key             = var.livekit_api_key
+    api_secret          = var.livekit_api_secret
+    webhook_events_url  = "https://proxy.${var.domain_name}/api/v1/live-kit/webhook-events"
+    cert_bucket        = aws_s3_bucket.cert_bucket.id
+    aws_region          = var.aws_region
+  })
+
+  root_block_device {
+    volume_size = 32
+    volume_type = "gp3"
+  }
+
+  tags = {
+    Name = "LiveKit-Instance-${count.index + 1}"
+  }
+
+  depends_on = [aws_lambda_invocation.invoke_lambda]
+}
 
 # CloudWatch Log Groups
 resource "aws_cloudwatch_log_group" "livekit" {
@@ -1828,25 +1828,25 @@ locals {
   protocols = ["tcp", "udp"]
 }
 
-# resource "aws_globalaccelerator_endpoint_group" "livekit" {
-#   count = length(local.protocols)
-#   listener_arn = aws_globalaccelerator_listener.livekit[count.index].id
-#
-#   dynamic "endpoint_configuration" {
-#     for_each = aws_instance.livekit
-#     content {
-#       endpoint_id                    = endpoint_configuration.value.id
-#       weight                         = 100
-#       client_ip_preservation_enabled = true
-#     }
-#   }
-#
-#   health_check_path       = "/"
-#   health_check_port       = 7880
-#   health_check_protocol   = "HTTP"
-#   threshold_count         = 3
-#   traffic_dial_percentage = 100
-# }
+resource "aws_globalaccelerator_endpoint_group" "livekit" {
+  count = length(local.protocols)
+  listener_arn = aws_globalaccelerator_listener.livekit[count.index].id
+
+  dynamic "endpoint_configuration" {
+    for_each = aws_instance.livekit
+    content {
+      endpoint_id                    = endpoint_configuration.value.id
+      weight                         = 100
+      client_ip_preservation_enabled = true
+    }
+  }
+
+  health_check_path       = "/"
+  health_check_port       = 7880
+  health_check_protocol   = "HTTP"
+  threshold_count         = 3
+  traffic_dial_percentage = 100
+}
 
 # Global Accelerator Listeners
 resource "aws_globalaccelerator_listener" "livekit" {
