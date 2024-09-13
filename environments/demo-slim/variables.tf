@@ -188,6 +188,11 @@ variable "cloudflare_api_token" {
   type        = string
 }
 
+variable "cloudflare_api_key" {
+  description = "Cloudflare API Key"
+  type        = string
+}
+
 variable "cloudflare_zone_id" {
   description = "Cloudflare zone id"
   type        = string

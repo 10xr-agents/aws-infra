@@ -1452,8 +1452,8 @@ resource "acme_certificate" "livekit" {
     provider = "cloudflare"
     config   = {
       CF_API_EMAIL      = var.email_address
-      CF_ZONE_API_TOKEN = var.cloudflare_api_token  # Use the correct token variable
-      CF_API_KEY        = var.cloudflare_api_token         # Use this for API key, not account ID
+      CF_ZONE_API_TOKEN = var.cloudflare_zone_id  # Use the correct token variable
+      CF_API_KEY        = var.cloudflare_api_key       # Use this for API key, not account ID
       CF_DNS_API_TOKEN  = var.cloudflare_api_token       # This looks correct
     }
   }
