@@ -41,12 +41,9 @@ write_files:
       export AWS_DEFAULT_REGION=${aws_region}
       mkdir -p /etc/caddy/certs
       aws s3 cp s3://${cert_bucket}/cert.pem /etc/caddy/certs/private_cert.pem
-      aws s3 cp s3://${cert_bucket}/key.pem /etc/caddy/certs/encrypted_key.pem
+      aws s3 cp s3://${cert_bucket}/key.pem /etc/caddy/certs/key.pem
       aws s3 cp s3://${cert_bucket}/chain.pem /etc/caddy/certs/chain.pem
-      aws s3 cp s3://${cert_bucket}/root_ca_crt.pem /etc/caddy/certs/root_ca_crt.pem
       cat /etc/caddy/certs/private_cert.pem /etc/caddy/certs/chain.pem >> /etc/caddy/certs/cert.pem
-      PASSPHRASE="live_kit_tls_pass_phrase"
-      openssl rsa -in /etc/caddy/certs/encrypted_key.pem -out /etc/caddy/certs/key.pem -passin pass:$PASSPHRASE
       chmod 755 /etc/caddy/certs/key.pem
       chmod 755 /etc/caddy/certs/cert.pem
 
