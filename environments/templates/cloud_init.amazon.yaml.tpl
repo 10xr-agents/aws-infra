@@ -25,6 +25,8 @@ packages:
   - mesa-libGL
   - xorg-x11-server-Xvfb
   - awscli
+  - openssl
+  - libssl-dev
 
 bootcmd:
   - mkdir -p /opt/livekit/caddy_data
@@ -39,8 +41,10 @@ write_files:
       export AWS_DEFAULT_REGION=${aws_region}
       mkdir -p /etc/caddy/certs
       aws s3 cp s3://${cert_bucket}/cert.pem /etc/caddy/certs/cert.pem
-      aws s3 cp s3://${cert_bucket}/key.pem /etc/caddy/certs/key.pem
+      aws s3 cp s3://${cert_bucket}/key.pem /etc/caddy/certs/encrypted_key.pem
       aws s3 cp s3://${cert_bucket}/chain.pem /etc/caddy/certs/chain.pem
+      PASSPHRASE="live_kit_tls_pass_phrase"
+      openssl rsa -in /etc/caddy/certs/encrypted_key.pem -out /etc/caddy/certs/key.pem -passin pass:${PASSPHRASE}
       chmod 755 /etc/caddy/certs/key.pem
       chmod 755 /etc/caddy/certs/cert.pem
 
@@ -337,7 +341,7 @@ runcmd:
   - yum install -y ffmpeg gstreamer1 gstreamer1-plugins-base gstreamer1-plugins-good gstreamer1-plugins-bad-free gstreamer1-plugins-bad-freeworld gstreamer1-plugins-ugly gstreamer1-libav
   - yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
   - yum install -y --enablerepo=epel gstreamer1-plugins-bad-freeworld
-  - yum install -y awscli
+  - yum install -y awscli openssl openssl-devel
   - yum install -y mesa-libGL xorg-x11-server-Xvfb
   - echo "INSTALLED EPEL LIBRARIES"
   - rm -rf /var/cache/yum
