@@ -1471,6 +1471,16 @@ resource "aws_acm_certificate" "livekit" {
   }
 }
 
+resource "null_resource" "wait_for_acm" {
+  triggers = {
+    cert_arn = aws_acm_certificate.livekit.arn
+  }
+
+  provisioner "local-exec" {
+    command = "echo 'ACM certificate created. Now you can use its domain validation options.'"
+  }
+}
+
 # Cloudflare DNS record for certificate validation
 resource "cloudflare_record" "cert_livekit_validation" {
   for_each = {
@@ -1489,7 +1499,7 @@ resource "cloudflare_record" "cert_livekit_validation" {
   ttl     = 60
   proxied = false
 
-  depends_on = [aws_acm_certificate.livekit]
+  depends_on = [null_resource.wait_for_acm]
 }
 
 # Certificate Validation
