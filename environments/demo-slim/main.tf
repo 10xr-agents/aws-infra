@@ -627,10 +627,7 @@ resource "aws_acm_certificate" "main" {
     "services.${var.domain_name}",
     "app.${var.domain_name}",
     "api.${var.domain_name}",
-    "proxy.${var.domain_name}",
-    "livekit.${var.domain_name}",
-    "livekit-turn.${var.domain_name}",
-    "livekit-whip.${var.domain_name}",
+    "proxy.${var.domain_name}"
   ]
 
   lifecycle {
@@ -1455,8 +1452,7 @@ resource "acme_certificate" "livekit" {
   dns_challenge {
     provider = "cloudflare"
     config = {
-      CF_API_EMAIL = var.email_address
-      CF_API_KEY   = var.cloudflare_api_token
+      CF_API_TOKEN   = var.cloudflare_api_token
     }
   }
 }
