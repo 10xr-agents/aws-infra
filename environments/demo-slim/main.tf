@@ -620,6 +620,9 @@ resource "aws_acm_certificate" "main" {
     "app.${var.domain_name}",
     "api.${var.domain_name}",
     "proxy.${var.domain_name}",
+    "livekit.${var.domain_name}",
+    "livekit-turn.${var.domain_name}",
+    "livekit-whip.${var.domain_name}",
   ]
 
   lifecycle {
@@ -1428,6 +1431,7 @@ resource "aws_instance" "livekit" {
   key_name      = aws_key_pair.livekit.key_name
   vpc_security_group_ids = [aws_security_group.livekit.id]
   subnet_id = aws_subnet.public[count.index % 2].id
+  iam_instance_profile = aws_iam_instance_profile.ecs_instance_profile.name
 
   user_data = templatefile("${path.module}/../templates/cloud_init.amazon.yaml.tpl", {
     redis_address  = "${aws_elasticache_cluster.livekit.cache_nodes[0].address}:${aws_elasticache_cluster.livekit.cache_nodes[0].port}"
@@ -1440,6 +1444,8 @@ resource "aws_instance" "livekit" {
     api_secret     = var.livekit_api_secret
     webhook_events_url = "https://proxy.${var.domain_name}/api/v1/live-kit/webhook-events"
     zero_ssl_api_key = var.zero_ssl_api_key
+    acm_certificate_arn = aws_acm_certificate.main.arn
+    aws_region         = var.aws_region
   })
 
   root_block_device {
@@ -1474,8 +1480,8 @@ resource "aws_cloudwatch_log_group" "livekit_ingress" {
 }
 
 # IAM role for EC2 instances to access CloudWatch
-resource "aws_iam_role" "ec2_cloudwatch" {
-  name = "EC2CloudWatchRole"
+resource "aws_iam_role" "ec2" {
+  name = "ec2-role-${var.project_name}"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -1494,13 +1500,115 @@ resource "aws_iam_role" "ec2_cloudwatch" {
 # Attach CloudWatch policy to the role
 resource "aws_iam_role_policy_attachment" "cloudwatch_policy" {
   policy_arn = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
-  role       = aws_iam_role.ec2_cloudwatch.name
+  role       = aws_iam_role.ec2.name
+}
+
+resource "aws_iam_role_policy" "livekit_ec2_policy" {
+  name = "livekit-ec2-${var.project_name}-policy"
+  role = aws_iam_role.ec2.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          # CloudWatch Logs
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents",
+          "logs:DescribeLogStreams",
+          "logs:DescribeLogGroups",
+          "logs:GetLogEvents",
+
+          # CloudWatch Metrics
+          "cloudwatch:PutMetricData",
+          "cloudwatch:GetMetricStatistics",
+          "cloudwatch:ListMetrics",
+
+          # EC2 Describe Actions (for self-discovery and debugging)
+          "ec2:DescribeInstances",
+          "ec2:DescribeInstanceStatus",
+          "ec2:DescribeTags",
+
+          # ACM (for certificate management)
+          "acm:DescribeCertificate",
+          "acm:ListCertificates",
+          "acm:GetCertificate",
+
+          # Systems Manager (for remote management and debugging)
+          "ssm:UpdateInstanceInformation",
+          "ssm:ListInstanceAssociations",
+          "ssm:DescribeInstanceAssociations",
+          "ssm:GetParameter",
+          "ssm:GetParameters",
+          "ssm:GetParametersByPath",
+
+          # S3 (if you decide to use S3 for log storage or config files)
+          "s3:GetObject",
+          "s3:PutObject",
+          "s3:ListBucket",
+
+          # SNS (for potential notifications)
+          "sns:Publish",
+
+          # SQS (if you use queues for any inter-instance communication)
+          "sqs:SendMessage",
+          "sqs:ReceiveMessage",
+          "sqs:DeleteMessage",
+          "sqs:GetQueueAttributes",
+
+          # KMS (if you use custom encryption keys)
+          "kms:Decrypt",
+          "kms:GenerateDataKey",
+
+          # ElastiCache (for describing Redis cluster)
+          "elasticache:DescribeCacheClusters",
+          "elasticache:ListTagsForResource",
+
+          # Route53 (if instances need to update DNS records)
+          "route53:ChangeResourceRecordSets",
+          "route53:ListResourceRecordSets",
+          "route53:ListHostedZones",
+
+          # ECS (if you're using containers)
+          "ecs:DescribeTasks",
+          "ecs:ListTasks",
+          "ecs:DescribeContainerInstances",
+          "ecs:ListContainerInstances",
+
+          # ECR (if you're using private Docker repositories)
+          "ecr:GetAuthorizationToken",
+          "ecr:BatchCheckLayerAvailability",
+          "ecr:GetDownloadUrlForLayer",
+          "ecr:BatchGetImage",
+
+          # X-Ray (for distributed tracing)
+          "xray:PutTraceSegments",
+          "xray:PutTelemetryRecords",
+          "xray:GetSamplingRules",
+          "xray:GetSamplingTargets",
+          "xray:GetSamplingStatisticSummaries",
+
+          # Systems Manager Parameter Store (for storing config securely)
+          "ssm:GetParameter",
+          "ssm:GetParameters",
+          "ssm:GetParametersByPath",
+
+          # IAM (for describing roles, useful for debugging)
+          "iam:GetRole",
+          "iam:ListAttachedRolePolicies"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
 }
 
 # Create an instance profile
 resource "aws_iam_instance_profile" "ec2_cloudwatch" {
-  name = "EC2CloudWatchProfile"
-  role = aws_iam_role.ec2_cloudwatch.name
+  name = "ec2-profile-${var.project_name}"
+  role = aws_iam_role.ec2.name
 }
 
 # Security Group for LiveKit

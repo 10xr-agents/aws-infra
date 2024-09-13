@@ -88,8 +88,9 @@ write_files:
           automation:
             policies:
               - issuers:
-                - module: zerossl
-                  api_key: ${zero_ssl_api_key}
+                - module: acm
+                  region: ${aws_region}
+                  certificate_arn: ${acm_certificate_arn}
         layer4:
           servers:
             main:
