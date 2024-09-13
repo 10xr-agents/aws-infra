@@ -24,12 +24,26 @@ packages:
   - ffmpeg
   - mesa-libGL
   - xorg-x11-server-Xvfb
+  - awscli
 
 bootcmd:
   - mkdir -p /opt/livekit/caddy_data
   - mkdir -p /usr/local/bin
 
 write_files:
+
+  - path: /etc/rc.local
+    permissions: '0755'
+    content: |
+      #!/bin/bash
+      export AWS_DEFAULT_REGION=${aws_region}
+      mkdir -p /etc/caddy/certs
+      aws s3 cp s3://${cert_bucket}/cert.pem /etc/caddy/certs/cert.pem
+      aws s3 cp s3://${cert_bucket}/key.pem /etc/caddy/certs/key.pem
+      aws s3 cp s3://${cert_bucket}/chain.pem /etc/caddy/certs/chain.pem
+      systemctl restart caddy
+      chmod 600 /etc/caddy/certs/key.pem
+
   - path: /opt/livekit/livekit.yaml
     content: |
       port: 7880
@@ -81,16 +95,11 @@ write_files:
       apps:
         tls:
           certificates:
-            automate:
-              - ${livekit_domain}
-              - ${turn_domain}
-              - ${whip_domain}
-          automation:
-            policies:
-              - issuers:
-                - module: acm
-                  region: ${aws_region}
-                  certificate_arn: ${acm_certificate_arn}
+            load_files:
+              - certificate_file: /etc/caddy/certs/cert.pem
+                key_file: /etc/caddy/certs/key.pem
+                chain_file: /etc/caddy/certs/chain.pem
+
         layer4:
           servers:
             main:
@@ -326,6 +335,7 @@ runcmd:
   - yum install -y ffmpeg gstreamer1 gstreamer1-plugins-base gstreamer1-plugins-good gstreamer1-plugins-bad-free gstreamer1-plugins-bad-freeworld gstreamer1-plugins-ugly gstreamer1-libav
   - yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
   - yum install -y --enablerepo=epel gstreamer1-plugins-bad-freeworld
+  - yum install -y awscli
   - yum install -y mesa-libGL xorg-x11-server-Xvfb
   - echo "INSTALLED EPEL LIBRARIES"
   - rm -rf /var/cache/yum
@@ -353,6 +363,7 @@ runcmd:
   - echo "ADDED LD LIBRARY PATH"
   - rm -rf /var/cache/yum
 
+  - /etc/rc.local
   - curl -L "https://github.com/docker/compose/releases/download/v2.20.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
   - chmod 755 /usr/local/bin/docker-compose
   - chmod 755 /opt/livekit/update_ip.sh

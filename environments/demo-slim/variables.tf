@@ -202,3 +202,9 @@ variable "cloudflare_account_id" {
   description = "Cloudflare account id"
   type        = string
 }
+
+variable "certificate_authority_10xr" {
+  description = "Certificate authority for 10xR"
+  type        = string
+  default = "arn:aws:acm-pca:us-east-1:761018882607:certificate-authority/110006ec-1946-47c5-b2e0-bbacd7fcb86a"
+}
