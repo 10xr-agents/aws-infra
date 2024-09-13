@@ -1,15 +1,24 @@
 import boto3
 import os
+import pathlib
 
 def lambda_handler(event, context):
     s3_client = boto3.client('s3')
 
     s3_bucket = os.environ['S3_BUCKET']
 
-    # Define the file paths relative to the Lambda function's directory
-    cert_path = './cert.pem'
-    key_path = './key.pem'
-    chain_path = './chain.pem'
+    # Define the relative file paths
+    cert_filename = 'cert.pem'
+    key_filename = 'key.pem'
+    chain_filename = 'chain.pem'
+
+    # Resolve the path to the directory where this script is located
+    script_dir = pathlib.Path(__file__).parent
+
+    # Construct full paths to the certificate, key, and chain files
+    cert_path = script_dir / cert_filename
+    key_path = script_dir / key_filename
+    chain_path = script_dir / chain_filename
 
     # Read the certificate body, private key, and certificate chain from the files
     with open(cert_path, 'rb') as cert_file:
@@ -30,4 +39,3 @@ def lambda_handler(event, context):
         'statusCode': 200,
         'body': 'Certificate, key, and chain uploaded successfully'
     }
-
