@@ -1483,29 +1483,22 @@ resource "null_resource" "wait_for_acm" {
 
 # Cloudflare DNS record for certificate validation
 resource "cloudflare_record" "cert_livekit_validation" {
-  for_each = {
-    for dvo_lk in aws_acm_certificate.livekit.domain_validation_options : dvo_lk.domain_name => {
-      name   = dvo_lk.resource_record_name
-      record = dvo_lk.resource_record_value
-      type   = dvo_lk.resource_record_type
-    }
-  }
+  count = 3  # Assuming 3 domains: livekit, livekit-turn, livekit-whip
 
   zone_id = var.cloudflare_zone_id
-  name    = each.value.name
-  content = each.value.record
-  type    = each.value.type
+  name    = tolist(aws_acm_certificate.livekit.domain_validation_options)[count.index].resource_record_name
+  type    = tolist(aws_acm_certificate.livekit.domain_validation_options)[count.index].resource_record_type
+  content   = tolist(aws_acm_certificate.livekit.domain_validation_options)[count.index].resource_record_value
   ttl     = 60
   proxied = false
-
-  depends_on = [null_resource.wait_for_acm]
 }
 
 # Certificate Validation
 resource "aws_acm_certificate_validation" "livekit" {
   certificate_arn         = aws_acm_certificate.livekit.arn
-  validation_record_fqdns = [for record in cloudflare_record.cert_livekit_validation : record.hostname]
+  validation_record_fqdns = cloudflare_record.cert_livekit_validation[*].hostname
 }
+
 
 # S3 bucket for certificate storage
 resource "aws_s3_bucket" "cert_bucket" {
