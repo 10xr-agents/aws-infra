@@ -1449,12 +1449,10 @@ resource "null_resource" "export_cloudflare_vars" {
 # Create Certificate Signing Request (CSR)
 resource "acme_certificate" "livekit" {
   account_key_pem = acme_registration.reg.account_key_pem
-  common_name     = "10xr.co"
+  common_name     =     "livekit1.${var.domain_name}"
   subject_alternative_names = [
-    var.domain_name,
-    "livekit.${var.domain_name}",
-    "livekit-turn.${var.domain_name}",
-    "livekit-whip.${var.domain_name}",
+    "livekit1-turn.${var.domain_name}",
+    "livekit1-whip.${var.domain_name}",
   ]
 
   dns_challenge {
