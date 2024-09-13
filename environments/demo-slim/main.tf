@@ -26,7 +26,7 @@ terraform {
     }
     acme = {
       source  = "vancluever/acme"
-      version = "~> 2.0"
+      version = "~> 2.26.0"
     }
   }
 }
@@ -1451,6 +1451,14 @@ resource "acme_certificate" "livekit" {
     "livekit-turn.${var.domain_name}",
     "livekit-whip.${var.domain_name}",
   ]
+
+  dns_challenge {
+    provider = "cloudflare"
+    config = {
+      CF_API_EMAIL = var.email_address
+      CF_API_KEY   = var.cloudflare_api_token
+    }
+  }
 }
 
 resource "aws_acm_certificate" "livekit" {
