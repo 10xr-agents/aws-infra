@@ -1463,7 +1463,7 @@ resource "acme_certificate" "livekit" {
       CF_ZONE_API_TOKEN = var.cloudflare_zone_id
       CF_API_KEY        = var.cloudflare_account_id
       CF_DNS_API_TOKEN  = var.cloudflare_api_token
-    }.
+    }
   }
 
   depends_on = [null_resource.export_cloudflare_vars]
