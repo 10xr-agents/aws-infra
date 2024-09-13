@@ -24,7 +24,15 @@ terraform {
       source  = "gavinbunney/kubectl"
       version = ">= 1.14.0"
     }
+    acme = {
+      source  = "vancluever/acme"
+      version = "~> 2.0"
+    }
   }
+}
+
+provider "acme" {
+  server_url = "https://acme-v02.api.letsencrypt.org/directory"
 }
 
 provider "cloudflare" {
@@ -1429,49 +1437,26 @@ resource "tls_private_key" "livekit" {
   algorithm = "RSA"
 }
 
-# Create Certificate Signing Request (CSR)
-resource "tls_cert_request" "livekit" {
-  private_key_pem = tls_private_key.livekit.private_key_pem
-
-  subject {
-    common_name = "livekit.${var.domain_name}"
-  }
-
-  dns_names = [
-    "livekit-turn.${var.domain_name}",
-    "livekit-whip.${var.domain_name}",
-  ]
+resource "acme_registration" "reg" {
+  account_key_pem = tls_private_key.livekit.private_key_pem
+  email_address   = var.email_address
 }
 
-# Create self-signed certificate
-# Note: In production, you'd typically use a proper CA to sign your certificate
-resource "tls_self_signed_cert" "livekit" {
-  private_key_pem = tls_private_key.livekit.private_key_pem
-  subject {
-    common_name = "livekit.${var.domain_name}"
-  }
 
-  validity_period_hours = 8760 # 1 year
-
-  allowed_uses = [
-    "key_encipherment",
-    "digital_signature",
-    "server_auth",
-  ]
-
-  dns_names = [
-    "livekit.${var.domain_name}",
+# Create Certificate Signing Request (CSR)
+resource "acme_certificate" "livekit" {
+  account_key_pem           = acme_registration.reg.account_key_pem
+  common_name               = "livekit.${var.domain_name}"
+  subject_alternative_names = [
     "livekit-turn.${var.domain_name}",
     "livekit-whip.${var.domain_name}",
   ]
 }
 
 resource "aws_acm_certificate" "livekit" {
-  domain_name               = "livekit.${var.domain_name}"
-  subject_alternative_names = [
-    "livekit-turn.${var.domain_name}",
-    "livekit-whip.${var.domain_name}",
-  ]
+  private_key        = acme_certificate.livekit.private_key_pem
+  certificate_body   = acme_certificate.livekit.certificate_pem
+  certificate_chain  = acme_certificate.livekit.issuer_pem
 
   lifecycle {
     create_before_destroy = true
@@ -1495,6 +1480,8 @@ resource "cloudflare_record" "cert_livekit_validation" {
   type    = each.value.type
   ttl     = 60
   proxied = false
+
+  depends_on = [aws_acm_certificate.livekit]
 }
 
 # Certificate Validation

@@ -1,6 +1,7 @@
 aws_region           = "us-east-1"
 environment          = "demo"
 project_name         = "10xr-demo"
+email_address        = "jaswanth@10xr.co"
 default_organization = "demo"
 domain_name          = "demo.10xr.co"
 vpc_cidr             = "10.0.0.0/16"

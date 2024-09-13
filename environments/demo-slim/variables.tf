@@ -197,3 +197,8 @@ variable "cloudflare_account_id" {
   description = "Cloudflare account id"
   type        = string
 }
+
+variable "email_address" {
+  description = "Email address for Let's Encrypt registration"
+  type        = string
+}
