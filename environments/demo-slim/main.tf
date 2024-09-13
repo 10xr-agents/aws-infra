@@ -1439,6 +1439,12 @@ resource "acme_registration" "reg" {
   email_address   = var.email_address
 }
 
+resource "null_resource" "export_cloudflare_vars" {
+  provisioner "local-exec" {
+    command = "export CLOUDFLARE_API_TOKEN=${var.cloudflare_api_token} && export CLOUDFLARE_ZONE_ID=${var.cloudflare_zone_id} && export CLOUDFLARE_ACCOUNT_ID=${var.cloudflare_account_id}"
+  }
+}
+
 
 # Create Certificate Signing Request (CSR)
 resource "acme_certificate" "livekit" {
@@ -1455,6 +1461,8 @@ resource "acme_certificate" "livekit" {
       CF_API_TOKEN   = var.cloudflare_api_token
     }
   }
+
+  depends_on = [null_resource.export_cloudflare_vars]
 }
 
 resource "aws_acm_certificate" "livekit" {
