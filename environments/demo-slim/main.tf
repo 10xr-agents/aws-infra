@@ -1452,17 +1452,17 @@ data "archive_file" "init" {
 
 # Lambda function to export ACM cert
 resource "aws_lambda_function" "export_cert" {
-  filename         = data.archive_file.init.output_path
-  function_name    = "export_acm_cert_${var.project_name}"
-  role             = aws_iam_role.lambda_exec.arn
-  handler          = "export_cert.lambda_handler"
+  filename      = data.archive_file.init.output_path
+  function_name = "export_acm_cert_${var.project_name}"
+  role          = aws_iam_role.lambda_exec.arn
+  handler       = "acm_cert_uploader.lambda_handler"
   source_code_hash = filebase64sha256(data.archive_file.init.output_path)
-  runtime          = "python3.8"
-  timeout          = 300
+  runtime       = "python3.8"
+  timeout       = 300
 
   environment {
     variables = {
-      S3_BUCKET     = aws_s3_bucket.cert_bucket.id
+      S3_BUCKET       = aws_s3_bucket.cert_bucket.id
       CERTIFICATE_ARN = aws_acm_certificate.livekit.arn
     }
   }
@@ -1474,13 +1474,15 @@ resource "aws_iam_role" "lambda_exec" {
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
-    Statement = [{
-      Action = "sts:AssumeRole"
-      Effect = "Allow"
-      Principal = {
-        Service = "lambda.amazonaws.com"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "lambda.amazonaws.com"
+        }
       }
-    }]
+    ]
   })
 }
 
@@ -1535,17 +1537,17 @@ resource "aws_instance" "livekit" {
   iam_instance_profile = aws_iam_instance_profile.ecs_instance_profile.name
 
   user_data = templatefile("${path.module}/../templates/cloud_init.amazon.yaml.tpl", {
-    redis_address       = "${aws_elasticache_cluster.livekit.cache_nodes[0].address}:${aws_elasticache_cluster.livekit.cache_nodes[0].port}"
-    redis_username      = "default"
-    redis_password      = random_password.redis_auth_token.result
-    livekit_domain      = "livekit.${var.domain_name}"
-    turn_domain         = "livekit-turn.${var.domain_name}"
-    whip_domain         = "livekit-whip.${var.domain_name}"
-    api_key             = var.livekit_api_key
-    api_secret          = var.livekit_api_secret
-    webhook_events_url  = "https://proxy.${var.domain_name}/api/v1/live-kit/webhook-events"
+    redis_address      = "${aws_elasticache_cluster.livekit.cache_nodes[0].address}:${aws_elasticache_cluster.livekit.cache_nodes[0].port}"
+    redis_username     = "default"
+    redis_password     = random_password.redis_auth_token.result
+    livekit_domain     = "livekit.${var.domain_name}"
+    turn_domain        = "livekit-turn.${var.domain_name}"
+    whip_domain        = "livekit-whip.${var.domain_name}"
+    api_key            = var.livekit_api_key
+    api_secret         = var.livekit_api_secret
+    webhook_events_url = "https://proxy.${var.domain_name}/api/v1/live-kit/webhook-events"
     cert_bucket        = aws_s3_bucket.cert_bucket.id
-    aws_region          = var.aws_region
+    aws_region         = var.aws_region
   })
 
   root_block_device {
