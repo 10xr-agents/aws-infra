@@ -1498,7 +1498,7 @@ resource "cloudflare_record" "cert_livekit_validation" {
 }
 
 # Certificate Validation
-resource "aws_acm_certificate_validation" "main" {
+resource "aws_acm_certificate_livekit_validation" "main" {
   certificate_arn         = aws_acm_certificate.livekit.arn
   validation_record_fqdns = [for record in cloudflare_record.cert_livekit_validation : record.hostname]
 }
