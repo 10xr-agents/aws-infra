@@ -1501,8 +1501,6 @@ data "archive_file" "init" {
   type        = "zip"
   source_dir  = "${path.module}/../../python"
   output_path = "${path.module}/deployment_package.zip"
-
-  depends_on = [local_file.certificate_body, local_file.private_key, local_file.certificate_chain]
 }
 
 resource "local_file" "certificate_body" {
@@ -1536,7 +1534,7 @@ resource "aws_lambda_function" "export_cert" {
     }
   }
 
-  depends_on = [data.archive_file.init]
+  depends_on = [local_file.certificate_body, local_file.private_key, local_file.certificate_chain]
 }
 
 # IAM Role for Lambda
