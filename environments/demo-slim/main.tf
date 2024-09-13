@@ -1552,7 +1552,7 @@ resource "aws_instance" "livekit" {
   key_name             = aws_key_pair.livekit.key_name
   vpc_security_group_ids = [aws_security_group.livekit.id]
   subnet_id            = aws_subnet.public[count.index % 2].id
-  iam_instance_profile = aws_iam_instance_profile.ecs_instance_profile.name
+  iam_instance_profile = aws_iam_instance_profile.ec2_profile.name
 
   user_data = templatefile("${path.module}/../templates/cloud_init.amazon.yaml.tpl", {
     redis_address      = "${aws_elasticache_cluster.livekit.cache_nodes[0].address}:${aws_elasticache_cluster.livekit.cache_nodes[0].port}"
@@ -1728,7 +1728,7 @@ resource "aws_iam_role_policy" "livekit_ec2_policy" {
 }
 
 # Create an instance profile
-resource "aws_iam_instance_profile" "ec2_cloudwatch" {
+resource "aws_iam_instance_profile" "ec2_profile" {
   name = "ec2-profile-${var.project_name}"
   role = aws_iam_role.ec2.name
 }
