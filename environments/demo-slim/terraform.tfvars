@@ -106,10 +106,10 @@ services = [
   {
     name              = "agt-anlytc"
     ecr_repo          = "761018882607.dkr.ecr.us-east-1.amazonaws.com/10xr/agent-analytics:latest"
-    cpu               = 2048
-    memory            = 4096
-    desired_count     = 2
-    instance_type     = "medium"
+    cpu               = 4096
+    memory            = 8192
+    desired_count     = 4
+    instance_type     = "xlarge"
     port              = 9800
     health_check_path = "/management/health"
     environment_variables = {
