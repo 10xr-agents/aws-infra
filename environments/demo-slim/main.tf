@@ -239,7 +239,7 @@ resource "aws_network_acl" "main" {
     rule_no    = 300
     action     = "allow"
     cidr_block = "0.0.0.0/0"
-    from_port  = 1024
+    from_port  = 0
     to_port    = 65535
   }
 
@@ -249,7 +249,7 @@ resource "aws_network_acl" "main" {
     rule_no    = 301
     action     = "allow"
     cidr_block = "0.0.0.0/0"
-    from_port  = 1024
+    from_port  = 0
     to_port    = 65535
   }
 
@@ -339,6 +339,14 @@ resource "aws_security_group" "ecs_sg" {
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
     description = "Allow inbound HTTPS traffic"
+  }
+
+  ingress {
+    from_port   = 587
+    to_port     = 587
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+    description = "Allow inbound HTTP traffic"
   }
 
   ingress {
