@@ -1119,7 +1119,7 @@ resource "mongodbatlas_cluster" "cluster" {
 
   # Provider Settings "block"
   provider_name               = "AWS"
-  provider_instance_size_name = "M30"
+  provider_instance_size_name = "M10"
 }
 
 # VPC Peering
