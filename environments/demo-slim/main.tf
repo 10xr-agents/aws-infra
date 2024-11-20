@@ -431,6 +431,65 @@ resource "aws_ecs_cluster" "main" {
   }
 }
 
+
+# First, create the EFS file system and required security group
+resource "aws_efs_file_system" "ecs_storage" {
+  creation_token = "${var.project_name}-efs"
+  encrypted      = true
+
+  tags = {
+    Name = "${var.project_name}-efs"
+  }
+}
+
+resource "aws_security_group" "efs" {
+  name        = "${var.project_name}-efs-sg"
+  description = "Allow EFS access from ECS tasks"
+  vpc_id      = aws_vpc.main.id
+
+  ingress {
+    from_port       = 2049
+    to_port         = 2049
+    protocol        = "tcp"
+    security_groups = [aws_security_group.ecs_sg.id]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+# Create mount targets in each subnet
+resource "aws_efs_mount_target" "ecs_storage" {
+  count           = length(aws_subnet.public)
+  file_system_id  = aws_efs_file_system.ecs_storage.id
+  subnet_id       = aws_subnet.public[count.index].id
+  security_groups = [aws_security_group.efs.id]
+}
+
+# Create access point for each service that needs storage
+resource "aws_efs_access_point" "service" {
+  count          = length(var.services)
+  file_system_id = aws_efs_file_system.ecs_storage.id
+
+  posix_user {
+    gid = 1000
+    uid = 1000
+  }
+
+  root_directory {
+    path = "/${var.services[count.index].name}"
+    creation_info {
+      owner_gid   = 1000
+      owner_uid   = 1000
+      permissions = "755"
+    }
+  }
+}
+
 # ECS Task Definitions
 resource "aws_ecs_task_definition" "service" {
   count = length(var.services)
@@ -441,6 +500,20 @@ resource "aws_ecs_task_definition" "service" {
   memory             = var.services[count.index].memory
   execution_role_arn = aws_iam_role.ecs_execution_role.arn
   task_role_arn      = aws_iam_role.ecs_task_role[count.index].arn
+
+  # Add volume configuration
+  volume {
+    name = "${var.services[count.index].name}-storage"
+    efs_volume_configuration {
+      file_system_id          = aws_efs_file_system.ecs_storage.id
+      transit_encryption      = "ENABLED"
+      transit_encryption_port = 2049
+      authorization_config {
+        access_point_id = aws_efs_access_point.service[count.index].id
+        iam            = "ENABLED"
+      }
+    }
+  }
 
   container_definitions = jsonencode([
     {

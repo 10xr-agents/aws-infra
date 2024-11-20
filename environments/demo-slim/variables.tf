@@ -54,6 +54,7 @@ variable "services" {
       weight            = number
       base              = number
     }))
+    storage_mount_path      = optional(string, "/tmp")
   }))
 }
 
