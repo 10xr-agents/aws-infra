@@ -512,6 +512,7 @@ resource "aws_ecs_task_definition" "service" {
         access_point_id = aws_efs_access_point.service[count.index].id
         iam            = "ENABLED"
       }
+      root_directory    = "/"  # Allow access to root directory
     }
   }
 
@@ -523,6 +524,13 @@ resource "aws_ecs_task_definition" "service" {
         {
           containerPort = var.services[count.index].port
           hostPort      = var.services[count.index].port
+        }
+      ]
+      mountPoints = [
+        {
+          sourceVolume  = "${var.services[count.index].name}-storage"
+          containerPath = "/tmp"  # Mount EFS volume to /tmp
+          readOnly     = false
         }
       ]
       environment = concat([
@@ -661,6 +669,13 @@ resource "aws_iam_role_policy_attachment" "ecs_task_role_policy" {
   count = length(var.services)
   role       = aws_iam_role.ecs_task_role[count.index].name
   policy_arn = aws_iam_policy.ecs_task_policy[count.index].arn
+}
+
+# Add to your task role policies
+resource "aws_iam_role_policy_attachment" "ecs_task_efs_policy" {
+  count      = length(var.services)
+  role       = aws_iam_role.ecs_task_role[count.index].name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonElasticFileSystemClientFullAccess"
 }
 
 resource "aws_iam_policy" "ecs_task_policy" {
