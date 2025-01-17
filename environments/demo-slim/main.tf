@@ -1529,142 +1529,142 @@ data "aws_ami" "amazon_linux_2" {
 
 # Private Certificate
 # Generate private key
-resource "tls_private_key" "livekit" {
-  algorithm = "RSA"
-}
+# resource "tls_private_key" "livekit" {
+#   algorithm = "RSA"
+# }
+#
+# resource "acme_registration" "reg" {
+#   account_key_pem = tls_private_key.livekit.private_key_pem
+#   email_address   = var.email_address
+# }
 
-resource "acme_registration" "reg" {
-  account_key_pem = tls_private_key.livekit.private_key_pem
-  email_address   = var.email_address
-}
+# # Create Certificate Signing Request (CSR)
+# resource "acme_certificate" "livekit" {
+#   account_key_pem = acme_registration.reg.account_key_pem
+#   common_name     =     "livekit.${var.domain_name}"
+#   subject_alternative_names = [
+#     "livekit-turn.${var.domain_name}",
+#     "livekit-whip.${var.domain_name}",
+#   ]
+#
+#   dns_challenge {
+#     provider = "cloudflare"
+#     config   = {
+#       CF_API_EMAIL      = var.email_address
+#       CF_ZONE_API_TOKEN = var.cloudflare_zone_id  # Use the correct token variable
+#       CF_API_KEY        = var.cloudflare_api_key       # Use this for API key, not account ID
+#       CF_DNS_API_TOKEN  = var.cloudflare_api_token       # This looks correct
+#     }
+#   }
+#
+# }
 
-# Create Certificate Signing Request (CSR)
-resource "acme_certificate" "livekit" {
-  account_key_pem = acme_registration.reg.account_key_pem
-  common_name     =     "livekit.${var.domain_name}"
-  subject_alternative_names = [
-    "livekit-turn.${var.domain_name}",
-    "livekit-whip.${var.domain_name}",
-  ]
-
-  dns_challenge {
-    provider = "cloudflare"
-    config   = {
-      CF_API_EMAIL      = var.email_address
-      CF_ZONE_API_TOKEN = var.cloudflare_zone_id  # Use the correct token variable
-      CF_API_KEY        = var.cloudflare_api_key       # Use this for API key, not account ID
-      CF_DNS_API_TOKEN  = var.cloudflare_api_token       # This looks correct
-    }
-  }
-
-}
-
-resource "aws_acm_certificate" "livekit" {
-  private_key       = acme_certificate.livekit.private_key_pem
-  certificate_body  = acme_certificate.livekit.certificate_pem
-  certificate_chain = acme_certificate.livekit.issuer_pem
-
-  lifecycle {
-    create_before_destroy = true
-  }
-}
-
-# S3 bucket for certificate storage
-resource "aws_s3_bucket" "cert_bucket" {
-  bucket = "livekit-certificates-${var.project_name}"
-}
-
-resource "aws_s3_bucket_policy" "cert_bucket_policy" {
-  bucket = aws_s3_bucket.cert_bucket.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Principal = {
-          AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/ec2-role-${var.project_name}"
-        }
-        Action   = "s3:GetObject"
-        Resource = "arn:aws:s3:::${aws_s3_bucket.cert_bucket.id}/*"
-      }
-    ]
-  })
-}
+# resource "aws_acm_certificate" "livekit" {
+#   private_key       = acme_certificate.livekit.private_key_pem
+#   certificate_body  = acme_certificate.livekit.certificate_pem
+#   certificate_chain = acme_certificate.livekit.issuer_pem
+#
+#   lifecycle {
+#     create_before_destroy = true
+#   }
+# }
+#
+# # S3 bucket for certificate storage
+# resource "aws_s3_bucket" "cert_bucket" {
+#   bucket = "livekit-certificates-${var.project_name}"
+# }
+#
+# resource "aws_s3_bucket_policy" "cert_bucket_policy" {
+#   bucket = aws_s3_bucket.cert_bucket.id
+#
+#   policy = jsonencode({
+#     Version = "2012-10-17"
+#     Statement = [
+#       {
+#         Effect = "Allow"
+#         Principal = {
+#           AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/ec2-role-${var.project_name}"
+#         }
+#         Action   = "s3:GetObject"
+#         Resource = "arn:aws:s3:::${aws_s3_bucket.cert_bucket.id}/*"
+#       }
+#     ]
+#   })
+# }
 
 
-resource "local_file" "certificate_body" {
-  content  = acme_certificate.livekit.certificate_pem
-  filename = "${path.module}/cert.pem"
-}
+# resource "local_file" "certificate_body" {
+#   content  = acme_certificate.livekit.certificate_pem
+#   filename = "${path.module}/cert.pem"
+# }
+#
+# resource "local_file" "private_key" {
+#   content  = acme_certificate.livekit.private_key_pem
+#   filename = "${path.module}/key.pem"
+# }
+#
+# resource "local_file" "certificate_chain" {
+#   content  = acme_certificate.livekit.issuer_pem
+#   filename = "${path.module}/chain.pem"
+# }
+#
+# # Upload certificate files to S3
+# resource "aws_s3_object" "cert_body" {
+#   bucket  = aws_s3_bucket.cert_bucket.id
+#   key     = "cert.pem"
+#   source  = local_file.certificate_body.filename
+#   acl     = "private"
+# }
+#
+# resource "aws_s3_object" "private_key" {
+#   bucket  = aws_s3_bucket.cert_bucket.id
+#   key     = "key.pem"
+#   source  = local_file.private_key.filename
+#   acl     = "private"
+# }
+#
+# resource "aws_s3_object" "certificate_chain" {
+#   bucket  = aws_s3_bucket.cert_bucket.id
+#   key     = "chain.pem"
+#   source  = local_file.certificate_chain.filename
+#   acl     = "private"
+# }
 
-resource "local_file" "private_key" {
-  content  = acme_certificate.livekit.private_key_pem
-  filename = "${path.module}/key.pem"
-}
-
-resource "local_file" "certificate_chain" {
-  content  = acme_certificate.livekit.issuer_pem
-  filename = "${path.module}/chain.pem"
-}
-
-# Upload certificate files to S3
-resource "aws_s3_object" "cert_body" {
-  bucket  = aws_s3_bucket.cert_bucket.id
-  key     = "cert.pem"
-  source  = local_file.certificate_body.filename
-  acl     = "private"
-}
-
-resource "aws_s3_object" "private_key" {
-  bucket  = aws_s3_bucket.cert_bucket.id
-  key     = "key.pem"
-  source  = local_file.private_key.filename
-  acl     = "private"
-}
-
-resource "aws_s3_object" "certificate_chain" {
-  bucket  = aws_s3_bucket.cert_bucket.id
-  key     = "chain.pem"
-  source  = local_file.certificate_chain.filename
-  acl     = "private"
-}
-
-# LiveKit EC2 Instances
-resource "aws_instance" "livekit" {
-  count                = 3
-  ami                  = data.aws_ami.amazon_linux_2.id
-  instance_type        = "t3.2xlarge"
-  key_name             = aws_key_pair.livekit.key_name
-  vpc_security_group_ids = [aws_security_group.livekit.id]
-  subnet_id            = aws_subnet.public[count.index % 2].id
-  iam_instance_profile = aws_iam_instance_profile.ec2_profile.name
-
-  user_data = templatefile("${path.module}/../templates/cloud_init.amazon.yaml.tpl", {
-    redis_address      = "${aws_elasticache_cluster.livekit.cache_nodes[0].address}:${aws_elasticache_cluster.livekit.cache_nodes[0].port}"
-    redis_username     = "default"
-    redis_password     = random_password.redis_auth_token.result
-    livekit_domain     = "livekit.${var.domain_name}"
-    turn_domain        = "livekit-turn.${var.domain_name}"
-    whip_domain        = "livekit-whip.${var.domain_name}"
-    api_key            = var.livekit_api_key
-    api_secret         = var.livekit_api_secret
-    webhook_events_url = "https://proxy.${var.domain_name}/api/v1/live-kit/webhook-events"
-    cert_bucket        = aws_s3_bucket.cert_bucket.id
-    aws_region         = var.aws_region
-  })
-
-  root_block_device {
-    volume_size = 32
-    volume_type = "gp3"
-  }
-
-  tags = {
-    Name = "LiveKit-Instance-${count.index + 1}"
-  }
-
-  depends_on = [aws_s3_object.cert_body, aws_s3_object.certificate_chain, aws_s3_object.private_key]
-}
+# # LiveKit EC2 Instances
+# resource "aws_instance" "livekit" {
+#   count                = 3
+#   ami                  = data.aws_ami.amazon_linux_2.id
+#   instance_type        = "t3.2xlarge"
+#   key_name             = aws_key_pair.livekit.key_name
+#   vpc_security_group_ids = [aws_security_group.livekit.id]
+#   subnet_id            = aws_subnet.public[count.index % 2].id
+#   iam_instance_profile = aws_iam_instance_profile.ec2_profile.name
+#
+#   user_data = templatefile("${path.module}/../templates/cloud_init.amazon.yaml.tpl", {
+#     redis_address      = "${aws_elasticache_cluster.livekit.cache_nodes[0].address}:${aws_elasticache_cluster.livekit.cache_nodes[0].port}"
+#     redis_username     = "default"
+#     redis_password     = random_password.redis_auth_token.result
+#     livekit_domain     = "livekit.${var.domain_name}"
+#     turn_domain        = "livekit-turn.${var.domain_name}"
+#     whip_domain        = "livekit-whip.${var.domain_name}"
+#     api_key            = var.livekit_api_key
+#     api_secret         = var.livekit_api_secret
+#     webhook_events_url = "https://proxy.${var.domain_name}/api/v1/live-kit/webhook-events"
+#     cert_bucket        = aws_s3_bucket.cert_bucket.id
+#     aws_region         = var.aws_region
+#   })
+#
+#   root_block_device {
+#     volume_size = 32
+#     volume_type = "gp3"
+#   }
+#
+#   tags = {
+#     Name = "LiveKit-Instance-${count.index + 1}"
+#   }
+#
+#   depends_on = [aws_s3_object.cert_body, aws_s3_object.certificate_chain, aws_s3_object.private_key]
+# }
 
 # CloudWatch Log Groups
 resource "aws_cloudwatch_log_group" "livekit" {
@@ -1906,10 +1906,10 @@ resource "aws_security_group" "livekit" {
 }
 
 # Key Pair for SSH access
-resource "aws_key_pair" "livekit" {
-  key_name = "livekit-key"
-  public_key = file("${path.module}/livekit_key.pub")  # Make sure to create this key
-}
+# resource "aws_key_pair" "livekit" {
+#   key_name = "livekit-key"
+#   public_key = file("${path.module}/livekit_key.pub")  # Make sure to create this key
+# }
 
 # Global Accelerator
 resource "aws_globalaccelerator_accelerator" "livekit" {
@@ -1934,98 +1934,98 @@ locals {
   protocols = ["tcp", "udp"]
 }
 
-resource "aws_globalaccelerator_endpoint_group" "livekit" {
-  count = length(local.protocols)
-  listener_arn = aws_globalaccelerator_listener.livekit[count.index].id
-
-  dynamic "endpoint_configuration" {
-    for_each = aws_instance.livekit
-    content {
-      endpoint_id                    = endpoint_configuration.value.id
-      weight                         = 100
-      client_ip_preservation_enabled = true
-    }
-  }
-
-  health_check_path       = "/"
-  health_check_port       = 7880
-  health_check_protocol   = "HTTP"
-  threshold_count         = 3
-  traffic_dial_percentage = 100
-}
-
-# Global Accelerator Listeners
-resource "aws_globalaccelerator_listener" "livekit" {
-  count = length(local.protocols)
-  accelerator_arn = aws_globalaccelerator_accelerator.livekit.id
-  client_affinity = "SOURCE_IP"
-  protocol = upper(local.protocols[count.index])
-
-  port_range {
-    from_port = 80
-    to_port   = 80
-  }
-
-  port_range {
-    from_port = 443
-    to_port   = 443
-  }
-
-  port_range {
-    from_port = 7880
-    to_port   = 7880
-  }
-
-  port_range {
-    from_port = 7881
-    to_port   = 7881
-  }
-
-  port_range {
-    from_port = 3478
-    to_port   = 3478
-  }
-
-  port_range {
-    from_port = 50000
-    to_port   = 60000
-  }
-
-  port_range {
-    from_port = 1935
-    to_port   = 1935
-  }
-
-  port_range {
-    from_port = 7885
-    to_port   = 7885
-  }
-}
+# resource "aws_globalaccelerator_endpoint_group" "livekit" {
+#   count = length(local.protocols)
+#   listener_arn = aws_globalaccelerator_listener.livekit[count.index].id
+#
+#   dynamic "endpoint_configuration" {
+#     for_each = aws_instance.livekit
+#     content {
+#       endpoint_id                    = endpoint_configuration.value.id
+#       weight                         = 100
+#       client_ip_preservation_enabled = true
+#     }
+#   }
+#
+#   health_check_path       = "/"
+#   health_check_port       = 7880
+#   health_check_protocol   = "HTTP"
+#   threshold_count         = 3
+#   traffic_dial_percentage = 100
+# }
+#
+# # Global Accelerator Listeners
+# resource "aws_globalaccelerator_listener" "livekit" {
+#   count = length(local.protocols)
+#   accelerator_arn = aws_globalaccelerator_accelerator.livekit.id
+#   client_affinity = "SOURCE_IP"
+#   protocol = upper(local.protocols[count.index])
+#
+#   port_range {
+#     from_port = 80
+#     to_port   = 80
+#   }
+#
+#   port_range {
+#     from_port = 443
+#     to_port   = 443
+#   }
+#
+#   port_range {
+#     from_port = 7880
+#     to_port   = 7880
+#   }
+#
+#   port_range {
+#     from_port = 7881
+#     to_port   = 7881
+#   }
+#
+#   port_range {
+#     from_port = 3478
+#     to_port   = 3478
+#   }
+#
+#   port_range {
+#     from_port = 50000
+#     to_port   = 60000
+#   }
+#
+#   port_range {
+#     from_port = 1935
+#     to_port   = 1935
+#   }
+#
+#   port_range {
+#     from_port = 7885
+#     to_port   = 7885
+#   }
+# }
 
 # Global Accelerator DNS entries
-resource "cloudflare_record" "livekit_global" {
-  zone_id = var.cloudflare_zone_id
-  name    = "livekit.${var.environment}"
-  content = aws_globalaccelerator_accelerator.livekit.dns_name
-  type    = "CNAME"
-  proxied = false
-}
-
-resource "cloudflare_record" "livekit_turn_global" {
-  zone_id = var.cloudflare_zone_id
-  name    = "livekit-turn.${var.environment}"
-  content = aws_globalaccelerator_accelerator.livekit.dns_name
-  type    = "CNAME"
-  proxied = false
-}
-
-resource "cloudflare_record" "livekit_whip_global" {
-  zone_id = var.cloudflare_zone_id
-  name    = "livekit-whip.${var.environment}"
-  content = aws_globalaccelerator_accelerator.livekit.dns_name
-  type    = "CNAME"
-  proxied = false
-}
+# resource "cloudflare_record" "livekit_global" {
+#   zone_id = var.cloudflare_zone_id
+#   name    = "livekit.${var.environment}"
+#   content = aws_globalaccelerator_accelerator.livekit.dns_name
+#   type    = "CNAME"
+#   proxied = false
+# }
+#
+# resource "cloudflare_record" "livekit_turn_global" {
+#   zone_id = var.cloudflare_zone_id
+#   name    = "livekit-turn.${var.environment}"
+#   content = aws_globalaccelerator_accelerator.livekit.dns_name
+#   type    = "CNAME"
+#   proxied = false
+# }
+#
+# resource "cloudflare_record" "livekit_whip_global" {
+#   zone_id = var.cloudflare_zone_id
+#   name    = "livekit-whip.${var.environment}"
+#   content = aws_globalaccelerator_accelerator.livekit.dns_name
+#   type    = "CNAME"
+#   proxied = false
+# }
 
 
 
