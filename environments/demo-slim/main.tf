@@ -697,7 +697,10 @@ resource "aws_iam_policy" "ecs_task_policy" {
           "ssm:SendCommand",
           "ssm:ListCommands",
           "ssm:ListCommandInvocations",
-          "ssm:DescribeInstanceInformation"
+          "ssm:DescribeInstanceInformation",
+          # ElastiCache (for describing Redis cluster)
+          "elasticache:DescribeCacheClusters",
+          "elasticache:ListTagsForResource",
         ]
         Resource = "*"
       }

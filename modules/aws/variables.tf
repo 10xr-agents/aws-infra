@@ -1,39 +1,51 @@
+
 variable "aws_region" {
-  description = "The AWS region to deploy resources"
+  description = "AWS region where resources will be created"
   type        = string
+  default     = "us-east-1"
 }
 
 variable "project_name" {
-  description = "The name of the project"
+  description = "Project name"
   type        = string
 }
 
 variable "environment" {
-  description = "Environment of our services"
-  type        = string
-}
-
-variable "default_organization" {
-  description = "default organization name"
-  type        = string
-  default = "demo"
-}
-
-
-variable "domain_name" {
-  description = "Domain on which our services will be hosted"
+  description = "Environment name"
   type        = string
 }
 
 variable "vpc_cidr" {
-  description = "The CIDR block for the VPC"
+  description = "CIDR block for VPC"
   type        = string
 }
 
-variable "public_subnet_cidrs" {
-  description = "The CIDR blocks for the public subnets"
-  type        = list(string)
+# VPC Tags
+variable "tags" {
+  description = "Additional tags for VPC resource"
+  type        = map(string)
+  default     = {}
 }
+
+# Subnet Tags
+variable "public_subnet_tags" {
+  description = "Additional tags for public subnet resources"
+  type        = map(string)
+  default     = {}
+}
+
+variable "private_subnet_tags" {
+  description = "Additional tags for private subnet resources"
+  type        = map(string)
+  default     = {}
+}
+
+variable "alarm_actions" {
+  description = "List of ARNs to notify when NAT Gateway alarm triggers"
+  type        = list(string)
+  default     = []
+}
+
 
 variable "services" {
   description = "List of services to deploy"
@@ -130,81 +142,4 @@ variable "asg_desired_capacity" {
   description = "Desired capacity for the Auto Scaling Group"
   type        = number
   default     = 1
-}
-
-variable "mongodb_atlas_public_key" {
-  description = "MongoDB Atlas public key"
-  type        = string
-}
-
-variable "mongodb_atlas_private_key" {
-  description = "MongoDB Atlas private key"
-  type        = string
-}
-
-variable "mongodb_atlas_project_name" {
-  description = "MongoDB Atlas project name"
-  type        = string
-}
-
-variable "mongodb_atlas_org_id" {
-  description = "MongoDB Atlas organization ID"
-  type        = string
-}
-
-variable "mongodb_atlas_project_id" {
-  description = "MongoDB Atlas Project ID"
-  type        = string
-}
-
-variable "mongodb_atlas_region" {
-  description = "MongoDB Atlas region"
-  type        = string
-}
-
-variable "mongodb_atlas_cidr_block" {
-  description = "CIDR block for MongoDB Atlas cluster"
-  type        = string
-  default     = "192.168.248.0/21"
-}
-
-variable "mongodb_database_name" {
-  description = "Database used from MongoDB Atlas cluster"
-  type        = string
-  default     = "converse-server"
-}
-
-variable "livekit_api_key" {
-  description = "LiveKit API key"
-  type        = string
-}
-
-variable "livekit_api_secret" {
-  description = "LiveKit API secret"
-  type        = string
-}
-
-variable "cloudflare_api_token" {
-  description = "Cloudflare API Token"
-  type        = string
-}
-
-variable "cloudflare_api_key" {
-  description = "Cloudflare API Key"
-  type        = string
-}
-
-variable "cloudflare_zone_id" {
-  description = "Cloudflare zone id"
-  type        = string
-}
-
-variable "cloudflare_account_id" {
-  description = "Cloudflare account id"
-  type        = string
-}
-
-variable "email_address" {
-  description = "Email address for Let's Encrypt registration"
-  type        = string
 }

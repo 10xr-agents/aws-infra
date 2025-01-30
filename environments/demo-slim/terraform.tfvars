@@ -35,9 +35,9 @@ services = [
   {
     name              = "cnvrs-ui"
     ecr_repo          = "761018882607.dkr.ecr.us-east-1.amazonaws.com/10xr/converse-ui:latest"
-    cpu               = 1024
-    memory            = 2048
-    desired_count     = 2
+    cpu               = 2048
+    memory            = 4096
+    desired_count     = 1
     instance_type     = "medium"
     port              = 3000
     health_check_path = "/api/management/health"
