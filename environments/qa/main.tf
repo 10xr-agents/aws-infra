@@ -1683,22 +1683,22 @@ resource "aws_instance" "livekit" {
 
 # CloudWatch Log Groups
 resource "aws_cloudwatch_log_group" "livekit" {
-  name              = "/ec2/livekit"
+  name              = "/ec2/${var.environment}/livekit"
   retention_in_days = 30
 }
 
 resource "aws_cloudwatch_log_group" "caddy" {
-  name              = "/ec2/caddy"
+  name              = "/ec2/${var.environment}/caddy"
   retention_in_days = 30
 }
 
 resource "aws_cloudwatch_log_group" "livekit_egress" {
-  name              = "/ec2/livekit-egress"
+  name              = "/ec2/${var.environment}/livekit-egress"
   retention_in_days = 30
 }
 
 resource "aws_cloudwatch_log_group" "livekit_ingress" {
-  name              = "/ec2/livekit-ingress"
+  name              = "/ec2/${var.environment}/livekit-ingress"
   retention_in_days = 30
 }
 
@@ -1922,7 +1922,7 @@ resource "aws_security_group" "livekit" {
 
 # Key Pair for SSH access
 resource "aws_key_pair" "livekit" {
-  key_name = "livekit-key"
+  key_name = "livekit-${var.environment}-key"
   public_key = file("${path.module}/livekit_key.pub")  # Make sure to create this key
 }
 
