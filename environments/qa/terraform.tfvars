@@ -1,8 +1,8 @@
 aws_region           = "us-east-1"
 environment          = "qa"
-project_name         = "ten_xr_ai"
+project_name         = "ten-xr-ai"
 email_address        = "jaswanth@10xr.co"
-default_organization = "ten_xr"
+default_organization = "ten-xr"
 domain_name          = "qa.app.10xr.co"
 vpc_cidr             = "10.0.0.0/16"
 public_subnet_cidrs = ["10.0.1.0/24", "10.0.2.0/24"]
