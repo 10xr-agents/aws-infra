@@ -541,6 +541,18 @@ resource "aws_ecs_task_definition" "service" {
         {
           name  = "MONGO_DB_URI"
           value = "${mongodbatlas_cluster.cluster.connection_strings[0].standard_srv}/${var.mongodb_database_name}?authMechanism=MONGODB-AWS&authSource=$external"
+        },
+        {
+          name  = "REDIS_URL"
+          value = "${aws_elasticache_cluster.livekit.cache_nodes[0].address}:${aws_elasticache_cluster.livekit.cache_nodes[0].port}"
+        },
+        {
+          name  = "REDIS_USERNAME"
+          value = "default"
+        },
+        {
+          name  = "REDIS_PASSWORD"
+          value = random_password.redis_auth_token.result
         }
       ], [
         for key, value in var.services[count.index].environment_variables :
@@ -697,7 +709,10 @@ resource "aws_iam_policy" "ecs_task_policy" {
           "ssm:SendCommand",
           "ssm:ListCommands",
           "ssm:ListCommandInvocations",
-          "ssm:DescribeInstanceInformation"
+          "ssm:DescribeInstanceInformation",
+          # ElastiCache (for describing Redis cluster)
+          "elasticache:DescribeCacheClusters",
+          "elasticache:ListTagsForResource",
         ]
         Resource = "*"
       }

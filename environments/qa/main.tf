@@ -448,31 +448,31 @@ resource "aws_security_group" "efs" {
   vpc_id      = aws_vpc.main.id
 
   ingress {
-    from_port       = 2049
-    to_port         = 2049
-    protocol        = "tcp"
+    from_port = 2049
+    to_port   = 2049
+    protocol  = "tcp"
     security_groups = [aws_security_group.ecs_sg.id]
   }
 
   egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
+    from_port = 0
+    to_port   = 0
+    protocol  = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
 }
 
 # Create mount targets in each subnet
 resource "aws_efs_mount_target" "ecs_storage" {
-  count           = length(aws_subnet.public)
-  file_system_id  = aws_efs_file_system.ecs_storage.id
-  subnet_id       = aws_subnet.public[count.index].id
+  count = length(aws_subnet.public)
+  file_system_id = aws_efs_file_system.ecs_storage.id
+  subnet_id      = aws_subnet.public[count.index].id
   security_groups = [aws_security_group.efs.id]
 }
 
 # Create access point for each service that needs storage
 resource "aws_efs_access_point" "service" {
-  count          = length(var.services)
+  count = length(var.services)
   file_system_id = aws_efs_file_system.ecs_storage.id
 
   posix_user {
@@ -510,9 +510,9 @@ resource "aws_ecs_task_definition" "service" {
       transit_encryption_port = 2049
       authorization_config {
         access_point_id = aws_efs_access_point.service[count.index].id
-        iam            = "ENABLED"
+        iam             = "ENABLED"
       }
-      root_directory    = "/"  # Allow access to root directory
+      root_directory = "/"  # Allow access to root directory
     }
   }
 
@@ -528,7 +528,7 @@ resource "aws_ecs_task_definition" "service" {
       ]
       mountPoints = [
         {
-          sourceVolume  = "${var.services[count.index].name}-storage"
+          sourceVolume = "${var.services[count.index].name}-storage"
           containerPath = "/tmp"  # Mount EFS volume to /tmp
           readOnly     = false
         }
@@ -541,6 +541,18 @@ resource "aws_ecs_task_definition" "service" {
         {
           name  = "MONGO_DB_URI"
           value = "${mongodbatlas_cluster.cluster.connection_strings[0].standard_srv}/${var.mongodb_database_name}?authMechanism=MONGODB-AWS&authSource=$external"
+        },
+        {
+          name  = "REDIS_URL"
+          value = "${aws_elasticache_cluster.livekit.cache_nodes[0].address}:${aws_elasticache_cluster.livekit.cache_nodes[0].port}"
+        },
+        {
+          name  = "REDIS_USERNAME"
+          value = "default"
+        },
+        {
+          name  = "REDIS_PASSWORD"
+          value = random_password.redis_auth_token.result
         }
       ], [
         for key, value in var.services[count.index].environment_variables :
@@ -673,7 +685,7 @@ resource "aws_iam_role_policy_attachment" "ecs_task_role_policy" {
 
 # Add to your task role policies
 resource "aws_iam_role_policy_attachment" "ecs_task_efs_policy" {
-  count      = length(var.services)
+  count = length(var.services)
   role       = aws_iam_role.ecs_task_role[count.index].name
   policy_arn = "arn:aws:iam::aws:policy/AmazonElasticFileSystemClientFullAccess"
 }
@@ -697,7 +709,10 @@ resource "aws_iam_policy" "ecs_task_policy" {
           "ssm:SendCommand",
           "ssm:ListCommands",
           "ssm:ListCommandInvocations",
-          "ssm:DescribeInstanceInformation"
+          "ssm:DescribeInstanceInformation",
+          # ElastiCache (for describing Redis cluster)
+          "elasticache:DescribeCacheClusters",
+          "elasticache:ListTagsForResource",
         ]
         Resource = "*"
       }
@@ -1541,7 +1556,7 @@ resource "acme_registration" "reg" {
 # Create Certificate Signing Request (CSR)
 resource "acme_certificate" "livekit" {
   account_key_pem = acme_registration.reg.account_key_pem
-  common_name     =     "livekit.${var.domain_name}"
+  common_name     = "livekit.${var.domain_name}"
   subject_alternative_names = [
     "livekit-turn.${var.domain_name}",
     "livekit-whip.${var.domain_name}",
@@ -1549,11 +1564,11 @@ resource "acme_certificate" "livekit" {
 
   dns_challenge {
     provider = "cloudflare"
-    config   = {
-      CF_API_EMAIL      = var.email_address
+    config = {
+      CF_API_EMAIL     = var.email_address
       CF_ZONE_API_TOKEN = var.cloudflare_zone_id  # Use the correct token variable
-      CF_API_KEY        = var.cloudflare_api_key       # Use this for API key, not account ID
-      CF_DNS_API_TOKEN  = var.cloudflare_api_token       # This looks correct
+      CF_API_KEY = var.cloudflare_api_key       # Use this for API key, not account ID
+      CF_DNS_API_TOKEN = var.cloudflare_api_token       # This looks correct
     }
   }
 
@@ -1610,24 +1625,24 @@ resource "local_file" "certificate_chain" {
 
 # Upload certificate files to S3
 resource "aws_s3_object" "cert_body" {
-  bucket  = aws_s3_bucket.cert_bucket.id
-  key     = "cert.pem"
-  source  = local_file.certificate_body.filename
-  acl     = "private"
+  bucket = aws_s3_bucket.cert_bucket.id
+  key    = "cert.pem"
+  source = local_file.certificate_body.filename
+  acl    = "private"
 }
 
 resource "aws_s3_object" "private_key" {
-  bucket  = aws_s3_bucket.cert_bucket.id
-  key     = "key.pem"
-  source  = local_file.private_key.filename
-  acl     = "private"
+  bucket = aws_s3_bucket.cert_bucket.id
+  key    = "key.pem"
+  source = local_file.private_key.filename
+  acl    = "private"
 }
 
 resource "aws_s3_object" "certificate_chain" {
-  bucket  = aws_s3_bucket.cert_bucket.id
-  key     = "chain.pem"
-  source  = local_file.certificate_chain.filename
-  acl     = "private"
+  bucket = aws_s3_bucket.cert_bucket.id
+  key    = "chain.pem"
+  source = local_file.certificate_chain.filename
+  acl    = "private"
 }
 
 # LiveKit EC2 Instances

@@ -1,9 +1,9 @@
 aws_region           = "us-east-1"
-environment          = "dev"
+environment          = "qa"
 project_name         = "ten_xr_ai"
 email_address        = "jaswanth@10xr.co"
 default_organization = "ten_xr"
-domain_name          = "dev.app.10xr.co"
+domain_name          = "qa.app.10xr.co"
 vpc_cidr             = "10.0.0.0/16"
 public_subnet_cidrs = ["10.0.1.0/24", "10.0.2.0/24"]
 
@@ -18,9 +18,9 @@ services = [
     port              = 8080
     health_check_path = "/actuator/health"
     environment_variables = {
-      "ENV"                    = "demo"
-      "ECS_ENVIRONMENT"        = "demo"
-      "SPRING_PROFILES_ACTIVE" = "demo"
+      "ENV"                    = "QA"
+      "ECS_ENVIRONMENT"        = "QA"
+      "SPRING_PROFILES_ACTIVE" = "QA"
     }
     secrets = {}
     additional_policies = ["arn:aws:iam::aws:policy/AmazonS3FullAccess"]
@@ -42,9 +42,10 @@ services = [
     port              = 3000
     health_check_path = "/api/management/health"
     environment_variables = {
-      "ENV"                    = "demo"
-      "ECS_ENVIRONMENT"        = "demo"
-      "SPRING_PROFILES_ACTIVE" = "demo"
+      "ENV"                    = "QA"
+      "ECS_ENVIRONMENT"        = "QA"
+      "SPRING_PROFILES_ACTIVE" = "QA"
+      "NODE_ENV"               = "qa"
     }
     secrets = {}
     additional_policies = ["arn:aws:iam::aws:policy/AmazonS3FullAccess"]
@@ -66,9 +67,9 @@ services = [
     port              = 9000
     health_check_path = "/api/v1/management/health"
     environment_variables = {
-      "ENV"                    = "demo"
-      "ECS_ENVIRONMENT"        = "demo"
-      "SPRING_PROFILES_ACTIVE" = "demo"
+      "ENV"                    = "QA"
+      "ECS_ENVIRONMENT"        = "QA"
+      "SPRING_PROFILES_ACTIVE" = "QA"
     }
     secrets = {}
     additional_policies = ["arn:aws:iam::aws:policy/AmazonS3FullAccess"]
@@ -90,8 +91,9 @@ services = [
     port              = 9600
     health_check_path = "/health"
     environment_variables = {
-      "ENV"             = "demo"
-      "ECS_ENVIRONMENT" = "demo"
+      "ENV"                    = "QA"
+      "ECS_ENVIRONMENT"        = "QA"
+      "SPRING_PROFILES_ACTIVE" = "QA"
     }
     secrets = {}
     additional_policies = ["arn:aws:iam::aws:policy/AmazonS3FullAccess"]
@@ -113,8 +115,9 @@ services = [
     port              = 9800
     health_check_path = "/management/health"
     environment_variables = {
-      "ENV"             = "demo"
-      "ECS_ENVIRONMENT" = "demo"
+      "ENV"                    = "QA"
+      "ECS_ENVIRONMENT"        = "QA"
+      "SPRING_PROFILES_ACTIVE" = "QA"
     }
     secrets = {}
     additional_policies = ["arn:aws:iam::aws:policy/AmazonS3FullAccess"]
@@ -136,7 +139,7 @@ instance_types = {
 }
 
 asg_min_size         = 1
-asg_max_size         = 5
+asg_max_size         = 10
 asg_desired_capacity = 1
 
 ecs_cluster_settings = {
