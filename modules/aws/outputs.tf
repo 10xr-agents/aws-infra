@@ -77,3 +77,19 @@ output "azs" {
   description = "Number of AZs being used in the VPC"
   value       = module.vpc.azs
 }
+
+# Output the EFS file system ID and access points
+# output "efs_file_system_id" {
+#   description = "EFS File System ID"
+#   value       = module.efs.id
+# }
+#
+# output "efs_file_system_dns_name" {
+#   description = "EFS File System DNS name"
+#   value       = module.efs.dns_name
+# }
+#
+# output "efs_access_points" {
+#   description = "EFS Access Points"
+#   value       = aws_efs_access_point.service[*].id
+# }

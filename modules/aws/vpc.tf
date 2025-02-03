@@ -15,9 +15,14 @@ module "vpc" {
 
   # Enable NAT Gateway for private subnets
   enable_nat_gateway   = true
+  one_nat_gateway_per_az = true
 
   # Enable IPv6
   enable_ipv6 = true
+
+  # Add VPC flow log improvements
+  flow_log_cloudwatch_log_group_retention_in_days = 30
+  flow_log_traffic_type = "ALL"  # Capture all traffic instead of just rejected traffic
 
   # Create IPv6 CIDR blocks for public and private subnets
   public_subnet_ipv6_prefixes = range(0, length(local.azs))
@@ -127,11 +132,19 @@ module "vpc_endpoints" {
       "autoscaling",
       "ec2",
       "ec2messages",
+      "elasticache",
       "elasticloadbalancing",
+      "events",
+      "execute-api",
       "kms",
       "logs",
+      "monitoring",
+      "rds",
+      "sqs",
+      "sns",
       "ssm",
-      "ssmmessages"
+      "ssmmessages",
+      "secretsmanager",
     ]) :
     replace(service, ".", "_") => {
       service             = service
