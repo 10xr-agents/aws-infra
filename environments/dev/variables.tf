@@ -42,16 +42,6 @@ variable "vpc_cidr" {
   }
 }
 
-# variable "identity_store_id" {
-#   description = "ID of the AWS IAM Identity Store"
-#   type        = string
-# }
-#
-# variable "sso_instance_arn" {
-#   description = "ARN of the AWS IAM Identity Center instance"
-#   type        = string
-# }
-
 variable "enable_vpc_endpoints" {
   description = "Enable VPC endpoints for AWS services"
   type        = bool
@@ -78,6 +68,12 @@ variable "private_subnet_tags" {
   description = "Additional tags for private subnet resources"
   type        = map(string)
   default     = {}
+}
+
+variable "alarm_actions" {
+  description = "List of ARNs to notify when NAT Gateway alarm triggers"
+  type        = list(string)
+  default     = []
 }
 
 # variable "services" {

@@ -40,11 +40,11 @@ variable "private_subnet_tags" {
   default     = {}
 }
 
-# variable "alarm_actions" {
-#   description = "List of ARNs to notify when NAT Gateway alarm triggers"
-#   type        = list(string)
-#   default     = []
-# }
+variable "alarm_actions" {
+  description = "List of ARNs to notify when NAT Gateway alarm triggers"
+  type        = list(string)
+  default     = []
+}
 #
 # variable "services" {
 #   description = "List of services to deploy"

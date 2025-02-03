@@ -21,6 +21,8 @@ module "aws" {
   environment  = var.environment
   vpc_cidr     = var.vpc_cidr
 
+  alarm_actions = var.alarm_actions
+
   # Tags configuration
   tags = merge(local.tags, var.tags, var.vpc_tags)
   public_subnet_tags = merge(
