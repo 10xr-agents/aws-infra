@@ -23,7 +23,9 @@ module "alb" {
       backend_protocol     = "HTTP"
       backend_port         = service.port
       target_type         = "ip"
+
       deregistration_delay = 10
+
       health_check = {
         enabled             = true
         interval            = 30
@@ -35,6 +37,17 @@ module "alb" {
         protocol           = "HTTP"
         matcher            = "200-299"
       }
+
+      load_balancing_cross_zone_enabled  = true
+      protocol_version                   = "HTTP1"
+
+      stickiness = {
+        enabled = false
+        type    = "lb_cookie"
+      }
+
+      # Remove targets configuration as they will be managed by ECS
+      create_attachment = false
     }
   }
 
