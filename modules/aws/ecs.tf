@@ -169,7 +169,7 @@ locals {
 # Main ECS Module
 module "ecs" {
   source  = "terraform-aws-modules/ecs/aws"
-  version = "~> 5.0"
+  version = "~> 5.12.0"
 
   cluster_name = local.name
 
@@ -456,11 +456,6 @@ resource "aws_cloudwatch_dashboard" "ecs" {
 # Add Container Insights
 resource "aws_ecs_cluster_capacity_providers" "insights" {
   cluster_name = module.ecs.cluster_id
-
-  cluster_settings {
-    name  = "containerInsights"
-    value = "enabled"
-  }
 }
 
 # Add Capacity Provider Alarms
