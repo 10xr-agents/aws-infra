@@ -20,7 +20,7 @@ services = [
     environment_variables = {
       "ENV"                    = "PROD"
       "ECS_ENVIRONMENT"        = "PROD"
-      "SPRING_PROFILES_ACTIVE" = "PROD"
+      "SPRING_PROFILES_ACTIVE" = "production"
     }
     secrets = {}
     additional_policies = ["arn:aws:iam::aws:policy/AmazonS3FullAccess"]
@@ -43,7 +43,7 @@ services = [
     health_check_path = "/api/management/health"
     environment_variables = {
       "ENV"                    = "PROD"
-      "ECS_ENVIRONMENT"        = "PROD"
+      "ECS_ENVIRONMENT"        = "production"
       "SPRING_PROFILES_ACTIVE" = "PROD"
       "NODE_ENV"               = "production"
     }
