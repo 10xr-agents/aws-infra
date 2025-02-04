@@ -92,7 +92,7 @@ services = [
     health_check_path = "/health"
     environment_variables = {
       "ENV"                    = "QA"
-      "ECS_ENVIRONMENT"        = "QA"
+      "ECS_ENVIRONMENT"        = "qa"
       "SPRING_PROFILES_ACTIVE" = "QA"
     }
     secrets = {}
@@ -116,7 +116,7 @@ services = [
     health_check_path = "/management/health"
     environment_variables = {
       "ENV"                    = "QA"
-      "ECS_ENVIRONMENT"        = "QA"
+      "ECS_ENVIRONMENT"        = "qa"
       "SPRING_PROFILES_ACTIVE" = "QA"
     }
     secrets = {}
