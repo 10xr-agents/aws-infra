@@ -109,13 +109,13 @@ locals {
 
       load_balancer = {
         service = {
-          target_group_arn = module.alb.target_groups[index(var.services[*].name, service.name)].arn
+          target_group_arn = module.alb.target_groups[index(service.name)].arn
           container_name   = service.name
           container_port   = service.port
         }
       }
 
-      subnet_ids = module.vpc.public_subnets
+      subnet_ids = module.vpc.private_subnets
       security_group_rules = {
         alb_ingress = {
           type                     = "ingress"
@@ -123,7 +123,7 @@ locals {
           to_port                  = service.port
           protocol                 = "tcp"
           description              = "Service port"
-          source_security_group_id = aws_security_group.ecs_sg.id
+          source_security_group_id = module.alb.security_group_id
         }
         egress_all = {
           type      = "egress"
@@ -306,7 +306,7 @@ module "autoscaling" {
     AmazonSSMManagedInstanceCore        = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
   }
 
-  vpc_zone_identifier = module.vpc.public_subnets
+  vpc_zone_identifier = module.vpc.private_subnets
   health_check_type   = "EC2"
   min_size            = var.asg_min_size
   max_size            = var.asg_max_size

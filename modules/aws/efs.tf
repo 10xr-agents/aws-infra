@@ -60,12 +60,14 @@ module "efs" {
 
 # Create EFS Access Points for each service
 resource "aws_efs_access_point" "service" {
-  count = length(var.services)
+  for_each = {
+    for service in var.services : service.name => service
+  }
 
   file_system_id = module.efs.id
 
   root_directory {
-    path = "/${var.services[count.index].name}"
+    path = "/${each.key}"
     creation_info {
       owner_gid   = 1000
       owner_uid   = 1000
@@ -79,7 +81,7 @@ resource "aws_efs_access_point" "service" {
   }
 
   tags = merge(local.tags, {
-    Name = "${local.name}-${var.services[count.index].name}"
+    Name = "${local.name}-${each.key}"
   })
 }
 

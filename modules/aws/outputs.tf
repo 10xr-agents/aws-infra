@@ -89,6 +89,11 @@ output "ecs_cluster_name" {
   value       = module.ecs.cluster_name
 }
 
+output "ecs_services" {
+  description = "Map of ECS services created"
+  value = module.ecs.services
+}
+
 # ALB Outputs
 output "alb_dns_name" {
   description = "The DNS name of the load balancer"
