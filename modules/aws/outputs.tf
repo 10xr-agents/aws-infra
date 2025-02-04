@@ -79,44 +79,44 @@ output "azs" {
 }
 
 # ECS Outputs
-output "ecs_cluster_id" {
-  description = "ID of the ECS cluster"
-  value       = module.ecs.cluster_id
-}
-
-output "ecs_cluster_name" {
-  description = "Name of the ECS cluster"
-  value       = module.ecs.cluster_name
-}
-
-output "ecs_services" {
-  description = "Map of ECS services created"
-  value = module.ecs.services
-}
-
-# ALB Outputs
-output "alb_dns_name" {
-  description = "The DNS name of the load balancer"
-  value       = module.alb.dns_name
-}
-
-output "alb_zone_id" {
-  description = "The canonical hosted zone ID of the load balancer"
-  value       = module.alb.zone_id
-}
-
-# Output the EFS file system ID and access points
-output "efs_file_system_id" {
-  description = "EFS File System ID"
-  value       = module.efs.id
-}
-
-output "efs_file_system_dns_name" {
-  description = "EFS File System DNS name"
-  value       = module.efs.dns_name
-}
-
-output "efs_access_points" {
-  description = "EFS Access Points"
-  value       = aws_efs_access_point.service[*].id
-}
+# output "ecs_cluster_id" {
+#   description = "ID of the ECS cluster"
+#   value       = module.ecs.cluster_id
+# }
+#
+# output "ecs_cluster_name" {
+#   description = "Name of the ECS cluster"
+#   value       = module.ecs.cluster_name
+# }
+#
+# output "ecs_services" {
+#   description = "Map of ECS services created"
+#   value = module.ecs.services
+# }
+#
+# # ALB Outputs
+# output "alb_dns_name" {
+#   description = "The DNS name of the load balancer"
+#   value       = module.alb.dns_name
+# }
+#
+# output "alb_zone_id" {
+#   description = "The canonical hosted zone ID of the load balancer"
+#   value       = module.alb.zone_id
+# }
+#
+# # Output the EFS file system ID and access points
+# output "efs_file_system_id" {
+#   description = "EFS File System ID"
+#   value       = module.efs.id
+# }
+#
+# output "efs_file_system_dns_name" {
+#   description = "EFS File System DNS name"
+#   value       = module.efs.dns_name
+# }
+#
+# output "efs_access_points" {
+#   description = "EFS Access Points"
+#   value       = aws_efs_access_point.service[*].id
+# }
