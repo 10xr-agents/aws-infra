@@ -21,6 +21,24 @@ module "aws" {
   environment  = var.environment
   vpc_cidr     = var.vpc_cidr
 
+  # ECS configurations
+  services                    = var.services
+  capacity_provider_strategy  = var.capacity_provider_strategy
+  instance_types             = var.instance_types
+  ecs_cluster_settings       = var.ecs_cluster_settings
+  enable_service_discovery   = var.enable_service_discovery
+  service_discovery_namespace = var.service_discovery_namespace
+  enable_ecs_exec            = var.enable_ecs_exec
+
+  # Auto Scaling configurations
+  asg_min_size         = var.asg_min_size
+  asg_max_size         = var.asg_max_size
+  asg_desired_capacity = var.asg_desired_capacity
+
+  # EFS configurations
+  efs_throughput_mode   = var.efs_throughput_mode
+  efs_performance_mode  = var.efs_performance_mode
+
   alarm_actions = var.alarm_actions
 
   # Tags configuration

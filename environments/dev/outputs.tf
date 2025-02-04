@@ -39,3 +39,36 @@ output "vpc_ip_v6_cidr" {
   description = "IPv6 CIDR block of the VPC"
   value       = module.aws.vpc_ip_v6_cidrs
 }
+
+# ECS Outputs
+output "ecs_cluster_id" {
+  description = "ID of the ECS cluster"
+  value       = module.aws.ecs_cluster_id
+}
+
+output "ecs_cluster_name" {
+  description = "Name of the ECS cluster"
+  value       = module.aws.ecs_cluster_name
+}
+
+# ALB Outputs
+output "alb_dns_name" {
+  description = "The DNS name of the load balancer"
+  value       = module.aws.alb_dns_name
+}
+
+output "alb_zone_id" {
+  description = "The canonical hosted zone ID of the load balancer"
+  value       = module.aws.alb_zone_id
+}
+
+# EFS Outputs
+output "efs_file_system_id" {
+  description = "ID of the EFS file system"
+  value       = module.aws.efs_file_system_id
+}
+
+output "efs_file_system_dns_name" {
+  description = "DNS name of the EFS file system"
+  value       = module.aws.efs_file_system_dns_name
+}
