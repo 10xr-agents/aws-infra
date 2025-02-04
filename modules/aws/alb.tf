@@ -1,7 +1,7 @@
 # Application Load Balancer
 module "alb" {
   source  = "terraform-aws-modules/alb/aws"
-  version = "~> 9.0"
+  version = "~> 9.13.0"
 
   name = "${local.name}-alb"
 
@@ -38,7 +38,7 @@ module "alb" {
     }
   }
 
-  http_tcp_listeners = [
+  listeners = [
     {
       port               = 80
       protocol           = "HTTP"
