@@ -3,7 +3,7 @@ environment          = "qa"
 project_name         = "ten-xr-ai"
 email_address        = "jaswanth@10xr.co"
 default_organization = "ten-xr"
-domain_name          = "qa.app.10xr.co"
+domain_name          = "qa.10xr.co"
 vpc_cidr             = "10.2.0.0/16"
 public_subnet_cidrs = ["10.2.1.0/24", "10.2.2.0/24"]
 
