@@ -1941,7 +1941,7 @@ resource "aws_globalaccelerator_accelerator" "livekit" {
 
 # S3 bucket for Global Accelerator logs
 resource "aws_s3_bucket" "accelerator_logs" {
-  bucket = "livekit-accelerator-logs-${data.aws_caller_identity.current.account_id}"
+  bucket = "${var.project_name}-livekit-accelerator-logs-${data.aws_caller_identity.current.account_id}"
 }
 
 # Global Accelerator Listener
