@@ -43,9 +43,9 @@ services = [
     health_check_path = "/api/management/health"
     environment_variables = {
       "ENV"                    = "QA"
-      "ECS_ENVIRONMENT"        = "QA"
+      "ECS_ENVIRONMENT"        = "test"
       "SPRING_PROFILES_ACTIVE" = "QA"
-      "NODE_ENV"               = "qa"
+      "NODE_ENV"               = "test"
     }
     secrets = {}
     additional_policies = ["arn:aws:iam::aws:policy/AmazonS3FullAccess"]
