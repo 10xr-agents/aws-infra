@@ -20,7 +20,7 @@ services = [
     environment_variables = {
       "ENV"                    = "QA"
       "ECS_ENVIRONMENT"        = "QA"
-      "SPRING_PROFILES_ACTIVE" = "QA"
+      "SPRING_PROFILES_ACTIVE" = "qa"
     }
     secrets = {}
     additional_policies = ["arn:aws:iam::aws:policy/AmazonS3FullAccess"]
@@ -34,7 +34,7 @@ services = [
   },
   {
     name              = "cnvrs-ui"
-    ecr_repo          = "761018882607.dkr.ecr.us-east-1.amazonaws.com/10xr/converse-ui:latest"
+    ecr_repo          = "761018882607.dkr.ecr.us-east-1.amazonaws.com/10xr/converse-ui:qa-latest"
     cpu               = 1024
     memory            = 2048
     desired_count     = 2
@@ -43,8 +43,8 @@ services = [
     health_check_path = "/api/management/health"
     environment_variables = {
       "ENV"                    = "QA"
-      "ECS_ENVIRONMENT"        = "test"
-      "SPRING_PROFILES_ACTIVE" = "QA"
+      "ECS_ENVIRONMENT"        = "qa"
+      "SPRING_PROFILES_ACTIVE" = "qa"
       "NODE_ENV"               = "test"
     }
     secrets = {}
@@ -69,7 +69,7 @@ services = [
     environment_variables = {
       "ENV"                    = "QA"
       "ECS_ENVIRONMENT"        = "QA"
-      "SPRING_PROFILES_ACTIVE" = "QA"
+      "SPRING_PROFILES_ACTIVE" = "qa"
     }
     secrets = {}
     additional_policies = ["arn:aws:iam::aws:policy/AmazonS3FullAccess"]
@@ -93,7 +93,7 @@ services = [
     environment_variables = {
       "ENV"                    = "QA"
       "ECS_ENVIRONMENT"        = "qa"
-      "SPRING_PROFILES_ACTIVE" = "QA"
+      "SPRING_PROFILES_ACTIVE" = "qa"
     }
     secrets = {}
     additional_policies = ["arn:aws:iam::aws:policy/AmazonS3FullAccess"]
@@ -117,7 +117,7 @@ services = [
     environment_variables = {
       "ENV"                    = "QA"
       "ECS_ENVIRONMENT"        = "qa"
-      "SPRING_PROFILES_ACTIVE" = "QA"
+      "SPRING_PROFILES_ACTIVE" = "qa"
     }
     secrets = {}
     additional_policies = ["arn:aws:iam::aws:policy/AmazonS3FullAccess"]

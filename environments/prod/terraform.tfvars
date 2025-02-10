@@ -1,11 +1,11 @@
 aws_region           = "us-east-1"
 environment          = "prod"
-project_name         = "ten_xr_ai"
+project_name         = "ten-xr-ai"
 email_address        = "jaswanth@10xr.co"
-default_organization = "ten_xr"
+default_organization = "ten-xr"
 domain_name          = "app.10xr.co"
-vpc_cidr             = "10.0.0.0/16"
-public_subnet_cidrs = ["10.0.1.0/24", "10.0.2.0/24"]
+vpc_cidr             = "10.3.0.0/16"
+public_subnet_cidrs = ["10.3.1.0/24", "10.3.2.0/24"]
 
 services = [
   {
@@ -18,8 +18,8 @@ services = [
     port              = 8080
     health_check_path = "/actuator/health"
     environment_variables = {
-      "ENV"                    = "PROD"
-      "ECS_ENVIRONMENT"        = "PROD"
+      "ENV"                    = "production"
+      "ECS_ENVIRONMENT"        = "production"
       "SPRING_PROFILES_ACTIVE" = "production"
     }
     secrets = {}
@@ -42,9 +42,9 @@ services = [
     port              = 3000
     health_check_path = "/api/management/health"
     environment_variables = {
-      "ENV"                    = "PROD"
+      "ENV"                    = "production"
       "ECS_ENVIRONMENT"        = "production"
-      "SPRING_PROFILES_ACTIVE" = "PROD"
+      "SPRING_PROFILES_ACTIVE" = "production"
       "NODE_ENV"               = "production"
     }
     secrets = {}
@@ -67,9 +67,9 @@ services = [
     port              = 9000
     health_check_path = "/api/v1/management/health"
     environment_variables = {
-      "ENV"                    = "PROD"
-      "ECS_ENVIRONMENT"        = "PROD"
-      "SPRING_PROFILES_ACTIVE" = "PROD"
+      "ENV"                    = "production"
+      "ECS_ENVIRONMENT"        = "production"
+      "SPRING_PROFILES_ACTIVE" = "production"
     }
     secrets = {}
     additional_policies = ["arn:aws:iam::aws:policy/AmazonS3FullAccess"]
@@ -91,8 +91,9 @@ services = [
     port              = 9600
     health_check_path = "/health"
     environment_variables = {
-      "ENV"             = "PROD"
-      "ECS_ENVIRONMENT" = "PROD"
+      "ENV"                    = "production"
+      "ECS_ENVIRONMENT"        = "production"
+      "SPRING_PROFILES_ACTIVE" = "production"
     }
     secrets = {}
     additional_policies = ["arn:aws:iam::aws:policy/AmazonS3FullAccess"]
@@ -107,15 +108,16 @@ services = [
   {
     name              = "agt-anlytc"
     ecr_repo          = "761018882607.dkr.ecr.us-east-1.amazonaws.com/10xr/agent-analytics:latest"
-    cpu               = 4096
-    memory            = 8192
-    desired_count     = 4
+    cpu               = 2048
+    memory            = 4096
+    desired_count     = 2
     instance_type     = "xlarge"
     port              = 9800
     health_check_path = "/management/health"
     environment_variables = {
-      "ENV"             = "PROD"
-      "ECS_ENVIRONMENT" = "PROD"
+      "ENV"                    = "production"
+      "ECS_ENVIRONMENT"        = "production"
+      "SPRING_PROFILES_ACTIVE" = "production"
     }
     secrets = {}
     additional_policies = ["arn:aws:iam::aws:policy/AmazonS3FullAccess"]

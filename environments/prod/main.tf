@@ -53,7 +53,7 @@ resource "aws_vpc" "main" {
   enable_dns_support   = true
 
   tags = {
-    Name = "${var.project_name}-vpc"
+    Name = "${var.project_name}-${var.environment}-vpc"
   }
 }
 
@@ -62,7 +62,7 @@ resource "aws_internet_gateway" "main" {
   vpc_id = aws_vpc.main.id
 
   tags = {
-    Name = "${var.project_name}-igw"
+    Name = "${var.project_name}-${var.environment}-igw"
   }
 }
 
@@ -75,7 +75,7 @@ resource "aws_subnet" "public" {
   availability_zone       = data.aws_availability_zones.available.names[count.index]
 
   tags = {
-    Name = "${var.project_name}-public-subnet-${count.index + 1}"
+    Name = "${var.project_name}-${var.environment}-public-subnet-${count.index + 1}"
   }
 }
 
@@ -94,7 +94,7 @@ resource "aws_route_table" "public" {
   }
 
   tags = {
-    Name = "${var.project_name}-public-rt"
+    Name = "${var.project_name}-${var.environment}-public-rt"
   }
 }
 
@@ -314,14 +314,14 @@ resource "aws_network_acl" "main" {
   }
 
   tags = {
-    Name = "${var.project_name}-nacl"
+    Name = "${var.project_name}-${var.environment}-nacl"
   }
 }
 
 # Security Group
 # ECS Security Group
 resource "aws_security_group" "ecs_sg" {
-  name        = "${var.project_name}-ecs-sg"
+  name        = "${var.project_name}-${var.environment}-ecs-sg"
   description = "Security group for ECS cluster and ALB"
   vpc_id      = aws_vpc.main.id
 
@@ -414,13 +414,13 @@ resource "aws_security_group" "ecs_sg" {
   }
 
   tags = {
-    Name = "${var.project_name}-ecs-sg"
+    Name = "${var.project_name}-${var.environment}-ecs-sg"
   }
 }
 
 # ECS Cluster
 resource "aws_ecs_cluster" "main" {
-  name = "${var.project_name}-ecs-cluster"
+  name = "${var.project_name}-${var.environment}-ecs-cluster"
 
   dynamic "setting" {
     for_each = var.ecs_cluster_settings
@@ -434,45 +434,45 @@ resource "aws_ecs_cluster" "main" {
 
 # First, create the EFS file system and required security group
 resource "aws_efs_file_system" "ecs_storage" {
-  creation_token = "${var.project_name}-efs"
+  creation_token = "${var.project_name}-${var.environment}-efs"
   encrypted      = true
 
   tags = {
-    Name = "${var.project_name}-efs"
+    Name = "${var.project_name}-${var.environment}-efs"
   }
 }
 
 resource "aws_security_group" "efs" {
-  name        = "${var.project_name}-efs-sg"
+  name        = "${var.project_name}-${var.environment}-efs-sg"
   description = "Allow EFS access from ECS tasks"
   vpc_id      = aws_vpc.main.id
 
   ingress {
-    from_port       = 2049
-    to_port         = 2049
-    protocol        = "tcp"
+    from_port = 2049
+    to_port   = 2049
+    protocol  = "tcp"
     security_groups = [aws_security_group.ecs_sg.id]
   }
 
   egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
+    from_port = 0
+    to_port   = 0
+    protocol  = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
 }
 
 # Create mount targets in each subnet
 resource "aws_efs_mount_target" "ecs_storage" {
-  count           = length(aws_subnet.public)
-  file_system_id  = aws_efs_file_system.ecs_storage.id
-  subnet_id       = aws_subnet.public[count.index].id
+  count = length(aws_subnet.public)
+  file_system_id = aws_efs_file_system.ecs_storage.id
+  subnet_id      = aws_subnet.public[count.index].id
   security_groups = [aws_security_group.efs.id]
 }
 
 # Create access point for each service that needs storage
 resource "aws_efs_access_point" "service" {
-  count          = length(var.services)
+  count = length(var.services)
   file_system_id = aws_efs_file_system.ecs_storage.id
 
   posix_user {
@@ -493,7 +493,7 @@ resource "aws_efs_access_point" "service" {
 # ECS Task Definitions
 resource "aws_ecs_task_definition" "service" {
   count = length(var.services)
-  family             = "${var.project_name}-${var.services[count.index].name}"
+  family             = "${var.project_name}-${var.environment}-${var.services[count.index].name}"
   network_mode       = "awsvpc"
   requires_compatibilities = ["FARGATE"]
   cpu                = var.services[count.index].cpu
@@ -510,9 +510,9 @@ resource "aws_ecs_task_definition" "service" {
       transit_encryption_port = 2049
       authorization_config {
         access_point_id = aws_efs_access_point.service[count.index].id
-        iam            = "ENABLED"
+        iam             = "ENABLED"
       }
-      root_directory    = "/"  # Allow access to root directory
+      root_directory = "/"  # Allow access to root directory
     }
   }
 
@@ -528,7 +528,7 @@ resource "aws_ecs_task_definition" "service" {
       ]
       mountPoints = [
         {
-          sourceVolume  = "${var.services[count.index].name}-storage"
+          sourceVolume = "${var.services[count.index].name}-storage"
           containerPath = "/tmp"  # Mount EFS volume to /tmp
           readOnly     = false
         }
@@ -594,7 +594,7 @@ resource "aws_ecs_task_definition" "service" {
 # ECS Services
 resource "aws_ecs_service" "service" {
   count = length(var.services)
-  name            = "${var.project_name}-${var.services[count.index].name}"
+  name            = "${var.project_name}-${var.environment}-${var.services[count.index].name}"
   cluster         = aws_ecs_cluster.main.id
   task_definition = aws_ecs_task_definition.service[count.index].arn
   desired_count   = var.services[count.index].desired_count
@@ -661,7 +661,7 @@ resource "aws_service_discovery_service" "service" {
 # IAM Roles
 resource "aws_iam_role" "ecs_task_role" {
   count = length(var.services)
-  name = "${var.project_name}-${var.services[count.index].name}-task-role"
+  name = "${var.project_name}-${var.environment}-${var.services[count.index].name}-task-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -685,14 +685,14 @@ resource "aws_iam_role_policy_attachment" "ecs_task_role_policy" {
 
 # Add to your task role policies
 resource "aws_iam_role_policy_attachment" "ecs_task_efs_policy" {
-  count      = length(var.services)
+  count = length(var.services)
   role       = aws_iam_role.ecs_task_role[count.index].name
   policy_arn = "arn:aws:iam::aws:policy/AmazonElasticFileSystemClientFullAccess"
 }
 
 resource "aws_iam_policy" "ecs_task_policy" {
   count = length(var.services)
-  name        = "${var.project_name}-${var.services[count.index].name}-task-policy"
+  name        = "${var.project_name}-${var.environment}-${var.services[count.index].name}-task-policy"
   path        = "/"
   description = "IAM policy for ECS task"
 
@@ -776,7 +776,7 @@ resource "aws_acm_certificate_validation" "main" {
 
 # Application Load Balancer
 resource "aws_lb" "main" {
-  name               = "${var.project_name}-alb"
+  name               = "${var.project_name}-${var.environment}-alb"
   internal           = false
   load_balancer_type = "application"
   security_groups = [aws_security_group.ecs_sg.id, aws_security_group.global_accelerator_endpoint.id]
@@ -797,13 +797,13 @@ resource "aws_lb" "main" {
   }
 
   tags = {
-    Name = "${var.project_name}-alb"
+    Name = "${var.project_name}-${var.environment}-alb"
   }
 }
 
 resource "aws_lb_target_group" "service" {
   count = length(var.services)
-  name        = "${var.project_name}-tg-${var.services[count.index].name}"
+  name        = "${var.project_name}-${var.environment}-tg-${var.services[count.index].name}"
   port        = var.services[count.index].port
   protocol    = "HTTP"
   vpc_id      = aws_vpc.main.id
@@ -945,7 +945,7 @@ data "aws_ssm_parameter" "ecs_optimized_ami" {
 resource "aws_autoscaling_group" "ecs_asg" {
   for_each = toset(["on_demand", "spot"])
 
-  name                = "${var.project_name}-asg-${each.key}"
+  name                = "${var.project_name}-${var.environment}-asg-${each.key}"
   vpc_zone_identifier = aws_subnet.public[*].id
   min_size            = var.asg_min_size
   max_size            = var.asg_max_size
@@ -967,7 +967,7 @@ resource "aws_autoscaling_group" "ecs_asg" {
 
 # Launch Templates
 resource "aws_launch_template" "on_demand" {
-  name_prefix   = "${var.project_name}-lt-on-demand"
+  name_prefix   = "${var.project_name}-${var.environment}-lt-on-demand"
   image_id      = data.aws_ssm_parameter.ecs_optimized_ami.value
   instance_type = var.instance_types["medium"] # Default to medium, can be adjusted
 
@@ -986,13 +986,13 @@ resource "aws_launch_template" "on_demand" {
   tag_specifications {
     resource_type = "instance"
     tags = {
-      Name = "${var.project_name}-ecs-instance-on-demand"
+      Name = "${var.project_name}-${var.environment}-ecs-instance-on-demand"
     }
   }
 }
 
 resource "aws_launch_template" "spot" {
-  name_prefix   = "${var.project_name}-lt-spot"
+  name_prefix   = "${var.project_name}-${var.environment}-lt-spot"
   image_id      = data.aws_ssm_parameter.ecs_optimized_ami.value
   instance_type = var.instance_types["medium"] # Default to medium, can be adjusted
 
@@ -1015,7 +1015,7 @@ resource "aws_launch_template" "spot" {
   tag_specifications {
     resource_type = "instance"
     tags = {
-      Name = "${var.project_name}-ecs-instance-spot"
+      Name = "${var.project_name}-${var.environment}-ecs-instance-spot"
     }
   }
 }
@@ -1024,7 +1024,7 @@ resource "aws_launch_template" "spot" {
 resource "aws_ecs_capacity_provider" "ec2" {
   for_each = toset(["on_demand", "spot"])
 
-  name = "${var.project_name}-${each.key}"
+  name = "${var.project_name}-${var.environment}-${each.key}"
 
   auto_scaling_group_provider {
     auto_scaling_group_arn         = aws_autoscaling_group.ecs_asg[each.key].arn
@@ -1057,7 +1057,7 @@ resource "aws_ecs_cluster_capacity_providers" "cluster_capacity_providers" {
 
 # ECS Task Execution Role
 resource "aws_iam_role" "ecs_execution_role" {
-  name = "${var.project_name}-ecs-execution-role"
+  name = "${var.project_name}-${var.environment}-ecs-execution-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -1080,7 +1080,7 @@ resource "aws_iam_role_policy_attachment" "ecs_execution_role_policy" {
 
 # ECS Instance Role
 resource "aws_iam_role" "ecs_instance_role" {
-  name = "${var.project_name}-ecs-instance-role"
+  name = "${var.project_name}-${var.environment}-ecs-instance-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -1103,19 +1103,19 @@ resource "aws_iam_role_policy_attachment" "ecs_instance_role_policy" {
 
 # ECS Instance Profile
 resource "aws_iam_instance_profile" "ecs_instance_profile" {
-  name = "${var.project_name}-ecs-instance-profile"
+  name = "${var.project_name}-${var.environment}-ecs-instance-profile"
   role = aws_iam_role.ecs_instance_role.name
 }
 
 # CloudWatch Log Group
 resource "aws_cloudwatch_log_group" "ecs_logs" {
-  name              = "/ecs/${var.project_name}"
+  name              = "/ecs/${var.project_name}-${var.environment}"
   retention_in_days = 30
 }
 
 # S3 Bucket for ALB Logs
 resource "aws_s3_bucket" "alb_logs" {
-  bucket = "${var.project_name}-alb-logs"
+  bucket = "${var.project_name}-${var.environment}-alb-logs"
 
   force_destroy = true
 }
@@ -1163,7 +1163,7 @@ resource "aws_s3_bucket_policy" "alb_logs" {
 }
 
 resource "aws_cloudwatch_log_resource_policy" "root_access" {
-  policy_name = "${var.project_name}-root-access-policy"
+  policy_name = "${var.project_name}-${var.environment}-root-access-policy"
 
   policy_document = jsonencode({
     Version = "2012-10-17"
@@ -1329,11 +1329,11 @@ resource "cloudflare_record" "proxy_global_accelerator_dns" {
 
 # S3 Bucket for external access
 resource "aws_s3_bucket" "external_access" {
-  bucket        = "${var.project_name}-external-access"
+  bucket        = "${var.project_name}-${var.environment}-external-access"
   force_destroy = true
 
   tags = {
-    Name = "${var.project_name}-external-access"
+    Name = "${var.project_name}-${var.environment}-external-access"
   }
 }
 
@@ -1349,12 +1349,12 @@ resource "aws_s3_bucket_public_access_block" "external_access" {
 
 # IAM User for programmatic access
 resource "aws_iam_user" "s3_external_access" {
-  name = "${var.project_name}-s3-external-access"
+  name = "${var.project_name}-${var.environment}-s3-external-access"
 }
 
 # IAM Policy for S3 access
 resource "aws_iam_policy" "s3_external_access" {
-  name        = "${var.project_name}-s3-external-access-policy"
+  name        = "${var.project_name}-${var.environment}-s3-external-access-policy"
   description = "Policy for external S3 access"
 
   policy = jsonencode({
@@ -1390,7 +1390,7 @@ resource "aws_iam_access_key" "s3_external_access" {
 
 # Global Accelerator
 resource "aws_globalaccelerator_accelerator" "main" {
-  name            = "${var.project_name}-accelerator"
+  name            = "${var.project_name}-${var.environment}-accelerator"
   ip_address_type = "IPV4"
   enabled         = true
 
@@ -1435,7 +1435,7 @@ resource "aws_globalaccelerator_endpoint_group" "main" {
 }
 
 resource "aws_security_group" "global_accelerator_endpoint" {
-  name        = "${var.project_name}-global-accelerator-endpoint-sg"
+  name        = "${var.project_name}-${var.environment}-global-accelerator-endpoint-sg"
   description = "Allow traffic from Global Accelerator to ALB"
   vpc_id      = aws_vpc.main.id
 
@@ -1475,13 +1475,13 @@ resource "random_password" "redis_auth_token" {
 
 # ElastiCache Subnet Group
 resource "aws_elasticache_subnet_group" "livekit" {
-  name       = "cache-subnet-${var.project_name}"
+  name       = "cache-subnet-${var.project_name}-${var.environment}"
   subnet_ids = aws_subnet.public[*].id
 }
 
 # ElastiCache Security Group
 resource "aws_security_group" "redis" {
-  name        = "redis-sg-${var.project_name}"
+  name        = "redis-sg-${var.project_name}-${var.environment}"
   description = "Security group for Redis cluster"
   vpc_id      = aws_vpc.main.id
 
@@ -1502,7 +1502,7 @@ resource "aws_security_group" "redis" {
 
 # ElastiCache Redis Cluster
 resource "aws_elasticache_cluster" "livekit" {
-  cluster_id           = "redis-${var.project_name}"
+  cluster_id           = "redis-${var.project_name}-${var.environment}"
   engine               = "redis"
   node_type = "cache.t3.micro"  # Adjust as needed
   num_cache_nodes      = 1
@@ -1517,7 +1517,7 @@ resource "aws_elasticache_cluster" "livekit" {
 # ElastiCache Parameter Group for Redis authentication
 resource "aws_elasticache_parameter_group" "redis_auth" {
   family = "redis7"
-  name   = "redis-auth-${var.project_name}"
+  name   = "redis-auth-${var.project_name}-${var.environment}"
 
   parameter {
     name  = "maxmemory-policy"
@@ -1556,7 +1556,7 @@ resource "acme_registration" "reg" {
 # Create Certificate Signing Request (CSR)
 resource "acme_certificate" "livekit" {
   account_key_pem = acme_registration.reg.account_key_pem
-  common_name     =     "livekit.${var.domain_name}"
+  common_name     = "livekit.${var.domain_name}"
   subject_alternative_names = [
     "livekit-turn.${var.domain_name}",
     "livekit-whip.${var.domain_name}",
@@ -1564,11 +1564,11 @@ resource "acme_certificate" "livekit" {
 
   dns_challenge {
     provider = "cloudflare"
-    config   = {
-      CF_API_EMAIL      = var.email_address
+    config = {
+      CF_API_EMAIL     = var.email_address
       CF_ZONE_API_TOKEN = var.cloudflare_zone_id  # Use the correct token variable
-      CF_API_KEY        = var.cloudflare_api_key       # Use this for API key, not account ID
-      CF_DNS_API_TOKEN  = var.cloudflare_api_token       # This looks correct
+      CF_API_KEY = var.cloudflare_api_key       # Use this for API key, not account ID
+      CF_DNS_API_TOKEN = var.cloudflare_api_token       # This looks correct
     }
   }
 
@@ -1586,7 +1586,7 @@ resource "aws_acm_certificate" "livekit" {
 
 # S3 bucket for certificate storage
 resource "aws_s3_bucket" "cert_bucket" {
-  bucket = "livekit-certificates-${var.project_name}"
+  bucket = "livekit-certificates-${var.project_name}-${var.environment}"
 }
 
 resource "aws_s3_bucket_policy" "cert_bucket_policy" {
@@ -1598,7 +1598,7 @@ resource "aws_s3_bucket_policy" "cert_bucket_policy" {
       {
         Effect = "Allow"
         Principal = {
-          AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/ec2-role-${var.project_name}"
+          AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/ec2-role-${var.project_name}-${var.environment}"
         }
         Action   = "s3:GetObject"
         Resource = "arn:aws:s3:::${aws_s3_bucket.cert_bucket.id}/*"
@@ -1625,24 +1625,24 @@ resource "local_file" "certificate_chain" {
 
 # Upload certificate files to S3
 resource "aws_s3_object" "cert_body" {
-  bucket  = aws_s3_bucket.cert_bucket.id
-  key     = "cert.pem"
-  source  = local_file.certificate_body.filename
-  acl     = "private"
+  bucket = aws_s3_bucket.cert_bucket.id
+  key    = "cert.pem"
+  source = local_file.certificate_body.filename
+  acl    = "private"
 }
 
 resource "aws_s3_object" "private_key" {
-  bucket  = aws_s3_bucket.cert_bucket.id
-  key     = "key.pem"
-  source  = local_file.private_key.filename
-  acl     = "private"
+  bucket = aws_s3_bucket.cert_bucket.id
+  key    = "key.pem"
+  source = local_file.private_key.filename
+  acl    = "private"
 }
 
 resource "aws_s3_object" "certificate_chain" {
-  bucket  = aws_s3_bucket.cert_bucket.id
-  key     = "chain.pem"
-  source  = local_file.certificate_chain.filename
-  acl     = "private"
+  bucket = aws_s3_bucket.cert_bucket.id
+  key    = "chain.pem"
+  source = local_file.certificate_chain.filename
+  acl    = "private"
 }
 
 # LiveKit EC2 Instances
@@ -1683,28 +1683,28 @@ resource "aws_instance" "livekit" {
 
 # CloudWatch Log Groups
 resource "aws_cloudwatch_log_group" "livekit" {
-  name              = "/ec2/livekit"
+  name              = "/ec2/${var.environment}/livekit"
   retention_in_days = 30
 }
 
 resource "aws_cloudwatch_log_group" "caddy" {
-  name              = "/ec2/caddy"
+  name              = "/ec2/${var.environment}/caddy"
   retention_in_days = 30
 }
 
 resource "aws_cloudwatch_log_group" "livekit_egress" {
-  name              = "/ec2/livekit-egress"
+  name              = "/ec2/${var.environment}/livekit-egress"
   retention_in_days = 30
 }
 
 resource "aws_cloudwatch_log_group" "livekit_ingress" {
-  name              = "/ec2/livekit-ingress"
+  name              = "/ec2/${var.environment}/livekit-ingress"
   retention_in_days = 30
 }
 
 # IAM role for EC2 instances to access CloudWatch
 resource "aws_iam_role" "ec2" {
-  name = "ec2-role-${var.project_name}"
+  name = "ec2-role-${var.project_name}-${var.environment}"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -1727,7 +1727,7 @@ resource "aws_iam_role_policy_attachment" "cloudwatch_policy" {
 }
 
 resource "aws_iam_role_policy" "livekit_ec2_policy" {
-  name = "livekit-ec2-${var.project_name}-policy"
+  name = "livekit-ec2-${var.project_name}-${var.environment}-policy"
   role = aws_iam_role.ec2.id
 
   policy = jsonencode({
@@ -1830,13 +1830,13 @@ resource "aws_iam_role_policy" "livekit_ec2_policy" {
 
 # Create an instance profile
 resource "aws_iam_instance_profile" "ec2_profile" {
-  name = "ec2-profile-${var.project_name}"
+  name = "ec2-profile-${var.project_name}-${var.environment}"
   role = aws_iam_role.ec2.name
 }
 
 # Security Group for LiveKit
 resource "aws_security_group" "livekit" {
-  name        = "livekit-sg-${var.project_name}"
+  name        = "livekit-sg-${var.project_name}-${var.environment}"
   description = "Security group for LiveKit servers"
   vpc_id      = aws_vpc.main.id
 
@@ -1922,13 +1922,13 @@ resource "aws_security_group" "livekit" {
 
 # Key Pair for SSH access
 resource "aws_key_pair" "livekit" {
-  key_name = "livekit-key"
+  key_name = "livekit-${var.environment}-key"
   public_key = file("${path.module}/livekit_key.pub")  # Make sure to create this key
 }
 
 # Global Accelerator
 resource "aws_globalaccelerator_accelerator" "livekit" {
-  name            = "${var.project_name}-livekit-accelerator"
+  name            = "${var.project_name}-${var.environment}-livekit-accelerator"
   ip_address_type = "IPV4"
   enabled         = true
 
@@ -1941,7 +1941,7 @@ resource "aws_globalaccelerator_accelerator" "livekit" {
 
 # S3 bucket for Global Accelerator logs
 resource "aws_s3_bucket" "accelerator_logs" {
-  bucket = "livekit-accelerator-logs-${data.aws_caller_identity.current.account_id}"
+  bucket = "${var.project_name}-${var.environment}-livekit-accelerator-logs-${data.aws_caller_identity.current.account_id}"
 }
 
 # Global Accelerator Listener
