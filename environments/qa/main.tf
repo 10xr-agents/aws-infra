@@ -1489,7 +1489,7 @@ resource "aws_security_group" "redis" {
     from_port = 6379
     to_port   = 6379
     protocol  = "tcp"
-    security_groups = [aws_security_group.livekit.id]
+    security_groups = [aws_security_group.livekit.id, aws_security_group.ecs_sg.id]
   }
 
   egress {
