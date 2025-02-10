@@ -544,7 +544,7 @@ resource "aws_ecs_task_definition" "service" {
         },
         {
           name  = "REDIS_URL"
-          value = "${aws_elasticache_cluster.livekit.cache_nodes[0].address}:${aws_elasticache_cluster.livekit.cache_nodes[0].port}"
+          value = "redis://${aws_elasticache_cluster.livekit.cache_nodes[0].address}:${aws_elasticache_cluster.livekit.cache_nodes[0].port}"
         },
         {
           name  = "REDIS_USERNAME"
