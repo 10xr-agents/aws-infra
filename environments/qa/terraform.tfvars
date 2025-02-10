@@ -67,8 +67,8 @@ services = [
     port              = 9000
     health_check_path = "/api/v1/management/health"
     environment_variables = {
-      "ENV"                    = "QA"
-      "ECS_ENVIRONMENT"        = "QA"
+      "ENV"                    = "qa"
+      "ECS_ENVIRONMENT"        = "qa"
       "SPRING_PROFILES_ACTIVE" = "qa"
     }
     secrets = {}
