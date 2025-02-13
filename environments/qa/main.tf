@@ -783,6 +783,7 @@ resource "aws_lb" "main" {
   subnets            = aws_subnet.public[*].id
 
   enable_deletion_protection = false
+  idle_timeout = 900
 
   access_logs {
     bucket  = aws_s3_bucket.alb_logs.bucket
