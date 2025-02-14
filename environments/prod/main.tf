@@ -883,7 +883,7 @@ resource "aws_lb_listener_rule" "demo_subdomain" {
 
   condition {
     host_header {
-      values = ["${var.environment}.10xr.co"]
+      values = ["app.10xr.co"]
     }
   }
 
@@ -905,7 +905,7 @@ resource "aws_lb_listener_rule" "api_demo_subdomain" {
 
   condition {
     host_header {
-      values = ["api.${var.environment}.10xr.co"]
+      values = ["api.app.10xr.co"]
     }
   }
 
@@ -927,7 +927,7 @@ resource "aws_lb_listener_rule" "proxy_demo_subdomain" {
 
   condition {
     host_header {
-      values = ["proxy.${var.environment}.10xr.co"]
+      values = ["proxy.app.10xr.co"]
     }
   }
 
