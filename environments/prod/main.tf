@@ -1306,7 +1306,7 @@ resource "aws_iam_role_policy" "ecs_task_mongodb_policy" {
 
 resource "cloudflare_record" "global_accelerator_dns" {
   zone_id = var.cloudflare_zone_id
-  name    = var.environment
+  name    = "app"
   content = aws_globalaccelerator_accelerator.main.dns_name
   type    = "CNAME"
   proxied = false
@@ -1314,7 +1314,7 @@ resource "cloudflare_record" "global_accelerator_dns" {
 
 resource "cloudflare_record" "api_global_accelerator_dns" {
   zone_id = var.cloudflare_zone_id
-  name    = "api.${var.environment}"
+  name    = "api.app"
   content = aws_globalaccelerator_accelerator.main.dns_name
   type    = "CNAME"
   proxied = false
@@ -1322,7 +1322,7 @@ resource "cloudflare_record" "api_global_accelerator_dns" {
 
 resource "cloudflare_record" "proxy_global_accelerator_dns" {
   zone_id = var.cloudflare_zone_id
-  name    = "proxy.${var.environment}"
+  name    = "proxy.app"
   content = aws_globalaccelerator_accelerator.main.dns_name
   type    = "CNAME"
   proxied = false
@@ -2021,7 +2021,7 @@ resource "aws_globalaccelerator_listener" "livekit" {
 # Global Accelerator DNS entries
 resource "cloudflare_record" "livekit_global" {
   zone_id = var.cloudflare_zone_id
-  name    = "livekit.${var.environment}"
+  name    = "livekit.app"
   content = aws_globalaccelerator_accelerator.livekit.dns_name
   type    = "CNAME"
   proxied = false
@@ -2029,7 +2029,7 @@ resource "cloudflare_record" "livekit_global" {
 
 resource "cloudflare_record" "livekit_turn_global" {
   zone_id = var.cloudflare_zone_id
-  name    = "livekit-turn.${var.environment}"
+  name    = "livekit-turn.app"
   content = aws_globalaccelerator_accelerator.livekit.dns_name
   type    = "CNAME"
   proxied = false
@@ -2037,7 +2037,7 @@ resource "cloudflare_record" "livekit_turn_global" {
 
 resource "cloudflare_record" "livekit_whip_global" {
   zone_id = var.cloudflare_zone_id
-  name    = "livekit-whip.${var.environment}"
+  name    = "livekit-whip.app"
   content = aws_globalaccelerator_accelerator.livekit.dns_name
   type    = "CNAME"
   proxied = false
