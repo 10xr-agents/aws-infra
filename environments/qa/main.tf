@@ -1206,7 +1206,7 @@ provider "mongodbatlas" {
 
 resource "mongodbatlas_cluster" "cluster" {
   project_id             = var.mongodb_atlas_project_id
-  name                   = var.project_name
+  name                   = "${var.project_name}-${var.environment}"
   mongo_db_major_version = "7.0"
   cluster_type           = "REPLICASET"
   replication_specs {
