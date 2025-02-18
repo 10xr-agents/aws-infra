@@ -172,6 +172,6 @@ output "global_accelerator_ip_addresses" {
 }
 
 # Output the Global Accelerator DNS name
-output "global_accelerator_livekit_dns_name" {
-  value = aws_globalaccelerator_accelerator.livekit.dns_name
-}
+# output "global_accelerator_livekit_dns_name" {
+#   value = aws_globalaccelerator_accelerator.livekit.dns_name
+# }
