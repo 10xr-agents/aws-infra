@@ -1928,17 +1928,17 @@ resource "aws_key_pair" "livekit" {
 }
 
 # Global Accelerator
-resource "aws_globalaccelerator_accelerator" "livekit" {
-  name            = "${var.project_name}-${var.environment}-livekit-accelerator"
-  ip_address_type = "IPV4"
-  enabled         = true
-
-  attributes {
-    flow_logs_enabled   = true
-    flow_logs_s3_bucket = aws_s3_bucket.accelerator_logs.bucket
-    flow_logs_s3_prefix = "flow-logs/"
-  }
-}
+# resource "aws_globalaccelerator_accelerator" "livekit" {
+#   name            = "${var.project_name}-${var.environment}-livekit-accelerator"
+#   ip_address_type = "IPV4"
+#   enabled         = true
+#
+#   attributes {
+#     flow_logs_enabled   = true
+#     flow_logs_s3_bucket = aws_s3_bucket.accelerator_logs.bucket
+#     flow_logs_s3_prefix = "flow-logs/"
+#   }
+# }
 
 # S3 bucket for Global Accelerator logs
 resource "aws_s3_bucket" "accelerator_logs" {
@@ -1950,98 +1950,98 @@ locals {
   protocols = ["tcp", "udp"]
 }
 
-resource "aws_globalaccelerator_endpoint_group" "livekit" {
-  count = length(local.protocols)
-  listener_arn = aws_globalaccelerator_listener.livekit[count.index].id
-
-  dynamic "endpoint_configuration" {
-    for_each = aws_instance.livekit
-    content {
-      endpoint_id                    = endpoint_configuration.value.id
-      weight                         = 100
-      client_ip_preservation_enabled = true
-    }
-  }
-
-  health_check_path       = "/"
-  health_check_port       = 7880
-  health_check_protocol   = "HTTP"
-  threshold_count         = 3
-  traffic_dial_percentage = 100
-}
+# resource "aws_globalaccelerator_endpoint_group" "livekit" {
+#   count = length(local.protocols)
+#   listener_arn = aws_globalaccelerator_listener.livekit[count.index].id
+#
+#   dynamic "endpoint_configuration" {
+#     for_each = aws_instance.livekit
+#     content {
+#       endpoint_id                    = endpoint_configuration.value.id
+#       weight                         = 100
+#       client_ip_preservation_enabled = true
+#     }
+#   }
+#
+#   health_check_path       = "/"
+#   health_check_port       = 7880
+#   health_check_protocol   = "HTTP"
+#   threshold_count         = 3
+#   traffic_dial_percentage = 100
+# }
 
 # Global Accelerator Listeners
-resource "aws_globalaccelerator_listener" "livekit" {
-  count = length(local.protocols)
-  accelerator_arn = aws_globalaccelerator_accelerator.livekit.id
-  client_affinity = "SOURCE_IP"
-  protocol = upper(local.protocols[count.index])
-
-  port_range {
-    from_port = 80
-    to_port   = 80
-  }
-
-  port_range {
-    from_port = 443
-    to_port   = 443
-  }
-
-  port_range {
-    from_port = 7880
-    to_port   = 7880
-  }
-
-  port_range {
-    from_port = 7881
-    to_port   = 7881
-  }
-
-  port_range {
-    from_port = 3478
-    to_port   = 3478
-  }
-
-  port_range {
-    from_port = 50000
-    to_port   = 60000
-  }
-
-  port_range {
-    from_port = 1935
-    to_port   = 1935
-  }
-
-  port_range {
-    from_port = 7885
-    to_port   = 7885
-  }
-}
-
-# Global Accelerator DNS entries
-resource "cloudflare_record" "livekit_global" {
-  zone_id = var.cloudflare_zone_id
-  name    = "livekit.app"
-  content = aws_globalaccelerator_accelerator.livekit.dns_name
-  type    = "CNAME"
-  proxied = false
-}
-
-resource "cloudflare_record" "livekit_turn_global" {
-  zone_id = var.cloudflare_zone_id
-  name    = "livekit-turn.app"
-  content = aws_globalaccelerator_accelerator.livekit.dns_name
-  type    = "CNAME"
-  proxied = false
-}
-
-resource "cloudflare_record" "livekit_whip_global" {
-  zone_id = var.cloudflare_zone_id
-  name    = "livekit-whip.app"
-  content = aws_globalaccelerator_accelerator.livekit.dns_name
-  type    = "CNAME"
-  proxied = false
-}
+# resource "aws_globalaccelerator_listener" "livekit" {
+#   count = length(local.protocols)
+#   accelerator_arn = aws_globalaccelerator_accelerator.livekit.id
+#   client_affinity = "SOURCE_IP"
+#   protocol = upper(local.protocols[count.index])
+#
+#   port_range {
+#     from_port = 80
+#     to_port   = 80
+#   }
+#
+#   port_range {
+#     from_port = 443
+#     to_port   = 443
+#   }
+#
+#   port_range {
+#     from_port = 7880
+#     to_port   = 7880
+#   }
+#
+#   port_range {
+#     from_port = 7881
+#     to_port   = 7881
+#   }
+#
+#   port_range {
+#     from_port = 3478
+#     to_port   = 3478
+#   }
+#
+#   port_range {
+#     from_port = 50000
+#     to_port   = 60000
+#   }
+#
+#   port_range {
+#     from_port = 1935
+#     to_port   = 1935
+#   }
+#
+#   port_range {
+#     from_port = 7885
+#     to_port   = 7885
+#   }
+# }
+#
+# # Global Accelerator DNS entries
+# resource "cloudflare_record" "livekit_global" {
+#   zone_id = var.cloudflare_zone_id
+#   name    = "livekit.app"
+#   content = aws_globalaccelerator_accelerator.livekit.dns_name
+#   type    = "CNAME"
+#   proxied = false
+# }
+#
+# resource "cloudflare_record" "livekit_turn_global" {
+#   zone_id = var.cloudflare_zone_id
+#   name    = "livekit-turn.app"
+#   content = aws_globalaccelerator_accelerator.livekit.dns_name
+#   type    = "CNAME"
+#   proxied = false
+# }
+#
+# resource "cloudflare_record" "livekit_whip_global" {
+#   zone_id = var.cloudflare_zone_id
+#   name    = "livekit-whip.app"
+#   content = aws_globalaccelerator_accelerator.livekit.dns_name
+#   type    = "CNAME"
+#   proxied = false
+# }
 
 
 
