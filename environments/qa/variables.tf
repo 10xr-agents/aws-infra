@@ -208,3 +208,23 @@ variable "email_address" {
   description = "Email address for Let's Encrypt registration"
   type        = string
 }
+
+variable "mongodb_cluster_id" {
+  description = "Mongo cluster id"
+  type        = string
+}
+
+variable "mongodb_cluster_name" {
+  description = "Mongo cluster name"
+  type        = string
+}
+
+variable "mongodb_standard_srv" {
+  description = "Mongo standard srv"
+  type        = string
+}
+
+variable "mongodb_container_id" {
+  description = "Mongo cluster container id"
+  type        = string
+}

@@ -158,6 +158,11 @@ mongodb_atlas_region       = "US_EAST_1"
 mongodb_atlas_cidr_block   = "192.168.248.0/21"
 mongodb_database_name      = "converse-server"
 
+mongodb_cluster_id         = "67b85aadcd20730f1e9652d2"
+mongodb_standard_srv       = "mongodb+srv://ten-xr-storage-prod.3njzs.mongodb.net"
+mongodb_cluster_name       = "ten-xr-storage-prod"
+mongodb_container_id       = "66ceccd24cccca7733370c69"
+
 livekit_api_key    = "APIaSovFA9uQ4p5"
 livekit_api_secret = "lTxgQzxS0e2n1vqwOhaiFUiwKWvYeyJukHvnJegbITmA"
 

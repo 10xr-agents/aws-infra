@@ -536,11 +536,11 @@ resource "aws_ecs_task_definition" "service" {
       environment = concat([
         {
           name  = "SPRING_DATA_MONGODB_URI"
-          value = "${mongodbatlas_cluster.cluster.connection_strings[0].standard_srv}/${var.mongodb_database_name}?authMechanism=MONGODB-AWS&authSource=$external"
+          value = "${var.mongodb_standard_srv}/${var.mongodb_database_name}?authMechanism=MONGODB-AWS&authSource=$external"
         },
         {
           name  = "MONGO_DB_URI"
-          value = "${mongodbatlas_cluster.cluster.connection_strings[0].standard_srv}/${var.mongodb_database_name}?authMechanism=MONGODB-AWS&authSource=$external"
+          value = "${var.mongodb_standard_srv}/${var.mongodb_database_name}?authMechanism=MONGODB-AWS&authSource=$external"
         },
         {
           name  = "REDIS_URL"
@@ -1204,32 +1204,10 @@ provider "mongodbatlas" {
   private_key = var.mongodb_atlas_private_key
 }
 
-resource "mongodbatlas_cluster" "cluster" {
-  project_id             = var.mongodb_atlas_project_id
-  name                   = "${var.project_name}-${var.environment}"
-  mongo_db_major_version = "7.0"
-  cluster_type           = "REPLICASET"
-  replication_specs {
-    num_shards = 1
-    regions_config {
-      region_name     = var.mongodb_atlas_region
-      electable_nodes = 3
-      priority        = 7
-      read_only_nodes = 0
-    }
-  }
-  cloud_backup = true
-  auto_scaling_disk_gb_enabled = true
-
-  # Provider Settings "block"
-  provider_name               = "AWS"
-  provider_instance_size_name = "M30"
-}
-
 # VPC Peering
 resource "mongodbatlas_network_peering" "peering" {
   project_id             = var.mongodb_atlas_project_id
-  container_id           = mongodbatlas_cluster.cluster.container_id
+  container_id           = var.mongodb_container_id
   provider_name          = "AWS"
   accepter_region_name   = var.mongodb_atlas_region
   route_table_cidr_block = var.vpc_cidr
@@ -1278,7 +1256,7 @@ resource "mongodbatlas_database_user" "aws_iam_user" {
 
 
   scopes {
-    name = mongodbatlas_cluster.cluster.name
+    name = var.mongodb_cluster_name
     type = "CLUSTER"
   }
 }
