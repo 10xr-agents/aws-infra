@@ -19,7 +19,7 @@ services = [
     health_check_path = "/actuator/health"
     environment_variables = {
       "ENV"                    = "QA"
-      "ECS_ENVIRONMENT"        = "QA"
+      "ECS_ENVIRONMENT"        = "qa"
       "SPRING_PROFILES_ACTIVE" = "qa"
     }
     secrets = {}
