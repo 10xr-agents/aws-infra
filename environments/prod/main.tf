@@ -542,18 +542,18 @@ resource "aws_ecs_task_definition" "service" {
           name  = "MONGO_DB_URI"
           value = "${var.mongodb_standard_srv}/${var.mongodb_database_name}?authMechanism=MONGODB-AWS&authSource=$external"
         },
-#         {
-#           name  = "REDIS_URL"
-#           value = "redis://${aws_elasticache_cluster.livekit.cache_nodes[0].address}:${aws_elasticache_cluster.livekit.cache_nodes[0].port}"
-#         },
+        {
+          name  = "REDIS_URL"
+          value = "redis://${aws_elasticache_cluster.livekit.cache_nodes[0].address}:${aws_elasticache_cluster.livekit.cache_nodes[0].port}"
+        },
         {
           name  = "REDIS_USERNAME"
           value = "default"
         },
-#         {
-#           name  = "REDIS_PASSWORD"
-#           value = random_password.redis_auth_token.result
-#         }
+        {
+          name  = "REDIS_PASSWORD"
+          value = random_password.redis_auth_token.result
+        }
       ], [
         for key, value in var.services[count.index].environment_variables :
         {
@@ -1447,579 +1447,579 @@ resource "aws_security_group" "global_accelerator_endpoint" {
 
 ### elastic cache ###
 
-# resource "random_password" "redis_auth_token" {
-#   length  = 64
-#   special = false
-# }
-#
-# # ElastiCache Subnet Group
-# resource "aws_elasticache_subnet_group" "livekit" {
-#   name       = "cache-subnet-${var.project_name}-${var.environment}"
-#   subnet_ids = aws_subnet.public[*].id
-# }
-#
-# # ElastiCache Security Group
-# resource "aws_security_group" "redis" {
-#   name        = "redis-sg-${var.project_name}-${var.environment}"
-#   description = "Security group for Redis cluster"
-#   vpc_id      = aws_vpc.main.id
-#
-#   ingress {
-#     from_port = 6379
-#     to_port   = 6379
-#     protocol  = "tcp"
-#     security_groups = [aws_security_group.livekit.id, aws_security_group.ecs_sg.id]
-#   }
-#
-#   egress {
-#     from_port = 0
-#     to_port   = 0
-#     protocol  = "-1"
-#     cidr_blocks = ["0.0.0.0/0"]
-#   }
-# }
-#
-# # ElastiCache Redis Cluster
-# resource "aws_elasticache_cluster" "livekit" {
-#   cluster_id           = "redis-${var.project_name}-${var.environment}"
-#   engine               = "redis"
-#   node_type = "cache.t3.micro"  # Adjust as needed
-#   num_cache_nodes      = 1
-#   parameter_group_name = aws_elasticache_parameter_group.redis_auth.name
-#   engine_version       = "7.0"
-#   port                 = 6379
-#
-#   subnet_group_name = aws_elasticache_subnet_group.livekit.name
-#   security_group_ids = [aws_security_group.redis.id]
-# }
-#
-# # ElastiCache Parameter Group for Redis authentication
-# resource "aws_elasticache_parameter_group" "redis_auth" {
-#   family = "redis7"
-#   name   = "redis-auth-${var.project_name}-${var.environment}"
-#
-#   parameter {
-#     name  = "maxmemory-policy"
-#     value = "allkeys-lru"
-#   }
-# }
-#
-# data "aws_ami" "amazon_linux_2" {
-#   most_recent = true
-#
-#   filter {
-#     name = "name"
-#     values = ["amzn2-ami-hvm-*-x86_64-gp2"]
-#   }
-#
-#   filter {
-#     name = "virtualization-type"
-#     values = ["hvm"]
-#   }
-#
-#   owners = ["137112412989"] # Amazon
-# }
-#
-#
-# # Private Certificate
-# # Generate private key
-# resource "tls_private_key" "livekit" {
-#   algorithm = "RSA"
-# }
-#
-# resource "acme_registration" "reg" {
-#   account_key_pem = tls_private_key.livekit.private_key_pem
-#   email_address   = var.email_address
-# }
-#
-# # Create Certificate Signing Request (CSR)
-# resource "acme_certificate" "livekit" {
-#   account_key_pem = acme_registration.reg.account_key_pem
-#   common_name     = "livekit.${var.domain_name}"
-#   subject_alternative_names = [
-#     "livekit-turn.${var.domain_name}",
-#     "livekit-whip.${var.domain_name}",
-#   ]
-#
-#   dns_challenge {
-#     provider = "cloudflare"
-#     config = {
-#       CF_API_EMAIL     = var.email_address
-#       CF_ZONE_API_TOKEN = var.cloudflare_zone_id  # Use the correct token variable
-#       CF_API_KEY = var.cloudflare_api_key       # Use this for API key, not account ID
-#       CF_DNS_API_TOKEN = var.cloudflare_api_token       # This looks correct
-#     }
-#   }
-#
-# }
-#
-# resource "aws_acm_certificate" "livekit" {
-#   private_key       = acme_certificate.livekit.private_key_pem
-#   certificate_body  = acme_certificate.livekit.certificate_pem
-#   certificate_chain = acme_certificate.livekit.issuer_pem
-#
-#   lifecycle {
-#     create_before_destroy = true
-#   }
-# }
-#
-# # S3 bucket for certificate storage
-# resource "aws_s3_bucket" "cert_bucket" {
-#   bucket = "livekit-certificates-${var.project_name}-${var.environment}"
-# }
-#
-# resource "aws_s3_bucket_policy" "cert_bucket_policy" {
-#   bucket = aws_s3_bucket.cert_bucket.id
-#
-#   policy = jsonencode({
-#     Version = "2012-10-17"
-#     Statement = [
-#       {
-#         Effect = "Allow"
-#         Principal = {
-#           AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/ec2-role-${var.project_name}-${var.environment}"
-#         }
-#         Action   = "s3:GetObject"
-#         Resource = "arn:aws:s3:::${aws_s3_bucket.cert_bucket.id}/*"
-#       }
-#     ]
-#   })
-# }
-#
-#
-# resource "local_file" "certificate_body" {
-#   content  = acme_certificate.livekit.certificate_pem
-#   filename = "${path.module}/cert.pem"
-# }
-#
-# resource "local_file" "private_key" {
-#   content  = acme_certificate.livekit.private_key_pem
-#   filename = "${path.module}/key.pem"
-# }
-#
-# resource "local_file" "certificate_chain" {
-#   content  = acme_certificate.livekit.issuer_pem
-#   filename = "${path.module}/chain.pem"
-# }
-#
-# # Upload certificate files to S3
-# resource "aws_s3_object" "cert_body" {
-#   bucket = aws_s3_bucket.cert_bucket.id
-#   key    = "cert.pem"
-#   source = local_file.certificate_body.filename
-#   acl    = "private"
-# }
-#
-# resource "aws_s3_object" "private_key" {
-#   bucket = aws_s3_bucket.cert_bucket.id
-#   key    = "key.pem"
-#   source = local_file.private_key.filename
-#   acl    = "private"
-# }
-#
-# resource "aws_s3_object" "certificate_chain" {
-#   bucket = aws_s3_bucket.cert_bucket.id
-#   key    = "chain.pem"
-#   source = local_file.certificate_chain.filename
-#   acl    = "private"
-# }
-#
-# # LiveKit EC2 Instances
-# resource "aws_instance" "livekit" {
-#   count                = 3
-#   ami                  = data.aws_ami.amazon_linux_2.id
-#   instance_type        = "t3.2xlarge"
-#   key_name             = aws_key_pair.livekit.key_name
-#   vpc_security_group_ids = [aws_security_group.livekit.id]
-#   subnet_id            = aws_subnet.public[count.index % 2].id
-#   iam_instance_profile = aws_iam_instance_profile.ec2_profile.name
-#
-#   user_data = templatefile("${path.module}/../templates/cloud_init.amazon.yaml.tpl", {
-#     redis_address      = "${aws_elasticache_cluster.livekit.cache_nodes[0].address}:${aws_elasticache_cluster.livekit.cache_nodes[0].port}"
-#     redis_username     = "default"
-#     redis_password     = random_password.redis_auth_token.result
-#     livekit_domain     = "livekit.${var.domain_name}"
-#     turn_domain        = "livekit-turn.${var.domain_name}"
-#     whip_domain        = "livekit-whip.${var.domain_name}"
-#     api_key            = var.livekit_api_key
-#     api_secret         = var.livekit_api_secret
-#     webhook_events_url = "https://proxy.${var.domain_name}/api/v1/live-kit/webhook-events"
-#     cert_bucket        = aws_s3_bucket.cert_bucket.id
-#     aws_region         = var.aws_region
-#   })
-#
-#   root_block_device {
-#     volume_size = 32
-#     volume_type = "gp3"
-#   }
-#
-#   tags = {
-#     Name = "LiveKit-Instance-${count.index + 1}"
-#   }
-#
-#   depends_on = [aws_s3_object.cert_body, aws_s3_object.certificate_chain, aws_s3_object.private_key]
-# }
-#
-# # CloudWatch Log Groups
-# resource "aws_cloudwatch_log_group" "livekit" {
-#   name              = "/ec2/${var.environment}/livekit"
-#   retention_in_days = 30
-# }
-#
-# resource "aws_cloudwatch_log_group" "caddy" {
-#   name              = "/ec2/${var.environment}/caddy"
-#   retention_in_days = 30
-# }
-#
-# resource "aws_cloudwatch_log_group" "livekit_egress" {
-#   name              = "/ec2/${var.environment}/livekit-egress"
-#   retention_in_days = 30
-# }
-#
-# resource "aws_cloudwatch_log_group" "livekit_ingress" {
-#   name              = "/ec2/${var.environment}/livekit-ingress"
-#   retention_in_days = 30
-# }
-#
-# # IAM role for EC2 instances to access CloudWatch
-# resource "aws_iam_role" "ec2" {
-#   name = "ec2-role-${var.project_name}-${var.environment}"
-#
-#   assume_role_policy = jsonencode({
-#     Version = "2012-10-17"
-#     Statement = [
-#       {
-#         Action = "sts:AssumeRole"
-#         Effect = "Allow"
-#         Principal = {
-#           Service = "ec2.amazonaws.com"
-#         }
-#       }
-#     ]
-#   })
-# }
-#
-# # Attach CloudWatch policy to the role
-# resource "aws_iam_role_policy_attachment" "cloudwatch_policy" {
-#   policy_arn = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
-#   role       = aws_iam_role.ec2.name
-# }
-#
-# resource "aws_iam_role_policy" "livekit_ec2_policy" {
-#   name = "livekit-ec2-${var.project_name}-${var.environment}-policy"
-#   role = aws_iam_role.ec2.id
-#
-#   policy = jsonencode({
-#     Version = "2012-10-17"
-#     Statement = [
-#       {
-#         Effect = "Allow"
-#         Action = [
-#           # CloudWatch Logs
-#           "logs:CreateLogGroup",
-#           "logs:CreateLogStream",
-#           "logs:PutLogEvents",
-#           "logs:DescribeLogStreams",
-#           "logs:DescribeLogGroups",
-#           "logs:GetLogEvents",
-#
-#           # CloudWatch Metrics
-#           "cloudwatch:PutMetricData",
-#           "cloudwatch:GetMetricStatistics",
-#           "cloudwatch:ListMetrics",
-#
-#           # EC2 Describe Actions (for self-discovery and debugging)
-#           "ec2:DescribeInstances",
-#           "ec2:DescribeInstanceStatus",
-#           "ec2:DescribeTags",
-#
-#           # ACM (for certificate management)
-#           "acm:DescribeCertificate",
-#           "acm:ListCertificates",
-#           "acm:GetCertificate",
-#
-#           # Systems Manager (for remote management and debugging)
-#           "ssm:UpdateInstanceInformation",
-#           "ssm:ListInstanceAssociations",
-#           "ssm:DescribeInstanceAssociations",
-#           "ssm:GetParameter",
-#           "ssm:GetParameters",
-#           "ssm:GetParametersByPath",
-#
-#           # S3 (if you decide to use S3 for log storage or config files)
-#           "s3:GetObject",
-#           "s3:PutObject",
-#           "s3:ListBucket",
-#
-#           # SNS (for potential notifications)
-#           "sns:Publish",
-#
-#           # SQS (if you use queues for any inter-instance communication)
-#           "sqs:SendMessage",
-#           "sqs:ReceiveMessage",
-#           "sqs:DeleteMessage",
-#           "sqs:GetQueueAttributes",
-#
-#           # KMS (if you use custom encryption keys)
-#           "kms:Decrypt",
-#           "kms:GenerateDataKey",
-#
-#           # ElastiCache (for describing Redis cluster)
-#           "elasticache:DescribeCacheClusters",
-#           "elasticache:ListTagsForResource",
-#
-#           # Route53 (if instances need to update DNS records)
-#           "route53:ChangeResourceRecordSets",
-#           "route53:ListResourceRecordSets",
-#           "route53:ListHostedZones",
-#
-#           # ECS (if you're using containers)
-#           "ecs:DescribeTasks",
-#           "ecs:ListTasks",
-#           "ecs:DescribeContainerInstances",
-#           "ecs:ListContainerInstances",
-#
-#           # ECR (if you're using private Docker repositories)
-#           "ecr:GetAuthorizationToken",
-#           "ecr:BatchCheckLayerAvailability",
-#           "ecr:GetDownloadUrlForLayer",
-#           "ecr:BatchGetImage",
-#
-#           # X-Ray (for distributed tracing)
-#           "xray:PutTraceSegments",
-#           "xray:PutTelemetryRecords",
-#           "xray:GetSamplingRules",
-#           "xray:GetSamplingTargets",
-#           "xray:GetSamplingStatisticSummaries",
-#
-#           # Systems Manager Parameter Store (for storing config securely)
-#           "ssm:GetParameter",
-#           "ssm:GetParameters",
-#           "ssm:GetParametersByPath",
-#
-#           # IAM (for describing roles, useful for debugging)
-#           "iam:GetRole",
-#           "iam:ListAttachedRolePolicies"
-#         ]
-#         Resource = "*"
-#       }
-#     ]
-#   })
-# }
-#
-# # Create an instance profile
-# resource "aws_iam_instance_profile" "ec2_profile" {
-#   name = "ec2-profile-${var.project_name}-${var.environment}"
-#   role = aws_iam_role.ec2.name
-# }
-#
-# # Security Group for LiveKit
-# resource "aws_security_group" "livekit" {
-#   name        = "livekit-sg-${var.project_name}-${var.environment}"
-#   description = "Security group for LiveKit servers"
-#   vpc_id      = aws_vpc.main.id
-#
-#   # SSH ingress rule
-#   ingress {
-#     from_port   = 22
-#     to_port     = 22
-#     protocol    = "tcp"
-#     cidr_blocks = ["0.0.0.0/0"]  # Be cautious with this. Ideally, restrict to your IP.
-#     description = "Allow SSH access"
-#   }
-#
-#   ingress {
-#     from_port = 80
-#     to_port   = 80
-#     protocol  = "tcp"
-#     cidr_blocks = ["0.0.0.0/0"]
-#   }
-#
-#   ingress {
-#     from_port = 7880
-#     to_port   = 7880
-#     protocol  = "tcp"
-#     cidr_blocks = ["0.0.0.0/0"]
-#   }
-#
-#   ingress {
-#     from_port = 443
-#     to_port   = 443
-#     protocol  = "tcp"
-#     cidr_blocks = ["0.0.0.0/0"]
-#   }
-#
-#   ingress {
-#     from_port = 7881
-#     to_port   = 7881
-#     protocol  = "tcp"
-#     cidr_blocks = ["0.0.0.0/0"]
-#   }
-#
-#   ingress {
-#     from_port = 3478
-#     to_port   = 3478
-#     protocol  = "udp"
-#     cidr_blocks = ["0.0.0.0/0"]
-#   }
-#
-#   ingress {
-#     from_port = 50000
-#     to_port   = 60000
-#     protocol  = "udp"
-#     cidr_blocks = ["0.0.0.0/0"]
-#   }
-#
-#   ingress {
-#     from_port = 7885
-#     to_port   = 7885
-#     protocol  = "udp"
-#     cidr_blocks = ["0.0.0.0/0"]
-#   }
-#
-#   ingress {
-#     from_port = 1935
-#     to_port   = 1935
-#     protocol  = "udp"
-#     cidr_blocks = ["0.0.0.0/0"]
-#   }
-#
-#   ingress {
-#     from_port = 1935
-#     to_port   = 1935
-#     protocol  = "tcp"
-#     cidr_blocks = ["0.0.0.0/0"]
-#   }
-#
-#   egress {
-#     from_port = 0
-#     to_port   = 0
-#     protocol  = "-1"
-#     cidr_blocks = ["0.0.0.0/0"]
-#   }
-# }
-#
-# # Key Pair for SSH access
-# resource "aws_key_pair" "livekit" {
-#   key_name = "livekit-${var.environment}-key"
-#   public_key = file("${path.module}/livekit_key.pub")  # Make sure to create this key
-# }
-#
-# # Global Accelerator
-# resource "aws_globalaccelerator_accelerator" "livekit" {
-#   name            = "${var.project_name}-${var.environment}-livekit-accelerator"
-#   ip_address_type = "IPV4"
-#   enabled         = true
-#
-#   attributes {
-#     flow_logs_enabled   = true
-#     flow_logs_s3_bucket = aws_s3_bucket.accelerator_logs.bucket
-#     flow_logs_s3_prefix = "flow-logs/"
-#   }
-# }
-#
-# # S3 bucket for Global Accelerator logs
-# resource "aws_s3_bucket" "accelerator_logs" {
-#   bucket = "${var.project_name}-${var.environment}-livekit-accelerator-logs-${data.aws_caller_identity.current.account_id}"
-# }
-#
-# # Global Accelerator Listener
-# locals {
-#   protocols = ["tcp", "udp"]
-# }
-#
-# resource "aws_globalaccelerator_endpoint_group" "livekit" {
-#   count = length(local.protocols)
-#   listener_arn = aws_globalaccelerator_listener.livekit[count.index].id
-#
-#   dynamic "endpoint_configuration" {
-#     for_each = aws_instance.livekit
-#     content {
-#       endpoint_id                    = endpoint_configuration.value.id
-#       weight                         = 100
-#       client_ip_preservation_enabled = true
-#     }
-#   }
-#
-#   health_check_path       = "/"
-#   health_check_port       = 7880
-#   health_check_protocol   = "HTTP"
-#   threshold_count         = 3
-#   traffic_dial_percentage = 100
-# }
-#
-# #Global Accelerator Listeners
-# resource "aws_globalaccelerator_listener" "livekit" {
-#   count = length(local.protocols)
-#   accelerator_arn = aws_globalaccelerator_accelerator.livekit.id
-#   client_affinity = "SOURCE_IP"
-#   protocol = upper(local.protocols[count.index])
-#
-#   port_range {
-#     from_port = 80
-#     to_port   = 80
-#   }
-#
-#   port_range {
-#     from_port = 443
-#     to_port   = 443
-#   }
-#
-#   port_range {
-#     from_port = 7880
-#     to_port   = 7880
-#   }
-#
-#   port_range {
-#     from_port = 7881
-#     to_port   = 7881
-#   }
-#
-#   port_range {
-#     from_port = 3478
-#     to_port   = 3478
-#   }
-#
-#   port_range {
-#     from_port = 50000
-#     to_port   = 60000
-#   }
-#
-#   port_range {
-#     from_port = 1935
-#     to_port   = 1935
-#   }
-#
-#   port_range {
-#     from_port = 7885
-#     to_port   = 7885
-#   }
-# }
-#
-# # # Global Accelerator DNS entries
-# resource "cloudflare_record" "livekit_global" {
-#   zone_id = var.cloudflare_zone_id
-#   name    = "livekit.app"
-#   content = aws_globalaccelerator_accelerator.livekit.dns_name
-#   type    = "CNAME"
-#   proxied = false
-# }
-#
-# resource "cloudflare_record" "livekit_turn_global" {
-#   zone_id = var.cloudflare_zone_id
-#   name    = "livekit-turn.app"
-#   content = aws_globalaccelerator_accelerator.livekit.dns_name
-#   type    = "CNAME"
-#   proxied = false
-# }
-#
-# resource "cloudflare_record" "livekit_whip_global" {
-#   zone_id = var.cloudflare_zone_id
-#   name    = "livekit-whip.app"
-#   content = aws_globalaccelerator_accelerator.livekit.dns_name
-#   type    = "CNAME"
-#   proxied = false
-# }
+resource "random_password" "redis_auth_token" {
+  length  = 64
+  special = false
+}
+
+# ElastiCache Subnet Group
+resource "aws_elasticache_subnet_group" "livekit" {
+  name       = "cache-subnet-${var.project_name}-${var.environment}"
+  subnet_ids = aws_subnet.public[*].id
+}
+
+# ElastiCache Security Group
+resource "aws_security_group" "redis" {
+  name        = "redis-sg-${var.project_name}-${var.environment}"
+  description = "Security group for Redis cluster"
+  vpc_id      = aws_vpc.main.id
+
+  ingress {
+    from_port = 6379
+    to_port   = 6379
+    protocol  = "tcp"
+    security_groups = [aws_security_group.livekit.id, aws_security_group.ecs_sg.id]
+  }
+
+  egress {
+    from_port = 0
+    to_port   = 0
+    protocol  = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+# ElastiCache Redis Cluster
+resource "aws_elasticache_cluster" "livekit" {
+  cluster_id           = "redis-${var.project_name}-${var.environment}"
+  engine               = "redis"
+  node_type = "cache.t3.micro"  # Adjust as needed
+  num_cache_nodes      = 1
+  parameter_group_name = aws_elasticache_parameter_group.redis_auth.name
+  engine_version       = "7.0"
+  port                 = 6379
+
+  subnet_group_name = aws_elasticache_subnet_group.livekit.name
+  security_group_ids = [aws_security_group.redis.id]
+}
+
+# ElastiCache Parameter Group for Redis authentication
+resource "aws_elasticache_parameter_group" "redis_auth" {
+  family = "redis7"
+  name   = "redis-auth-${var.project_name}-${var.environment}"
+
+  parameter {
+    name  = "maxmemory-policy"
+    value = "allkeys-lru"
+  }
+}
+
+data "aws_ami" "amazon_linux_2" {
+  most_recent = true
+
+  filter {
+    name = "name"
+    values = ["amzn2-ami-hvm-*-x86_64-gp2"]
+  }
+
+  filter {
+    name = "virtualization-type"
+    values = ["hvm"]
+  }
+
+  owners = ["137112412989"] # Amazon
+}
+
+
+# Private Certificate
+# Generate private key
+resource "tls_private_key" "livekit" {
+  algorithm = "RSA"
+}
+
+resource "acme_registration" "reg" {
+  account_key_pem = tls_private_key.livekit.private_key_pem
+  email_address   = var.email_address
+}
+
+# Create Certificate Signing Request (CSR)
+resource "acme_certificate" "livekit" {
+  account_key_pem = acme_registration.reg.account_key_pem
+  common_name     = "livekit.${var.domain_name}"
+  subject_alternative_names = [
+    "livekit-turn.${var.domain_name}",
+    "livekit-whip.${var.domain_name}",
+  ]
+
+  dns_challenge {
+    provider = "cloudflare"
+    config = {
+      CF_API_EMAIL     = var.email_address
+      CF_ZONE_API_TOKEN = var.cloudflare_zone_id  # Use the correct token variable
+      CF_API_KEY = var.cloudflare_api_key       # Use this for API key, not account ID
+      CF_DNS_API_TOKEN = var.cloudflare_api_token       # This looks correct
+    }
+  }
+
+}
+
+resource "aws_acm_certificate" "livekit" {
+  private_key       = acme_certificate.livekit.private_key_pem
+  certificate_body  = acme_certificate.livekit.certificate_pem
+  certificate_chain = acme_certificate.livekit.issuer_pem
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+# S3 bucket for certificate storage
+resource "aws_s3_bucket" "cert_bucket" {
+  bucket = "livekit-certificates-${var.project_name}-${var.environment}"
+}
+
+resource "aws_s3_bucket_policy" "cert_bucket_policy" {
+  bucket = aws_s3_bucket.cert_bucket.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Principal = {
+          AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/ec2-role-${var.project_name}-${var.environment}"
+        }
+        Action   = "s3:GetObject"
+        Resource = "arn:aws:s3:::${aws_s3_bucket.cert_bucket.id}/*"
+      }
+    ]
+  })
+}
+
+
+resource "local_file" "certificate_body" {
+  content  = acme_certificate.livekit.certificate_pem
+  filename = "${path.module}/cert.pem"
+}
+
+resource "local_file" "private_key" {
+  content  = acme_certificate.livekit.private_key_pem
+  filename = "${path.module}/key.pem"
+}
+
+resource "local_file" "certificate_chain" {
+  content  = acme_certificate.livekit.issuer_pem
+  filename = "${path.module}/chain.pem"
+}
+
+# Upload certificate files to S3
+resource "aws_s3_object" "cert_body" {
+  bucket = aws_s3_bucket.cert_bucket.id
+  key    = "cert.pem"
+  source = local_file.certificate_body.filename
+  acl    = "private"
+}
+
+resource "aws_s3_object" "private_key" {
+  bucket = aws_s3_bucket.cert_bucket.id
+  key    = "key.pem"
+  source = local_file.private_key.filename
+  acl    = "private"
+}
+
+resource "aws_s3_object" "certificate_chain" {
+  bucket = aws_s3_bucket.cert_bucket.id
+  key    = "chain.pem"
+  source = local_file.certificate_chain.filename
+  acl    = "private"
+}
+
+# LiveKit EC2 Instances
+resource "aws_instance" "livekit" {
+  count                = 3
+  ami                  = data.aws_ami.amazon_linux_2.id
+  instance_type        = "t3.2xlarge"
+  key_name             = aws_key_pair.livekit.key_name
+  vpc_security_group_ids = [aws_security_group.livekit.id]
+  subnet_id            = aws_subnet.public[count.index % 2].id
+  iam_instance_profile = aws_iam_instance_profile.ec2_profile.name
+
+  user_data = templatefile("${path.module}/../templates/cloud_init.amazon.yaml.tpl", {
+    redis_address      = "${aws_elasticache_cluster.livekit.cache_nodes[0].address}:${aws_elasticache_cluster.livekit.cache_nodes[0].port}"
+    redis_username     = "default"
+    redis_password     = random_password.redis_auth_token.result
+    livekit_domain     = "livekit.${var.domain_name}"
+    turn_domain        = "livekit-turn.${var.domain_name}"
+    whip_domain        = "livekit-whip.${var.domain_name}"
+    api_key            = var.livekit_api_key
+    api_secret         = var.livekit_api_secret
+    webhook_events_url = "https://proxy.${var.domain_name}/api/v1/live-kit/webhook-events"
+    cert_bucket        = aws_s3_bucket.cert_bucket.id
+    aws_region         = var.aws_region
+  })
+
+  root_block_device {
+    volume_size = 32
+    volume_type = "gp3"
+  }
+
+  tags = {
+    Name = "LiveKit-Instance-${count.index + 1}"
+  }
+
+  depends_on = [aws_s3_object.cert_body, aws_s3_object.certificate_chain, aws_s3_object.private_key]
+}
+
+# CloudWatch Log Groups
+resource "aws_cloudwatch_log_group" "livekit" {
+  name              = "/ec2/${var.environment}/livekit"
+  retention_in_days = 30
+}
+
+resource "aws_cloudwatch_log_group" "caddy" {
+  name              = "/ec2/${var.environment}/caddy"
+  retention_in_days = 30
+}
+
+resource "aws_cloudwatch_log_group" "livekit_egress" {
+  name              = "/ec2/${var.environment}/livekit-egress"
+  retention_in_days = 30
+}
+
+resource "aws_cloudwatch_log_group" "livekit_ingress" {
+  name              = "/ec2/${var.environment}/livekit-ingress"
+  retention_in_days = 30
+}
+
+# IAM role for EC2 instances to access CloudWatch
+resource "aws_iam_role" "ec2" {
+  name = "ec2-role-${var.project_name}-${var.environment}"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "ec2.amazonaws.com"
+        }
+      }
+    ]
+  })
+}
+
+# Attach CloudWatch policy to the role
+resource "aws_iam_role_policy_attachment" "cloudwatch_policy" {
+  policy_arn = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
+  role       = aws_iam_role.ec2.name
+}
+
+resource "aws_iam_role_policy" "livekit_ec2_policy" {
+  name = "livekit-ec2-${var.project_name}-${var.environment}-policy"
+  role = aws_iam_role.ec2.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          # CloudWatch Logs
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents",
+          "logs:DescribeLogStreams",
+          "logs:DescribeLogGroups",
+          "logs:GetLogEvents",
+
+          # CloudWatch Metrics
+          "cloudwatch:PutMetricData",
+          "cloudwatch:GetMetricStatistics",
+          "cloudwatch:ListMetrics",
+
+          # EC2 Describe Actions (for self-discovery and debugging)
+          "ec2:DescribeInstances",
+          "ec2:DescribeInstanceStatus",
+          "ec2:DescribeTags",
+
+          # ACM (for certificate management)
+          "acm:DescribeCertificate",
+          "acm:ListCertificates",
+          "acm:GetCertificate",
+
+          # Systems Manager (for remote management and debugging)
+          "ssm:UpdateInstanceInformation",
+          "ssm:ListInstanceAssociations",
+          "ssm:DescribeInstanceAssociations",
+          "ssm:GetParameter",
+          "ssm:GetParameters",
+          "ssm:GetParametersByPath",
+
+          # S3 (if you decide to use S3 for log storage or config files)
+          "s3:GetObject",
+          "s3:PutObject",
+          "s3:ListBucket",
+
+          # SNS (for potential notifications)
+          "sns:Publish",
+
+          # SQS (if you use queues for any inter-instance communication)
+          "sqs:SendMessage",
+          "sqs:ReceiveMessage",
+          "sqs:DeleteMessage",
+          "sqs:GetQueueAttributes",
+
+          # KMS (if you use custom encryption keys)
+          "kms:Decrypt",
+          "kms:GenerateDataKey",
+
+          # ElastiCache (for describing Redis cluster)
+          "elasticache:DescribeCacheClusters",
+          "elasticache:ListTagsForResource",
+
+          # Route53 (if instances need to update DNS records)
+          "route53:ChangeResourceRecordSets",
+          "route53:ListResourceRecordSets",
+          "route53:ListHostedZones",
+
+          # ECS (if you're using containers)
+          "ecs:DescribeTasks",
+          "ecs:ListTasks",
+          "ecs:DescribeContainerInstances",
+          "ecs:ListContainerInstances",
+
+          # ECR (if you're using private Docker repositories)
+          "ecr:GetAuthorizationToken",
+          "ecr:BatchCheckLayerAvailability",
+          "ecr:GetDownloadUrlForLayer",
+          "ecr:BatchGetImage",
+
+          # X-Ray (for distributed tracing)
+          "xray:PutTraceSegments",
+          "xray:PutTelemetryRecords",
+          "xray:GetSamplingRules",
+          "xray:GetSamplingTargets",
+          "xray:GetSamplingStatisticSummaries",
+
+          # Systems Manager Parameter Store (for storing config securely)
+          "ssm:GetParameter",
+          "ssm:GetParameters",
+          "ssm:GetParametersByPath",
+
+          # IAM (for describing roles, useful for debugging)
+          "iam:GetRole",
+          "iam:ListAttachedRolePolicies"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+# Create an instance profile
+resource "aws_iam_instance_profile" "ec2_profile" {
+  name = "ec2-profile-${var.project_name}-${var.environment}"
+  role = aws_iam_role.ec2.name
+}
+
+# Security Group for LiveKit
+resource "aws_security_group" "livekit" {
+  name        = "livekit-sg-${var.project_name}-${var.environment}"
+  description = "Security group for LiveKit servers"
+  vpc_id      = aws_vpc.main.id
+
+  # SSH ingress rule
+  ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]  # Be cautious with this. Ideally, restrict to your IP.
+    description = "Allow SSH access"
+  }
+
+  ingress {
+    from_port = 80
+    to_port   = 80
+    protocol  = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    from_port = 7880
+    to_port   = 7880
+    protocol  = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    from_port = 443
+    to_port   = 443
+    protocol  = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    from_port = 7881
+    to_port   = 7881
+    protocol  = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    from_port = 3478
+    to_port   = 3478
+    protocol  = "udp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    from_port = 50000
+    to_port   = 60000
+    protocol  = "udp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    from_port = 7885
+    to_port   = 7885
+    protocol  = "udp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    from_port = 1935
+    to_port   = 1935
+    protocol  = "udp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    from_port = 1935
+    to_port   = 1935
+    protocol  = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port = 0
+    to_port   = 0
+    protocol  = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+# Key Pair for SSH access
+resource "aws_key_pair" "livekit" {
+  key_name = "livekit-${var.environment}-key"
+  public_key = file("${path.module}/livekit_key.pub")  # Make sure to create this key
+}
+
+# Global Accelerator
+resource "aws_globalaccelerator_accelerator" "livekit" {
+  name            = "${var.project_name}-${var.environment}-livekit-accelerator"
+  ip_address_type = "IPV4"
+  enabled         = true
+
+  attributes {
+    flow_logs_enabled   = true
+    flow_logs_s3_bucket = aws_s3_bucket.accelerator_logs.bucket
+    flow_logs_s3_prefix = "flow-logs/"
+  }
+}
+
+# S3 bucket for Global Accelerator logs
+resource "aws_s3_bucket" "accelerator_logs" {
+  bucket = "${var.project_name}-${var.environment}-livekit-accelerator-logs-${data.aws_caller_identity.current.account_id}"
+}
+
+# Global Accelerator Listener
+locals {
+  protocols = ["tcp", "udp"]
+}
+
+resource "aws_globalaccelerator_endpoint_group" "livekit" {
+  count = length(local.protocols)
+  listener_arn = aws_globalaccelerator_listener.livekit[count.index].id
+
+  dynamic "endpoint_configuration" {
+    for_each = aws_instance.livekit
+    content {
+      endpoint_id                    = endpoint_configuration.value.id
+      weight                         = 100
+      client_ip_preservation_enabled = true
+    }
+  }
+
+  health_check_path       = "/"
+  health_check_port       = 7880
+  health_check_protocol   = "HTTP"
+  threshold_count         = 3
+  traffic_dial_percentage = 100
+}
+
+#Global Accelerator Listeners
+resource "aws_globalaccelerator_listener" "livekit" {
+  count = length(local.protocols)
+  accelerator_arn = aws_globalaccelerator_accelerator.livekit.id
+  client_affinity = "SOURCE_IP"
+  protocol = upper(local.protocols[count.index])
+
+  port_range {
+    from_port = 80
+    to_port   = 80
+  }
+
+  port_range {
+    from_port = 443
+    to_port   = 443
+  }
+
+  port_range {
+    from_port = 7880
+    to_port   = 7880
+  }
+
+  port_range {
+    from_port = 7881
+    to_port   = 7881
+  }
+
+  port_range {
+    from_port = 3478
+    to_port   = 3478
+  }
+
+  port_range {
+    from_port = 50000
+    to_port   = 60000
+  }
+
+  port_range {
+    from_port = 1935
+    to_port   = 1935
+  }
+
+  port_range {
+    from_port = 7885
+    to_port   = 7885
+  }
+}
+
+# # Global Accelerator DNS entries
+resource "cloudflare_record" "livekit_global" {
+  zone_id = var.cloudflare_zone_id
+  name    = "livekit.app"
+  content = aws_globalaccelerator_accelerator.livekit.dns_name
+  type    = "CNAME"
+  proxied = false
+}
+
+resource "cloudflare_record" "livekit_turn_global" {
+  zone_id = var.cloudflare_zone_id
+  name    = "livekit-turn.app"
+  content = aws_globalaccelerator_accelerator.livekit.dns_name
+  type    = "CNAME"
+  proxied = false
+}
+
+resource "cloudflare_record" "livekit_whip_global" {
+  zone_id = var.cloudflare_zone_id
+  name    = "livekit-whip.app"
+  content = aws_globalaccelerator_accelerator.livekit.dns_name
+  type    = "CNAME"
+  proxied = false
+}
 
 
 
