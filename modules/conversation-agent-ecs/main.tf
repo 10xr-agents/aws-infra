@@ -49,7 +49,7 @@ resource "aws_ecs_task_definition" "conversation_agent" {
         }
       ]
 
-      environment = [
+      environment = concat([
         {
           name  = "LOG_LEVEL"
           value = var.log_level
@@ -109,13 +109,14 @@ resource "aws_ecs_task_definition" "conversation_agent" {
         {
           name  = "devsecret"
           value = var.livekit_api_secret
-        },
+        }
+      ], [
         # Additional environment variables from the original configuration
         for key, value in var.additional_environment_variables : {
           name  = key
           value = tostring(value)
         }
-      ]
+      ])
 
       secrets = [
         {
