@@ -1,3 +1,4 @@
+
 # modules/storage-ecs/main.tf
 
 /**
@@ -14,17 +15,13 @@ resource "aws_efs_file_system" "main" {
   performance_mode = var.efs_performance_mode
   throughput_mode  = var.efs_throughput_mode
   
+  # Set provisioned throughput if using provisioned mode
+  provisioned_throughput_in_mibps = var.efs_throughput_mode == "provisioned" ? var.efs_provisioned_throughput : null
+  
   dynamic "lifecycle_policy" {
     for_each = var.enable_efs_lifecycle_policy ? [1] : []
     content {
       transition_to_ia = "AFTER_30_DAYS"
-    }
-  }
-
-  dynamic "provisioned_throughput_in_mibps" {
-    for_each = var.efs_throughput_mode == "provisioned" ? [1] : []
-    content {
-      provisioned_throughput_in_mibps = var.efs_provisioned_throughput
     }
   }
 
@@ -161,6 +158,10 @@ resource "aws_s3_bucket_lifecycle_configuration" "recordings" {
   rule {
     id     = "expire-old-recordings"
     status = "Enabled"
+
+    filter {
+      prefix = ""
+    }
 
     expiration {
       days = var.recordings_expiration_days

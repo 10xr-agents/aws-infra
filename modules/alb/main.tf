@@ -112,12 +112,7 @@ resource "aws_lb_listener" "http" {
     }
 
     # Forward to target group if no certificate
-    dynamic "forward" {
-      for_each = var.certificate_arn != "" ? [] : [1]
-      content {
-        target_group_arn = aws_lb_target_group.default.arn
-      }
-    }
+    target_group_arn = var.certificate_arn != "" ? null : aws_lb_target_group.default.arn
   }
 }
 
