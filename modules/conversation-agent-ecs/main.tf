@@ -259,15 +259,10 @@ resource "aws_ecs_service" "conversation_agent" {
   task_definition = aws_ecs_task_definition.conversation_agent.arn
   desired_count   = var.desired_count
 
-  deployment_configuration {
-    minimum_healthy_percent = var.deployment_minimum_healthy_percent
-    maximum_percent        = var.deployment_maximum_percent
-  }
-
-  deployment_circuit_breaker {
-    enable   = true
-    rollback = true
-  }
+  deployment_minimum_healthy_percent = var.deployment_minimum_healthy_percent
+  deployment_maximum_percent        = var.deployment_maximum_percent
+  
+  enable_execute_command = var.enable_execute_command
 
   network_configuration {
     subnets          = var.private_subnet_ids
@@ -296,9 +291,6 @@ resource "aws_ecs_service" "conversation_agent" {
       base             = capacity_provider_strategy.value.base
     }
   }
-
-  # Enable execute command for debugging
-  enable_execute_command = var.enable_execute_command
 
   tags = merge(
     var.tags,
