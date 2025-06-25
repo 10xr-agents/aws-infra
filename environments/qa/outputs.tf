@@ -87,9 +87,6 @@ output "default_target_group_arn" {
   value       = module.alb.default_target_group_arn
 }
 
-# Note: NLB outputs will be available when you create ECS services with NLB
-# Each service that needs an NLB will create its own load balancer
-
 # Service Discovery
 output "service_discovery_namespace_id" {
   description = "ID of the service discovery namespace"
@@ -135,4 +132,51 @@ output "recordings_bucket_arn" {
 output "storage_task_role_arn" {
   description = "ARN of the IAM role for ECS tasks to access storage"
   value       = module.storage.task_role_arn
+}
+
+# Conversation Agent outputs
+output "conversation_agent_service_name" {
+  description = "Name of the conversation agent ECS service"
+  value       = module.conversation_agent.service_name
+}
+
+output "conversation_agent_service_arn" {
+  description = "ARN of the conversation agent ECS service"
+  value       = module.conversation_agent.service_arn
+}
+
+output "conversation_agent_task_definition_arn" {
+  description = "ARN of the conversation agent task definition"
+  value       = module.conversation_agent.task_definition_arn
+}
+
+output "conversation_agent_target_group_arn" {
+  description = "ARN of the conversation agent target group"
+  value       = module.conversation_agent.target_group_arn
+}
+
+output "conversation_agent_security_group_id" {
+  description = "ID of the conversation agent security group"
+  value       = module.conversation_agent.security_group_id
+}
+
+output "conversation_agent_cloudwatch_log_group_name" {
+  description = "Name of the conversation agent CloudWatch log group"
+  value       = module.conversation_agent.cloudwatch_log_group_name
+}
+
+output "conversation_agent_service_discovery_service_name" {
+  description = "Name of the conversation agent service discovery service"
+  value       = module.conversation_agent.service_discovery_service_name
+}
+
+# Access URLs
+output "conversation_agent_url" {
+  description = "URL to access the conversation agent service"
+  value       = "http://${module.alb.alb_dns_name}/conversation/"
+}
+
+output "conversation_agent_internal_url" {
+  description = "Internal service discovery URL for the conversation agent"
+  value       = module.conversation_agent.service_discovery_service_name != null ? "http://conversation-agent.${aws_service_discovery_private_dns_namespace.main.name}:${var.conversation_agent_port}" : null
 }

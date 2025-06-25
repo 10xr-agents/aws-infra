@@ -191,6 +191,222 @@ variable "recordings_expiration_days" {
   default     = 30
 }
 
+# Conversation Agent Configuration (matching nonprod EKS deployment)
+variable "conversation_agent_ecr_repository_url" {
+  description = "URL of the ECR repository for the conversation agent image"
+  type        = string
+  default     = "761018882607.dkr.ecr.us-east-1.amazonaws.com/10xr/conversation-agent"
+}
+
+variable "conversation_agent_image_tag" {
+  description = "Tag of the Docker image to deploy"
+  type        = string
+  default     = "latest"
+}
+
+variable "conversation_agent_port" {
+  description = "Port that the conversation agent container listens on"
+  type        = number
+  default     = 9600
+}
+
+variable "conversation_agent_cpu" {
+  description = "CPU units for the conversation agent task (1024 = 1 vCPU)"
+  type        = number
+  default     = 2048  # 2000m from EKS
+}
+
+variable "conversation_agent_memory" {
+  description = "Memory for the conversation agent task in MB"
+  type        = number
+  default     = 4096  # 4Gi from EKS
+}
+
+variable "conversation_agent_desired_count" {
+  description = "Desired number of conversation agent tasks"
+  type        = number
+  default     = 2
+}
+
+# Application Configuration (matching EKS variables)
+variable "conversation_agent_log_level" {
+  description = "Log level for the conversation agent"
+  type        = string
+  default     = "DEBUG"
+}
+
+variable "conversation_agent_agent_collection_name" {
+  description = "MongoDB collection name for agent context data"
+  type        = string
+  default     = "agent-context-data"
+}
+
+variable "conversation_agent_frames_collection_name" {
+  description = "MongoDB collection name for voice AI frames"
+  type        = string
+  default     = "voice-ai-frames"
+}
+
+variable "conversation_agent_database_name" {
+  description = "MongoDB database name"
+  type        = string
+  default     = "converse-server-qa"
+}
+
+variable "conversation_agent_mongodb_uri" {
+  description = "MongoDB connection URI"
+  type        = string
+  default     = "mongodb+srv://converseDev:firstPassword1@converse.3njzs.mongodb.net/converse-server?retryWrites=true&w=majority&appName=Converse"
+  sensitive   = true
+}
+
+# LiveKit Configuration
+variable "conversation_agent_livekit_service" {
+  description = "Name of the LiveKit service"
+  type        = string
+  default     = "livekit-server"
+}
+
+variable "conversation_agent_livekit_api_key" {
+  description = "LiveKit API key"
+  type        = string
+  default     = "APIaSovFA9uQ4p5"
+  sensitive   = true
+}
+
+variable "conversation_agent_livekit_api_secret" {
+  description = "LiveKit API secret"
+  type        = string
+  default     = "lTxgQzxS0e2n1vqwOhaiFUiwKWvYeyJukHvnJegbITmA"
+  sensitive   = true
+}
+
+# Secrets Configuration (use these in production)
+variable "conversation_agent_anthropic_api_key_secret_arn" {
+  description = "ARN of the secret containing Anthropic API key"
+  type        = string
+  default     = ""
+}
+
+variable "conversation_agent_deepgram_api_key_secret_arn" {
+  description = "ARN of the secret containing Deepgram API key"
+  type        = string
+  default     = ""
+}
+
+variable "conversation_agent_cartesia_api_key_secret_arn" {
+  description = "ARN of the secret containing Cartesia API key"
+  type        = string
+  default     = ""
+}
+
+variable "conversation_agent_livekit_api_key_secret_arn" {
+  description = "ARN of the secret containing LiveKit API key"
+  type        = string
+  default     = ""
+}
+
+variable "conversation_agent_livekit_api_secret_secret_arn" {
+  description = "ARN of the secret containing LiveKit API secret"
+  type        = string
+  default     = ""
+}
+
+# Additional Environment Variables
+variable "conversation_agent_additional_environment_variables" {
+  description = "Additional environment variables for the conversation agent"
+  type        = map(string)
+  default     = {}
+}
+
+# Health Check Configuration
+variable "conversation_agent_enable_health_check" {
+  description = "Whether to enable container health checks for conversation agent"
+  type        = bool
+  default     = true
+}
+
+variable "conversation_agent_health_check_command" {
+  description = "Health check command for conversation agent"
+  type        = string
+  default     = "curl -f http://localhost:9600/health || exit 1"
+}
+
+variable "conversation_agent_health_check_path" {
+  description = "Health check path for conversation agent target group"
+  type        = string
+  default     = "/health"
+}
+
+variable "conversation_agent_health_check_interval" {
+  description = "Health check interval in seconds"
+  type        = number
+  default     = 30
+}
+
+variable "conversation_agent_health_check_timeout" {
+  description = "Health check timeout in seconds"
+  type        = number
+  default     = 20
+}
+
+variable "conversation_agent_health_check_start_period" {
+  description = "Health check start period in seconds"
+  type        = number
+  default     = 90
+}
+
+# Auto Scaling Configuration
+variable "conversation_agent_enable_auto_scaling" {
+  description = "Whether to enable auto scaling for conversation agent"
+  type        = bool
+  default     = true
+}
+
+variable "conversation_agent_min_capacity" {
+  description = "Minimum number of conversation agent tasks"
+  type        = number
+  default     = 1
+}
+
+variable "conversation_agent_max_capacity" {
+  description = "Maximum number of conversation agent tasks"
+  type        = number
+  default     = 10
+}
+
+variable "conversation_agent_cpu_target" {
+  description = "Target CPU utilization for conversation agent auto scaling"
+  type        = number
+  default     = 70
+}
+
+variable "conversation_agent_memory_target" {
+  description = "Target memory utilization for conversation agent auto scaling"
+  type        = number
+  default     = 80
+}
+
+# Service Discovery Configuration
+variable "conversation_agent_enable_service_discovery" {
+  description = "Whether to enable service discovery for conversation agent"
+  type        = bool
+  default     = true
+}
+
+# EFS Configuration
+variable "conversation_agent_enable_efs" {
+  description = "Whether to mount EFS storage for conversation agent"
+  type        = bool
+  default     = false
+}
+
+variable "conversation_agent_efs_mount_path" {
+  description = "Path to mount EFS in the conversation agent container"
+  type        = string
+  default     = "/app/storage"
+}
+
 # Tags
 variable "tags" {
   description = "A map of tags to add to all resources"
