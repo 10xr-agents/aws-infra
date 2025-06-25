@@ -135,7 +135,7 @@ variable "database_name" {
 variable "mongodb_uri" {
   description = "MongoDB connection URI"
   type        = string
-  default     = "mongodb+srv://converseDev:firstPassword1@converse.3njzs.mongodb.net/converse-server?retryWrites=true&w=majority&appName=Converse"
+  default     = "mongodb+srv://doadmin:by6n2k14L8g53dt7@db-mongodb-nyc3-70786-efaf17f9.mongo.ondigitalocean.com/ten_xr_temp_agents_local?tls=true&authSource=admin&replicaSet=db-mongodb-nyc3-70786"
   sensitive   = true
 }
 
@@ -186,14 +186,14 @@ variable "livekit_api_secret_secret_arn" {
 variable "livekit_api_key" {
   description = "LiveKit API key (use secret for production)"
   type        = string
-  default     = "APIaSovFA9uQ4p5"
+  default     = "APIoiCmJzAYqd5v"
   sensitive   = true
 }
 
 variable "livekit_api_secret" {
   description = "LiveKit API secret (use secret for production)"
   type        = string
-  default     = "lTxgQzxS0e2n1vqwOhaiFUiwKWvYeyJukHvnJegbITmA"
+  default     = "upXGZbqbwpeftLexnICK401jqQFfvrl1o42N84lsSWcC"
   sensitive   = true
 }
 
@@ -215,6 +215,12 @@ variable "health_check_command" {
   description = "Health check command"
   type        = string
   default     = "curl -f http://localhost:9600/health || exit 1"
+}
+
+variable "health_check_path" {
+  description = "Health check path for target group"
+  type        = string
+  default     = "/health"
 }
 
 variable "health_check_interval" {
