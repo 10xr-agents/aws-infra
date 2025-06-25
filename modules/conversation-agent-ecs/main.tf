@@ -179,10 +179,8 @@ resource "aws_ecs_task_definition" "conversation_agent" {
       name = "efs-storage"
 
       efs_volume_configuration {
-        file_system_id          = var.efs_file_system_id
-        access_point_id         = var.efs_access_point_id
-        transit_encryption      = "ENABLED"
-        transit_encryption_port = 2049
+        file_system_id     = var.efs_file_system_id
+        transit_encryption = "ENABLED"
       }
     }
   }
