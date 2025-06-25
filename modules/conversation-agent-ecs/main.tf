@@ -260,12 +260,13 @@ resource "aws_ecs_service" "conversation_agent" {
   desired_count   = var.desired_count
 
   deployment_configuration {
-    minimum_healthy_percent         = var.deployment_minimum_healthy_percent
-    maximum_percent                = var.deployment_maximum_percent
-    deployment_circuit_breaker {
-      enable   = true
-      rollback = true
-    }
+    minimum_healthy_percent = var.deployment_minimum_healthy_percent
+    maximum_percent        = var.deployment_maximum_percent
+  }
+
+  deployment_circuit_breaker {
+    enable   = true
+    rollback = true
   }
 
   network_configuration {
