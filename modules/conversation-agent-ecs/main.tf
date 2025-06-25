@@ -179,9 +179,12 @@ resource "aws_ecs_task_definition" "conversation_agent" {
       name = "efs-storage"
 
       efs_volume_configuration {
-        file_system_id     = var.efs_file_system_id
-        access_point_id    = var.efs_access_point_id
-        transit_encryption = "ENABLED"
+        file_system_id          = var.efs_file_system_id
+        access_point {
+          access_point_id = var.efs_access_point_id
+        }
+        transit_encryption      = "ENABLED"
+        transit_encryption_port = 2049
       }
     }
   }
@@ -244,8 +247,6 @@ resource "aws_service_discovery_service" "conversation_agent" {
 
     routing_policy = "MULTIVALUE"
   }
-
-  health_check_grace_period_seconds = 30
 
   tags = merge(
     var.tags,
