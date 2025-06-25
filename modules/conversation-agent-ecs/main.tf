@@ -180,9 +180,7 @@ resource "aws_ecs_task_definition" "conversation_agent" {
 
       efs_volume_configuration {
         file_system_id          = var.efs_file_system_id
-        access_point {
-          access_point_id = var.efs_access_point_id
-        }
+        access_point_id         = var.efs_access_point_id
         transit_encryption      = "ENABLED"
         transit_encryption_port = 2049
       }
