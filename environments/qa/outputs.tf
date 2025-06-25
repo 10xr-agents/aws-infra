@@ -1,4 +1,4 @@
-# environments/nonprod/outputs.tf
+# environments/qa/outputs.tf
 
 output "vpc_id" {
   description = "The ID of the VPC"
@@ -87,37 +87,8 @@ output "default_target_group_arn" {
   value       = module.alb.default_target_group_arn
 }
 
-# NLB outputs for TURN
-output "turn_nlb_dns_name" {
-  description = "DNS name of the TURN Network Load Balancer"
-  value       = module.nlb.turn_nlb_dns_name
-}
-
-output "turn_nlb_arn" {
-  description = "ARN of the TURN Network Load Balancer"
-  value       = module.nlb.turn_nlb_arn
-}
-
-output "turn_target_group_arns" {
-  description = "Map of TURN target group ARNs"
-  value       = module.nlb.turn_target_group_arns
-}
-
-# NLB outputs for SIP
-output "sip_nlb_dns_name" {
-  description = "DNS name of the SIP Network Load Balancer"
-  value       = module.nlb.sip_nlb_dns_name
-}
-
-output "sip_nlb_arn" {
-  description = "ARN of the SIP Network Load Balancer"
-  value       = module.nlb.sip_nlb_arn
-}
-
-output "sip_signaling_target_group_arn" {
-  description = "ARN of the SIP signaling target group"
-  value       = module.nlb.sip_signaling_target_group_arn
-}
+# Note: NLB outputs will be available when you create ECS services with NLB
+# Each service that needs an NLB will create its own load balancer
 
 # Service Discovery
 output "service_discovery_namespace_id" {

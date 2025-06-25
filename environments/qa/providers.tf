@@ -1,7 +1,6 @@
-# environments/nonprod/providers.tf
+# environments/qa/providers.tf
 
 provider "aws" {
   region = var.region
 }
-
 

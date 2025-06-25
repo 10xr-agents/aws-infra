@@ -1,4 +1,4 @@
-# environments/nonprod/variables.tf
+# environments/qa/variables.tf
 
 variable "region" {
   description = "AWS region"
@@ -9,7 +9,7 @@ variable "region" {
 variable "environment" {
   description = "Environment name (e.g., dev, staging, prod)"
   type        = string
-  default     = "nonprod"
+  default     = "qa"
 }
 
 variable "cluster_name" {
@@ -21,7 +21,7 @@ variable "cluster_name" {
 variable "domain" {
   description = "Domain name for LiveKit services"
   type        = string
-  default     = "nonprod.10xr.com"
+  default     = "qa.10xr.com"
 }
 
 # VPC Configuration
@@ -160,31 +160,6 @@ variable "acm_certificate_arn" {
   default     = ""
 }
 
-# NLB Configuration
-variable "nlb_enable_deletion_protection" {
-  description = "Whether to enable deletion protection on the NLB"
-  type        = bool
-  default     = false
-}
-
-variable "nlb_enable_cross_zone_load_balancing" {
-  description = "Whether to enable cross-zone load balancing on the NLB"
-  type        = bool
-  default     = true
-}
-
-variable "create_turn_nlb" {
-  description = "Whether to create NLB for TURN traffic"
-  type        = bool
-  default     = true
-}
-
-variable "create_sip_nlb" {
-  description = "Whether to create NLB for SIP traffic"
-  type        = bool
-  default     = true
-}
-
 # Storage Configuration
 variable "efs_performance_mode" {
   description = "Performance mode for EFS"
@@ -221,7 +196,7 @@ variable "tags" {
   description = "A map of tags to add to all resources"
   type        = map(string)
   default     = {
-    Environment = "nonprod"
+    Environment = "qa"
     Project     = "LiveKit"
     Platform    = "ECS"
     Terraform   = "true"

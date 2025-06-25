@@ -1,4 +1,4 @@
-# environments/nonprod/main.tf
+# environments/qa/main.tf
 
 locals {
   cluster_name = "${var.cluster_name}-${var.environment}"
@@ -144,63 +144,9 @@ module "alb" {
   depends_on = [module.vpc]
 }
 
-# Network Load Balancer Module (for services requiring NLB)
-module "nlb" {
-  source = "../../modules/nlb"
-
-  cluster_name = local.cluster_name
-  environment  = var.environment
-
-  vpc_id            = module.vpc.vpc_id
-  public_subnet_ids = module.vpc.public_subnets
-
-  # NLB Configuration
-  enable_deletion_protection       = var.nlb_enable_deletion_protection
-  enable_cross_zone_load_balancing = var.nlb_enable_cross_zone_load_balancing
-
-  # Create NLB for TURN/WebRTC traffic
-  create_turn_nlb = var.create_turn_nlb
-  turn_ports = {
-    udp = {
-      port     = 3478
-      protocol = "UDP"
-    }
-    tcp = {
-      port     = 3480
-      protocol = "TCP"
-    }
-  }
-
-  # Create NLB for SIP traffic
-  create_sip_nlb = var.create_sip_nlb
-  sip_ports = {
-    signaling = {
-      port     = 5060
-      protocol = "UDP"
-    }
-    rtp_start = {
-      port     = 10000
-      protocol = "UDP"
-    }
-    rtp_end = {
-      port     = 20000
-      protocol = "UDP"
-    }
-  }
-
-  tags = merge(
-    var.tags,
-    {
-      "Environment" = var.environment
-      "Project"     = "LiveKit"
-      "Platform"    = "ECS"
-      "Component"   = "NLB"
-      "Terraform"   = "true"
-    }
-  )
-
-  depends_on = [module.vpc]
-}
+# Note: Network Load Balancers (NLBs) will be created automatically when defining ECS services
+# that require NLB instead of ALB. This is different from EKS where ingress controllers
+# create the load balancers.
 
 # Service Discovery Namespace
 resource "aws_service_discovery_private_dns_namespace" "main" {
