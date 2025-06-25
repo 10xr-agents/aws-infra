@@ -118,28 +118,28 @@ resource "aws_ecs_task_definition" "conversation_agent" {
         }
       ])
 
-      secrets = [
-        {
+      secrets = concat(
+        var.anthropic_api_key_secret_arn != "" ? [{
           name      = "ANTHROPIC_API_KEY"
           valueFrom = var.anthropic_api_key_secret_arn
-        },
-        {
+        }] : [],
+        var.deepgram_api_key_secret_arn != "" ? [{
           name      = "DEEPGRAM_API_KEY"
           valueFrom = var.deepgram_api_key_secret_arn
-        },
-        {
+        }] : [],
+        var.cartesia_api_key_secret_arn != "" ? [{
           name      = "CARTESIA_API_KEY"
           valueFrom = var.cartesia_api_key_secret_arn
-        },
-        {
+        }] : [],
+        var.livekit_api_key_secret_arn != "" ? [{
           name      = "LIVEKIT_API_KEY"
           valueFrom = var.livekit_api_key_secret_arn
-        },
-        {
+        }] : [],
+        var.livekit_api_secret_secret_arn != "" ? [{
           name      = "LIVEKIT_API_SECRET"
           valueFrom = var.livekit_api_secret_secret_arn
-        }
-      ]
+        }] : []
+      )
 
       logConfiguration = {
         logDriver = "awslogs"
