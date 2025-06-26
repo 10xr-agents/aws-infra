@@ -117,8 +117,9 @@ resource "aws_eks_addon" "vpc_cni" {
   cluster_name = aws_eks_cluster.main.name
   addon_name   = "vpc-cni"
   
-  # Resolve conflicts automatically
-  resolve_conflicts = "OVERWRITE"
+  # Resolve conflicts automatically (updated argument name)
+  resolve_conflicts_on_create = "OVERWRITE"
+  resolve_conflicts_on_update = "OVERWRITE"
 
   tags = var.tags
 }
@@ -127,8 +128,9 @@ resource "aws_eks_addon" "coredns" {
   cluster_name = aws_eks_cluster.main.name
   addon_name   = "coredns"
   
-  # Resolve conflicts automatically
-  resolve_conflicts = "OVERWRITE"
+  # Resolve conflicts automatically (updated argument name)
+  resolve_conflicts_on_create = "OVERWRITE"
+  resolve_conflicts_on_update = "OVERWRITE"
 
   # CoreDNS requires nodes to be available
   depends_on = [aws_eks_node_group.main]
@@ -140,8 +142,9 @@ resource "aws_eks_addon" "kube_proxy" {
   cluster_name = aws_eks_cluster.main.name
   addon_name   = "kube-proxy"
   
-  # Resolve conflicts automatically
-  resolve_conflicts = "OVERWRITE"
+  # Resolve conflicts automatically (updated argument name)
+  resolve_conflicts_on_create = "OVERWRITE"
+  resolve_conflicts_on_update = "OVERWRITE"
 
   tags = var.tags
 }
@@ -153,8 +156,9 @@ resource "aws_eks_addon" "ebs_csi" {
   cluster_name = aws_eks_cluster.main.name
   addon_name   = "aws-ebs-csi-driver"
   
-  # Resolve conflicts automatically
-  resolve_conflicts = "OVERWRITE"
+  # Resolve conflicts automatically (updated argument name)
+  resolve_conflicts_on_create = "OVERWRITE"
+  resolve_conflicts_on_update = "OVERWRITE"
 
   tags = var.tags
 }
