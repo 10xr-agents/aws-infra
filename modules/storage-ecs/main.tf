@@ -1,5 +1,18 @@
 # modules/storage-ecs/main.tf (Updated for ECS + EKS)
 
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = ">= 5.97.0"
+    }
+    kubectl = {
+      source  = "gavinbunney/kubectl"
+      version = ">= 1.19.0"
+    }
+  }
+}
+
 /**
  * # Unified Storage Module for ECS + EKS
  *
