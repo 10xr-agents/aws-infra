@@ -1,7 +1,7 @@
-# modules/storage-ecs/variables.tf (Updated for ECS + EKS)
+# modules/storage-ecs/variables.tf
 
 variable "cluster_name" {
-  description = "Name of the cluster"
+  description = "Name of the ECS cluster"
   type        = string
 }
 
@@ -20,50 +20,11 @@ variable "private_subnet_ids" {
   type        = list(string)
 }
 
-# ECS Configuration
 variable "ecs_security_group_id" {
   description = "Security group ID of ECS tasks"
   type        = string
 }
 
-# EKS Configuration (optional)
-variable "enable_eks" {
-  description = "Whether EKS is enabled"
-  type        = bool
-  default     = false
-}
-
-variable "eks_cluster_security_group_id" {
-  description = "Security group ID of the EKS cluster"
-  type        = string
-  default     = ""
-}
-
-variable "eks_node_security_group_id" {
-  description = "Security group ID of the EKS nodes"
-  type        = string
-  default     = ""
-}
-
-variable "eks_oidc_provider_arn" {
-  description = "ARN of the EKS OIDC provider"
-  type        = string
-  default     = ""
-}
-
-variable "livekit_namespace" {
-  description = "Kubernetes namespace for LiveKit components"
-  type        = string
-  default     = "livekit"
-}
-
-variable "create_kubernetes_resources" {
-  description = "Whether to create Kubernetes resources (storage classes, etc.)"
-  type        = bool
-  default     = true
-}
-
-# EFS Configuration
 variable "efs_performance_mode" {
   description = "Performance mode for EFS (generalPurpose or maxIO)"
   type        = string
@@ -88,7 +49,6 @@ variable "enable_efs_lifecycle_policy" {
   default     = true
 }
 
-# S3 Configuration
 variable "create_recordings_bucket" {
   description = "Whether to create S3 bucket for recordings"
   type        = bool
@@ -106,21 +66,9 @@ variable "recordings_expiration_days" {
   default     = 30
 }
 
-# Kubernetes Storage Classes Configuration
-variable "gp3_iops" {
-  description = "IOPS for GP3 storage class"
-  type        = string
-  default     = "3000"
-}
-
-variable "gp3_throughput" {
-  description = "Throughput for GP3 storage class"
-  type        = string
-  default     = "125"
-}
-
 variable "tags" {
   description = "A map of tags to add to all resources"
   type        = map(string)
   default     = {}
 }
+
