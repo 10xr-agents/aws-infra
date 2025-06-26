@@ -139,7 +139,7 @@ variable "ec2_ami_id" {
 variable "eks_kubernetes_version" {
   description = "Kubernetes version for the EKS cluster"
   type        = string
-  default     = "1.28"
+  default     = "1.32"  # Latest stable version with longest support window
 }
 
 variable "eks_endpoint_private_access" {

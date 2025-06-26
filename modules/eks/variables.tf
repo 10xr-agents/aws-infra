@@ -29,7 +29,7 @@ variable "public_subnet_ids" {
 variable "kubernetes_version" {
   description = "Kubernetes version for the EKS cluster"
   type        = string
-  default     = "1.28"
+  default     = "1.32"  # Latest stable version with longest support window
 }
 
 variable "endpoint_private_access" {

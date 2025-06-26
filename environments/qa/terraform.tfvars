@@ -33,7 +33,7 @@ ec2_asg_desired_capacity = 2
 ec2_instance_types       = ["m5.large", "m5.xlarge", "m5a.large", "m5a.xlarge"]
 
 # EKS Configuration
-eks_kubernetes_version            = "1.28"
+eks_kubernetes_version            = "1.32"  # Latest stable version with longest support window
 eks_endpoint_private_access       = true
 eks_endpoint_public_access        = true
 eks_endpoint_public_access_cidrs  = ["0.0.0.0/0"]
