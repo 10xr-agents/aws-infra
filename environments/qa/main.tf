@@ -3,6 +3,7 @@
 locals {
   cluster_name = "${var.cluster_name}-${var.environment}"
   vpc_name     = "${var.cluster_name}-${var.environment}-${var.region}"
+  eks_cluster_name = "${var.cluster_name}-${var.environment}-eks"
 }
 
 # VPC Module - Reuse existing VPC module
@@ -33,7 +34,7 @@ module "vpc" {
     {
       "Environment" = var.environment
       "Project"     = "LiveKit"
-      "Platform"    = "ECS"
+      "Platform"    = "ECS-EKS"
       "Terraform"   = "true"
     }
   )
@@ -71,6 +72,58 @@ module "ecs" {
       "Environment" = var.environment
       "Project"     = "LiveKit"
       "Platform"    = "ECS"
+      "Terraform"   = "true"
+    }
+  )
+
+  depends_on = [module.vpc]
+}
+
+# EKS Cluster Module
+module "eks" {
+  count = var.enable_eks ? 1 : 0
+  
+  source = "../../modules/eks"
+
+  cluster_name    = local.eks_cluster_name
+  environment     = var.environment
+
+  vpc_id             = module.vpc.vpc_id
+  private_subnet_ids = module.vpc.private_subnets
+  public_subnet_ids  = module.vpc.public_subnets
+
+  # EKS Configuration
+  kubernetes_version      = var.eks_kubernetes_version
+  endpoint_private_access = var.eks_endpoint_private_access
+  endpoint_public_access  = var.eks_endpoint_public_access
+  public_access_cidrs     = var.eks_public_access_cidrs
+  enabled_cluster_log_types = var.eks_enabled_cluster_log_types
+  log_retention_days      = var.eks_log_retention_days
+
+  # Node Group Configuration
+  node_group_capacity_type   = var.eks_node_group_capacity_type
+  node_group_instance_types  = var.eks_node_group_instance_types
+  node_group_ami_type        = var.eks_node_group_ami_type
+  node_group_disk_size       = var.eks_node_group_disk_size
+  node_group_desired_size    = var.eks_node_group_desired_size
+  node_group_max_size        = var.eks_node_group_max_size
+  node_group_min_size        = var.eks_node_group_min_size
+  node_group_max_unavailable = var.eks_node_group_max_unavailable
+  enable_launch_template     = var.eks_enable_launch_template
+
+  # Add-ons
+  vpc_cni_version        = var.eks_vpc_cni_version
+  coredns_version        = var.eks_coredns_version
+  kube_proxy_version     = var.eks_kube_proxy_version
+  enable_ebs_csi_driver  = var.eks_enable_ebs_csi_driver
+  ebs_csi_driver_version = var.eks_ebs_csi_driver_version
+
+  tags = merge(
+    var.tags,
+    {
+      "Environment" = var.environment
+      "Project"     = "LiveKit"
+      "Platform"    = "EKS"
       "Terraform"   = "true"
     }
   )
@@ -135,7 +188,7 @@ module "alb" {
     {
       "Environment" = var.environment
       "Project"     = "LiveKit"
-      "Platform"    = "ECS"
+      "Platform"    = "ECS-EKS"
       "Component"   = "ALB"
       "Terraform"   = "true"
     }
@@ -155,14 +208,14 @@ resource "aws_service_discovery_private_dns_namespace" "main" {
     {
       "Environment" = var.environment
       "Project"     = "LiveKit"
-      "Platform"    = "ECS"
+      "Platform"    = "ECS-EKS"
       "Component"   = "ServiceDiscovery"
       "Terraform"   = "true"
     }
   )
 }
 
-# Storage Module (EFS for shared storage)
+# Unified Storage Module (shared by ECS and EKS)
 module "storage" {
   source = "../../modules/storage-ecs"
 
@@ -171,9 +224,20 @@ module "storage" {
   cluster_name          = local.cluster_name
   environment           = var.environment
 
+  # ECS Configuration
+  ecs_security_group_id = module.ecs.ecs_security_group_id
+
+  # EKS Configuration (optional)
+  enable_eks                    = var.enable_eks
+  eks_cluster_security_group_id = var.enable_eks ? module.eks[0].cluster_security_group_id : ""
+  eks_node_security_group_id    = var.enable_eks ? module.eks[0].node_group_security_group_id : ""
+  eks_oidc_provider_arn         = var.enable_eks ? module.eks[0].cluster_oidc_issuer_url : ""
+  livekit_namespace             = var.livekit_namespace
+  create_kubernetes_resources   = var.enable_eks
+
   # EFS configuration
-  efs_performance_mode  = var.efs_performance_mode
-  efs_throughput_mode   = var.efs_throughput_mode
+  efs_performance_mode       = var.efs_performance_mode
+  efs_throughput_mode        = var.efs_throughput_mode
   efs_provisioned_throughput = var.efs_provisioned_throughput
 
   # S3 configuration for recordings
@@ -181,23 +245,21 @@ module "storage" {
   recordings_bucket_name     = "${var.cluster_name}-livekit-recordings"
   recordings_expiration_days = var.recordings_expiration_days
 
-  # Security
-  ecs_security_group_id = module.ecs.ecs_security_group_id
-
   tags = merge(
     var.tags,
     {
       "Environment" = var.environment
       "Project"     = "LiveKit"
-      "Platform"    = "ECS"
+      "Platform"    = "ECS-EKS"
+      "Component"   = "Storage"
       "Terraform"   = "true"
     }
   )
 
-  depends_on = [module.ecs]
+  depends_on = [module.ecs, module.eks]
 }
 
-# Conversation Agent Service
+# Conversation Agent Service (ECS)
 module "conversation_agent" {
   source = "../../modules/conversation-agent-ecs"
 

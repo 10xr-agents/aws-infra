@@ -32,19 +32,47 @@ ec2_asg_max_size         = 10
 ec2_asg_desired_capacity = 2
 ec2_instance_types       = ["m5.large", "m5.xlarge", "m5a.large", "m5a.xlarge"]
 
+# EKS Configuration
+enable_eks                    = true
+eks_kubernetes_version        = "1.28"
+eks_endpoint_private_access   = true
+eks_endpoint_public_access    = true
+eks_public_access_cidrs       = ["0.0.0.0/0"]
+eks_enabled_cluster_log_types = ["api", "audit", "authenticator", "controllerManager", "scheduler"]
+eks_log_retention_days        = 7
+
+# EKS Node Group Configuration
+eks_node_group_capacity_type   = "ON_DEMAND"
+eks_node_group_instance_types  = ["t3.medium", "t3.large"]
+eks_node_group_ami_type        = "AL2_x86_64"
+eks_node_group_disk_size       = 20
+eks_node_group_desired_size    = 2
+eks_node_group_max_size        = 4
+eks_node_group_min_size        = 1
+eks_node_group_max_unavailable = 1
+eks_enable_launch_template     = false
+
+# EKS Add-ons (use latest versions by default)
+eks_vpc_cni_version        = null
+eks_coredns_version        = null
+eks_kube_proxy_version     = null
+eks_enable_ebs_csi_driver  = true
+eks_ebs_csi_driver_version = null
+
 # ALB Configuration
 alb_enable_deletion_protection = false
 alb_enable_http2              = true
 alb_idle_timeout              = 60
 # acm_certificate_arn = "arn:aws:acm:us-east-1:123456789012:certificate/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 
-# Storage Configuration
+# LiveKit Configuration (for EKS)
+livekit_namespace = "livekit"
 efs_performance_mode       = "generalPurpose"
 efs_throughput_mode        = "bursting"
 create_recordings_bucket   = true
 recordings_expiration_days = 30
 
-
+# Conversation Agent Configuration (ECS deployment)
 conversation_agent_ecr_repository_url = "761018882607.dkr.ecr.us-east-1.amazonaws.com/10xr/conversation-agent"
 conversation_agent_image_tag          = "latest"
 conversation_agent_port               = 9600
@@ -56,7 +84,6 @@ conversation_agent_log_level               = "DEBUG"
 conversation_agent_agent_collection_name   = "agent-context-data"
 conversation_agent_frames_collection_name  = "voice-ai-frames"
 conversation_agent_database_name          = "converse-server-qa"
-
 
 conversation_agent_mongodb_uri = "mongodb+srv://doadmin:by6n2k14L8g53dt7@db-mongodb-nyc3-70786-efaf17f9.mongo.ondigitalocean.com/ten_xr_temp_agents_local?tls=true&authSource=admin&replicaSet=db-mongodb-nyc3-70786"
 
@@ -103,6 +130,6 @@ conversation_agent_efs_mount_path = "/app/storage"
 tags = {
   Environment = "qa"
   Project     = "LiveKit"
-  Platform    = "ECS"
+  Platform    = "ECS-EKS"
   Terraform   = "true"
 }

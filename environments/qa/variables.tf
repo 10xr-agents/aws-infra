@@ -13,7 +13,7 @@ variable "environment" {
 }
 
 variable "cluster_name" {
-  description = "Name of the ECS cluster"
+  description = "Name of the ECS/EKS cluster"
   type        = string
   default     = "livekit"
 }
@@ -133,6 +133,135 @@ variable "ec2_ami_id" {
   description = "AMI ID for EC2 instances (defaults to latest ECS-optimized AMI)"
   type        = string
   default     = ""
+}
+
+# EKS Configuration
+variable "enable_eks" {
+  description = "Whether to enable EKS cluster"
+  type        = bool
+  default     = true
+}
+
+variable "eks_kubernetes_version" {
+  description = "Kubernetes version for the EKS cluster"
+  type        = string
+  default     = "1.28"
+}
+
+variable "eks_endpoint_private_access" {
+  description = "Whether the Amazon EKS private API server endpoint is enabled"
+  type        = bool
+  default     = true
+}
+
+variable "eks_endpoint_public_access" {
+  description = "Whether the Amazon EKS public API server endpoint is enabled"
+  type        = bool
+  default     = true
+}
+
+variable "eks_public_access_cidrs" {
+  description = "List of CIDR blocks that can access the Amazon EKS public API server endpoint"
+  type        = list(string)
+  default     = ["0.0.0.0/0"]
+}
+
+variable "eks_enabled_cluster_log_types" {
+  description = "List of control plane logging to enable"
+  type        = list(string)
+  default     = ["api", "audit", "authenticator", "controllerManager", "scheduler"]
+}
+
+variable "eks_log_retention_days" {
+  description = "Number of days to retain cluster logs"
+  type        = number
+  default     = 7
+}
+
+# EKS Node Group Configuration
+variable "eks_node_group_capacity_type" {
+  description = "Type of capacity associated with the EKS Node Group (ON_DEMAND or SPOT)"
+  type        = string
+  default     = "ON_DEMAND"
+}
+
+variable "eks_node_group_instance_types" {
+  description = "List of instance types for the EKS Node Group"
+  type        = list(string)
+  default     = ["t3.medium"]
+}
+
+variable "eks_node_group_ami_type" {
+  description = "Type of Amazon Machine Image (AMI) associated with the EKS Node Group"
+  type        = string
+  default     = "AL2_x86_64"
+}
+
+variable "eks_node_group_disk_size" {
+  description = "Disk size in GiB for worker nodes"
+  type        = number
+  default     = 20
+}
+
+variable "eks_node_group_desired_size" {
+  description = "Desired number of worker nodes"
+  type        = number
+  default     = 2
+}
+
+variable "eks_node_group_max_size" {
+  description = "Maximum number of worker nodes"
+  type        = number
+  default     = 4
+}
+
+variable "eks_node_group_min_size" {
+  description = "Minimum number of worker nodes"
+  type        = number
+  default     = 1
+}
+
+variable "eks_node_group_max_unavailable" {
+  description = "Maximum number of nodes unavailable at once during a version update"
+  type        = number
+  default     = 1
+}
+
+variable "eks_enable_launch_template" {
+  description = "Whether to use a launch template for the node group"
+  type        = bool
+  default     = false
+}
+
+# EKS Add-on versions
+variable "eks_vpc_cni_version" {
+  description = "Version of the VPC CNI add-on"
+  type        = string
+  default     = null
+}
+
+variable "eks_coredns_version" {
+  description = "Version of the CoreDNS add-on"
+  type        = string
+  default     = null
+}
+
+variable "eks_kube_proxy_version" {
+  description = "Version of the kube-proxy add-on"
+  type        = string
+  default     = null
+}
+
+variable "eks_enable_ebs_csi_driver" {
+  description = "Whether to enable the EBS CSI driver add-on"
+  type        = bool
+  default     = true
+}
+
+variable "eks_ebs_csi_driver_version" {
+  description = "Version of the EBS CSI driver add-on"
+  type        = string
+  default     = null
 }
 
 # ALB Configuration
@@ -394,7 +523,12 @@ variable "conversation_agent_enable_service_discovery" {
   default     = true
 }
 
-# EFS Configuration
+# LiveKit Namespace (for EKS)
+variable "livekit_namespace" {
+  description = "Kubernetes namespace for LiveKit components"
+  type        = string
+  default     = "livekit"
+}
 variable "conversation_agent_enable_efs" {
   description = "Whether to mount EFS storage for conversation agent"
   type        = bool
@@ -414,7 +548,7 @@ variable "tags" {
   default     = {
     Environment = "qa"
     Project     = "LiveKit"
-    Platform    = "ECS"
+    Platform    = "ECS-EKS"
     Terraform   = "true"
   }
 }
