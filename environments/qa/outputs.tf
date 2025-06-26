@@ -1,5 +1,6 @@
 # environments/qa/outputs.tf
 
+# VPC outputs
 output "vpc_id" {
   description = "The ID of the VPC"
   value       = module.vpc.vpc_id
@@ -47,8 +48,70 @@ output "ecs_task_execution_role_arn" {
 }
 
 output "ecs_capacity_providers" {
-  description = "List of capacity providers associated with the cluster"
+  description = "List of capacity providers associated with the ECS cluster"
   value       = module.ecs.capacity_providers
+}
+
+# EKS Cluster outputs
+output "eks_cluster_id" {
+  description = "The ID of the EKS cluster"
+  value       = module.eks.cluster_id
+}
+
+output "eks_cluster_arn" {
+  description = "The ARN of the EKS cluster"
+  value       = module.eks.cluster_arn
+}
+
+output "eks_cluster_name" {
+  description = "The name of the EKS cluster"
+  value       = module.eks.cluster_name
+}
+
+output "eks_cluster_endpoint" {
+  description = "The endpoint for the EKS cluster API server"
+  value       = module.eks.cluster_endpoint
+}
+
+output "eks_cluster_version" {
+  description = "The Kubernetes version of the EKS cluster"
+  value       = module.eks.cluster_version
+}
+
+output "eks_cluster_certificate_authority_data" {
+  description = "Base64 encoded certificate data required to communicate with the EKS cluster"
+  value       = module.eks.cluster_certificate_authority_data
+  sensitive   = true
+}
+
+output "eks_cluster_security_group_id" {
+  description = "Security group ID attached to the EKS cluster"
+  value       = module.eks.cluster_security_group_id
+}
+
+output "eks_node_security_group_id" {
+  description = "Security group ID attached to the EKS node group"
+  value       = module.eks.node_security_group_id
+}
+
+output "eks_node_group_arn" {
+  description = "ARN of the EKS node group"
+  value       = module.eks.node_group_arn
+}
+
+output "eks_cluster_iam_role_arn" {
+  description = "IAM role ARN of the EKS cluster"
+  value       = module.eks.cluster_iam_role_arn
+}
+
+output "eks_node_group_iam_role_arn" {
+  description = "IAM role ARN of the EKS node group"
+  value       = module.eks.node_group_iam_role_arn
+}
+
+output "eks_cluster_oidc_issuer_url" {
+  description = "The URL on the EKS cluster OIDC Issuer"
+  value       = module.eks.cluster_oidc_issuer_url
 }
 
 # ALB outputs
@@ -179,4 +242,10 @@ output "conversation_agent_url" {
 output "conversation_agent_internal_url" {
   description = "Internal service discovery URL for the conversation agent"
   value       = module.conversation_agent.service_discovery_service_name != null ? "http://conversation-agent.${aws_service_discovery_private_dns_namespace.main.name}:${var.conversation_agent_port}" : null
+}
+
+# Kubeconfig command for EKS
+output "kubectl_config_command" {
+  description = "Command to configure kubectl for the EKS cluster"
+  value       = "aws eks update-kubeconfig --region ${var.region} --name ${module.eks.cluster_name}"
 }

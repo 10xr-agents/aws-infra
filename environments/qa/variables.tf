@@ -135,6 +135,104 @@ variable "ec2_ami_id" {
   default     = ""
 }
 
+# EKS Configuration
+variable "eks_kubernetes_version" {
+  description = "Kubernetes version for the EKS cluster"
+  type        = string
+  default     = "1.28"
+}
+
+variable "eks_endpoint_private_access" {
+  description = "Whether the Amazon EKS private API server endpoint is enabled"
+  type        = bool
+  default     = true
+}
+
+variable "eks_endpoint_public_access" {
+  description = "Whether the Amazon EKS public API server endpoint is enabled"
+  type        = bool
+  default     = true
+}
+
+variable "eks_endpoint_public_access_cidrs" {
+  description = "List of CIDR blocks that can access the Amazon EKS public API server endpoint"
+  type        = list(string)
+  default     = ["0.0.0.0/0"]
+}
+
+variable "eks_cluster_log_types" {
+  description = "List of cluster log types to enable"
+  type        = list(string)
+  default     = ["api", "audit", "authenticator", "controllerManager", "scheduler"]
+}
+
+variable "eks_cluster_log_retention_days" {
+  description = "Number of days to retain cluster logs"
+  type        = number
+  default     = 7
+}
+
+# EKS Node Group Configuration
+variable "eks_node_instance_types" {
+  description = "List of instance types for the EKS node group"
+  type        = list(string)
+  default     = ["t3.medium"]
+}
+
+variable "eks_node_ami_type" {
+  description = "AMI type for the EKS node group"
+  type        = string
+  default     = "AL2_x86_64"
+}
+
+variable "eks_node_capacity_type" {
+  description = "Capacity type for the EKS node group (ON_DEMAND or SPOT)"
+  type        = string
+  default     = "ON_DEMAND"
+}
+
+variable "eks_node_disk_size" {
+  description = "Disk size for EKS worker nodes (in GB)"
+  type        = number
+  default     = 20
+}
+
+variable "eks_node_desired_size" {
+  description = "Desired number of EKS worker nodes"
+  type        = number
+  default     = 2
+}
+
+variable "eks_node_max_size" {
+  description = "Maximum number of EKS worker nodes"
+  type        = number
+  default     = 4
+}
+
+variable "eks_node_min_size" {
+  description = "Minimum number of EKS worker nodes"
+  type        = number
+  default     = 1
+}
+
+variable "eks_node_max_unavailable" {
+  description = "Maximum number of nodes that can be unavailable during node group update"
+  type        = number
+  default     = 1
+}
+
+variable "eks_node_key_pair" {
+  description = "EC2 Key Pair name for SSH access to EKS nodes (optional)"
+  type        = string
+  default     = ""
+}
+
+variable "eks_enable_ebs_csi_driver" {
+  description = "Whether to enable the EBS CSI driver add-on for EKS"
+  type        = bool
+  default     = true
+}
+
 # ALB Configuration
 variable "alb_enable_deletion_protection" {
   description = "Whether to enable deletion protection on the ALB"

@@ -3,6 +3,9 @@
 locals {
   cluster_name = "${var.cluster_name}-${var.environment}"
   vpc_name     = "${var.cluster_name}-${var.environment}-${var.region}"
+  
+  # EKS cluster name (separate from ECS)
+  eks_cluster_name = "${var.cluster_name}-eks-${var.environment}"
 }
 
 # VPC Module - Reuse existing VPC module
@@ -71,6 +74,52 @@ module "ecs" {
       "Environment" = var.environment
       "Project"     = "LiveKit"
       "Platform"    = "ECS"
+      "Terraform"   = "true"
+    }
+  )
+
+  depends_on = [module.vpc]
+}
+
+# EKS Cluster Module
+module "eks" {
+  source = "../../modules/eks"
+
+  cluster_name = local.eks_cluster_name
+  environment  = var.environment
+
+  vpc_id             = module.vpc.vpc_id
+  private_subnet_ids = module.vpc.private_subnets
+  public_subnet_ids  = module.vpc.public_subnets
+
+  # Cluster Configuration
+  kubernetes_version            = var.eks_kubernetes_version
+  endpoint_private_access       = var.eks_endpoint_private_access
+  endpoint_public_access        = var.eks_endpoint_public_access
+  endpoint_public_access_cidrs  = var.eks_endpoint_public_access_cidrs
+  cluster_log_types            = var.eks_cluster_log_types
+  cluster_log_retention_days   = var.eks_cluster_log_retention_days
+
+  # Node Group Configuration
+  node_instance_types = var.eks_node_instance_types
+  node_ami_type      = var.eks_node_ami_type
+  node_capacity_type = var.eks_node_capacity_type
+  node_disk_size     = var.eks_node_disk_size
+  node_desired_size  = var.eks_node_desired_size
+  node_max_size      = var.eks_node_max_size
+  node_min_size      = var.eks_node_min_size
+  node_max_unavailable = var.eks_node_max_unavailable
+  node_key_pair      = var.eks_node_key_pair
+
+  # Add-ons
+  enable_ebs_csi_driver = var.eks_enable_ebs_csi_driver
+
+  tags = merge(
+    var.tags,
+    {
+      "Environment" = var.environment
+      "Project"     = "LiveKit"
+      "Platform"    = "EKS"
       "Terraform"   = "true"
     }
   )
