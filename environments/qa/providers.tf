@@ -16,13 +16,7 @@ provider "kubernetes" {
     args        = ["eks", "get-token", "--cluster-name", var.enable_eks ? module.eks[0].cluster_name : ""]
   }
 
-  # Only configure if EKS is enabled
-  dynamic "ignore_annotations" {
-    for_each = var.enable_eks ? [1] : []
-    content {
-      "*" = true
-    }
-  }
+
 }
 
 # Helm provider configuration (for EKS)
