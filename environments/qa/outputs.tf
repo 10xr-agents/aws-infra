@@ -53,7 +53,7 @@ output "alb_security_group_id" {
 
 output "alb_listener_arns" {
   description = "Map of listener ARNs"
-  value       = module.ecs.alb_listeners
+  value       = module.ecs.alb_listener_arns
 }
 
 output "alb_target_groups" {

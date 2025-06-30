@@ -198,6 +198,11 @@ output "alb_dns_name" {
   value       = try(aws_lb.main[0].dns_name, null)
 }
 
+output "alb_id" {
+  description = "ID of the Application Load Balancer"
+  value       = try(aws_lb.main[0].id, null)
+}
+
 output "alb_zone_id" {
   description = "Zone ID of the Application Load Balancer"
   value       = try(aws_lb.main[0].zone_id, null)
@@ -213,6 +218,13 @@ output "alb_listener_arns" {
   value = {
     http  = try(aws_lb_listener.http[0].arn, null)
     https = try(aws_lb_listener.https[0].arn, null)
+  }
+}
+
+output "alb_target_groups" {
+  description = "Map of target groups created for services"
+  value = {
+    for name, tg in aws_lb_target_group.service : name => tg.name
   }
 }
 
