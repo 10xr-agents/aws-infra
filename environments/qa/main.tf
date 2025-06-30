@@ -104,6 +104,147 @@ module "mongodb" {
   depends_on = [module.vpc]
 }
 
+# Application Load Balancer Module
+module "alb" {
+  source  = "terraform-aws-modules/alb/aws"
+  version = "9.17.0"
+
+  name               = "${local.cluster_name}-alb"
+  load_balancer_type = "application"
+
+  vpc_id  = module.vpc.vpc_id
+  subnets = module.vpc.public_subnets
+
+  # ALB Configuration
+  enable_deletion_protection = var.alb_enable_deletion_protection
+  enable_http2              = var.alb_enable_http2
+  idle_timeout              = var.alb_idle_timeout
+
+  # Security Groups
+  security_group_ingress_rules = {
+    all_http = {
+      from_port   = 80
+      to_port     = 80
+      ip_protocol = "tcp"
+      cidr_ipv4   = "0.0.0.0/0"
+      description = "HTTP web traffic"
+    }
+    all_https = {
+      from_port   = 443
+      to_port     = 443
+      ip_protocol = "tcp"
+      cidr_ipv4   = "0.0.0.0/0"
+      description = "HTTPS web traffic"
+    }
+  }
+
+  security_group_egress_rules = {
+    all = {
+      ip_protocol = "-1"
+      cidr_ipv4   = "0.0.0.0/0"
+      description = "All outbound traffic"
+    }
+  }
+
+  # Target Groups for each service
+  target_groups = {
+    for service_name, service_config in local.ecs_services_with_overrides : service_name => {
+      name_prefix          = substr(service_name, 0, 6)
+      protocol             = "HTTP"
+      port                 = service_config.port
+      target_type          = "ip"
+      deregistration_delay = lookup(service_config, "deregistration_delay", 30)
+
+      health_check = {
+        enabled             = true
+        healthy_threshold   = lookup(service_config.health_check, "healthy_threshold", 2)
+        interval            = lookup(service_config.health_check, "interval", 30)
+        matcher             = lookup(service_config.health_check, "matcher", "200")
+        path                = lookup(service_config.health_check, "path", "/health")
+        port                = "traffic-port"
+        protocol            = "HTTP"
+        timeout             = lookup(service_config.health_check, "timeout", 20)
+        unhealthy_threshold = lookup(service_config.health_check, "unhealthy_threshold", 3)
+      }
+
+      create_attachment = false
+    }
+  }
+
+  # HTTP Listener
+  listeners = {
+    http = {
+      port     = 80
+      protocol = "HTTP"
+
+      # Redirect to HTTPS if certificate is provided
+      default_actions = var.acm_certificate_arn != "" ? [
+        {
+          type = "redirect"
+          redirect = {
+            port        = "443"
+            protocol    = "HTTPS"
+            status_code = "HTTP_301"
+          }
+        }
+      ] : [
+        {
+          type             = "forward"
+          target_group_key = "ui-console" # Default to UI console
+        }
+      ]
+    }
+
+    # HTTPS Listener (if certificate is provided)
+    https = var.acm_certificate_arn != "" ? {
+      port            = 443
+      protocol        = "HTTPS"
+      certificate_arn = var.acm_certificate_arn
+      ssl_policy      = var.ssl_policy
+
+      default_actions = [
+        {
+          type             = "forward"
+          target_group_key = "ui-console" # Default to UI console
+        }
+      ]
+
+      # Rules for each service based on path patterns
+      rules = {
+        for service_name, service_config in local.ecs_services_with_overrides : service_name => {
+          priority = 100 + index(keys(local.ecs_services_with_overrides), service_name)
+
+          conditions = [
+            {
+              path_pattern = {
+                values = lookup(service_config, "alb_path_patterns", ["/${service_name}/*"])
+              }
+            }
+          ]
+
+          actions = [
+            {
+              type             = "forward"
+              target_group_key = service_name
+            }
+          ]
+        } if lookup(service_config, "alb_path_patterns", null) != null
+      }
+    } : null
+  }
+
+  tags = merge(
+    var.tags,
+    {
+      "Environment" = var.environment
+      "Project"     = "10xR-Agents"
+      "Component"   = "ALB"
+      "Platform"    = "AWS"
+      "Terraform"   = "true"
+    }
+  )
+}
+
 # ECS Cluster Module
 module "ecs" {
   source = "../../modules/ecs"

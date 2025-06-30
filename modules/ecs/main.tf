@@ -1,4 +1,4 @@
-# modules/ecs-refactored/main.tf
+# modules/ecs/main.tf
 
 locals {
   # Environment-specific naming
@@ -57,13 +57,14 @@ module "ecs" {
   fargate_capacity_providers = {
     FARGATE = {
       default_capacity_provider_strategy = {
-        weight = 1
+        weight = 50
         base   = 1
       }
     }
     FARGATE_SPOT = {
       default_capacity_provider_strategy = {
-        weight = 0
+        weight = 50
+        base   = 0
       }
     }
   }
@@ -123,12 +124,12 @@ module "ecs" {
     # Service discovery
     service_registries = var.enable_service_discovery && lookup(config, "enable_service_discovery", true) ? {
       registry_arn = aws_service_discovery_service.services[name].arn
-    } : null
+    } : {}
 
-    # Load balancer
-    load_balancer = var.create_alb && lookup(config, "enable_load_balancer", true) ? {
+    # Load balancer - use external target groups if provided
+    load_balancer = var.target_group_arns != null && lookup(var.target_group_arns, name, null) != null ? {
       service = {
-        target_group_arn = aws_lb_target_group.services[name].arn
+        target_group_arn = var.target_group_arns[name]
         container_name   = name
         container_port   = config.port
       }
@@ -202,93 +203,8 @@ resource "aws_service_discovery_service" "services" {
   health_check_custom_config {
     failure_threshold = 1
   }
-}
-
-################################################################################
-# Target Groups for ALB
-################################################################################
-
-resource "aws_lb_target_group" "services" {
-  for_each = var.create_alb ? {
-    for name, config in local.services_config : name => config
-    if lookup(config, "enable_load_balancer", true)
-  } : {}
-
-  name        = substr("${local.name_prefix}-${each.key}", 0, 32)
-  port        = each.value.port
-  protocol    = "HTTP"
-  vpc_id      = var.vpc_id
-  target_type = "ip"
-
-  health_check {
-    enabled             = true
-    healthy_threshold   = lookup(each.value.health_check, "healthy_threshold", 2)
-    interval            = lookup(each.value.health_check, "interval", 30)
-    matcher             = lookup(each.value.health_check, "matcher", "200")
-    path                = lookup(each.value.health_check, "path", "/health")
-    port                = "traffic-port"
-    protocol            = "HTTP"
-    timeout             = lookup(each.value.health_check, "timeout", 20)
-    unhealthy_threshold = lookup(each.value.health_check, "unhealthy_threshold", 3)
-  }
-
-  deregistration_delay = lookup(each.value, "deregistration_delay", 30)
 
   tags = merge(local.common_tags, { Service = each.key })
-}
-
-# ALB Listener Rules for each service
-resource "aws_lb_listener_rule" "services" {
-  for_each = { for name, config in var.services : name => config if var.create_alb_rules }
-
-  listener_arn = var.alb_https_listener_arn
-  priority     = lookup(each.value, "alb_priority", 100 + index(keys(var.services), each.key) * 100)
-
-  action {
-    type             = "forward"
-    target_group_arn = module.ecs.target_group_arns[each.key]
-  }
-
-  condition {
-    path_pattern {
-      values = lookup(each.value, "alb_path_patterns", ["/${each.key}/*"])
-    }
-  }
-
-  tags = merge(
-    var.tags,
-    {
-      Service = each.key
-    }
-  )
-}
-
-# HTTPS Listener Rules (if certificate is provided)
-resource "aws_lb_listener_rule" "services_https" {
-  for_each = var.acm_certificate_arn != "" && var.create_alb_rules ? {
-    for name, config in var.services : name => config
-  } : {}
-
-  listener_arn = var.alb_https_listener_arn
-  priority     = lookup(each.value, "alb_priority", 100 + index(keys(var.services), each.key) * 100)
-
-  action {
-    type             = "forward"
-    target_group_arn = module.ecs.target_group_arns[each.key]
-  }
-
-  condition {
-    path_pattern {
-      values = lookup(each.value, "alb_path_patterns", ["/${each.key}/*"])
-    }
-  }
-
-  tags = merge(
-    var.tags,
-    {
-      Service = each.key
-    }
-  )
 }
 
 ################################################################################

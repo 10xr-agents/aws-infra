@@ -25,6 +25,42 @@ output "database_subnets" {
   value       = module.vpc.database_subnets
 }
 
+# ALB Outputs
+output "alb_id" {
+  description = "The ID of the ALB"
+  value       = module.alb.id
+}
+
+output "alb_arn" {
+  description = "The ARN of the ALB"
+  value       = module.alb.arn
+}
+
+output "alb_dns_name" {
+  description = "The DNS name of the ALB"
+  value       = module.alb.dns_name
+}
+
+output "alb_zone_id" {
+  description = "The canonical hosted zone ID of the ALB"
+  value       = module.alb.zone_id
+}
+
+output "alb_security_group_id" {
+  description = "The ID of the ALB security group"
+  value       = module.alb.security_group_id
+}
+
+output "alb_listener_arns" {
+  description = "Map of listener ARNs"
+  value       = module.alb.listeners
+}
+
+output "alb_target_groups" {
+  description = "Map of target groups created for services"
+  value       = module.alb.target_groups
+}
+
 # ECS Cluster outputs
 output "ecs_cluster_id" {
   description = "The ID of the ECS cluster"
@@ -41,45 +77,20 @@ output "ecs_cluster_name" {
   value       = module.ecs.cluster_name
 }
 
-output "ecs_task_execution_role_arn" {
-  description = "ARN of the ECS task execution role"
-  value       = module.ecs.task_execution_role_arn
+output "ecs_services" {
+  description = "Map of ECS services created"
+  value       = module.ecs.services
 }
 
-output "ecs_capacity_providers" {
-  description = "List of capacity providers associated with the cluster"
-  value       = module.ecs.capacity_providers
-}
-
-# Storage outputs
-output "efs_id" {
-  description = "ID of the EFS file system"
-  value       = module.storage.efs_id
-}
-
-output "efs_dns_name" {
-  description = "DNS name of the EFS file system"
-  value       = module.storage.efs_dns_name
-}
-
-output "livekit_access_point_id" {
-  description = "ID of the LiveKit EFS access point"
-  value       = module.storage.livekit_access_point_id
-}
-
-output "recordings_bucket_name" {
-  description = "Name of the S3 bucket for recordings"
-  value       = module.storage.recordings_bucket_name
-}
-
-output "recordings_bucket_arn" {
-  description = "ARN of the S3 bucket for recordings"
-  value       = module.storage.recordings_bucket_arn
-}
-
-output "storage_task_role_arn" {
-  description = "ARN of the IAM role for ECS tasks to access storage"
-  value       = module.storage.task_role_arn
+output "ecs_service_urls" {
+  description = "Map of service URLs via ALB"
+  value = {
+    for name, config in local.ecs_services_with_overrides : name => {
+      internal_url = var.enable_service_discovery ? "http://${name}.${local.cluster_name}.local:${config.port}" : null
+      external_url = "http${var.acm_certificate_arn != "" ? "s" : ""}://${module.alb.dns_name}${lookup(config, "alb_path_patterns", ["/"])[0]}"
+      paths        = lookup(config, "alb_path_patterns", ["/${name}/*"])
+    }
+  }
 }
 
 # MongoDB outputs

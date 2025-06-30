@@ -27,6 +27,10 @@ enable_fargate_spot      = true
 
 ecs_services = local.ecs_services_with_overrides
 
+# SSL Configuration (add your certificate ARN here if you have one)
+acm_certificate_arn = ""  # Add your ACM certificate ARN here for HTTPS
+ssl_policy          = "ELBSecurityPolicy-TLS-1-2-2017-01"
+
 # MongoDB Configuration
 mongodb_replica_count    = 3
 mongodb_instance_type    = "t3.large"

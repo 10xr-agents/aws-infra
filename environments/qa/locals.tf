@@ -16,6 +16,8 @@ locals {
         config.environment,
         {
           ENVIRONMENT = var.environment
+          ECS_ENVIRONMENT = var.environment
+          SPRING_PROFILES_ACTIVE = var.environment
           CLUSTER_NAME = var.cluster_name
         }
       )

@@ -141,6 +141,12 @@ variable "ec2_ami_id" {
   default     = ""
 }
 
+variable "enable_service_discovery" {
+  description = "Whether to enable service discovery"
+  type        = bool
+  default     = true
+}
+
 # ALB Configuration
 variable "alb_enable_deletion_protection" {
   description = "Whether to enable deletion protection on the ALB"
@@ -164,6 +170,12 @@ variable "acm_certificate_arn" {
   description = "ARN of the ACM certificate for HTTPS"
   type        = string
   default     = ""
+}
+
+variable "ssl_policy" {
+  description = "SSL policy for the HTTPS listener"
+  type        = string
+  default     = "ELBSecurityPolicy-TLS-1-2-2017-01"
 }
 
 # Storage Configuration
