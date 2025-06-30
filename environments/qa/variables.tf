@@ -79,6 +79,12 @@ variable "map_public_ip_on_launch" {
   default     = true
 }
 
+variable "enable_execute_command" {
+  description = "Whether to enable ECS Exec for debugging"
+  type        = bool
+  default     = false
+}
+
 # ECS Configuration
 variable "enable_container_insights" {
   description = "Whether to enable Container Insights for the ECS cluster"
