@@ -142,13 +142,7 @@ livekit_proxy_enable_service_discovery = true
 livekit_proxy_enable_efs     = false
 livekit_proxy_efs_mount_path = "/app/storage"
 
-# Tags
-tags = {
-  Environment = "qa"
-  Project     = "LiveKit"
-  Platform    = "ECS"
-  Terraform   = "true"
-}
+
 
 # MongoDB Configuration
 mongodb_replica_count    = 3
