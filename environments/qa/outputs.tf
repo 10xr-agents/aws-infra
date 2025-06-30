@@ -137,73 +137,73 @@ output "storage_task_role_arn" {
 # Voice Agent outputs
 output "voice_agent_service_name" {
   description = "Name of the voice agent ECS service"
-  value       = module.voice_agent.service_name
+  value       = module.services.voice_agent_service_name
 }
 
 output "voice_agent_service_arn" {
   description = "ARN of the voice agent ECS service"
-  value       = module.voice_agent.service_arn
+  value       = module.services.voice_agent_service_arn
 }
 
 output "voice_agent_task_definition_arn" {
   description = "ARN of the voice agent task definition"
-  value       = module.voice_agent.task_definition_arn
+  value       = module.services.voice_agent_task_definition_arn
 }
 
 output "voice_agent_target_group_arn" {
   description = "ARN of the voice agent target group"
-  value       = module.voice_agent.target_group_arn
+  value       = module.services.voice_agent_target_group_arn
 }
 
 output "voice_agent_security_group_id" {
   description = "ID of the voice agent security group"
-  value       = module.voice_agent.security_group_id
+  value       = module.services.voice_agent_security_group_id
 }
 
 output "voice_agent_cloudwatch_log_group_name" {
   description = "Name of the voice agent CloudWatch log group"
-  value       = module.voice_agent.cloudwatch_log_group_name
+  value       = module.services.voice_agent_cloudwatch_log_group_name
 }
 
 output "voice_agent_service_discovery_service_name" {
   description = "Name of the voice agent service discovery service"
-  value       = module.voice_agent.service_discovery_service_name
+  value       = module.services.voice_agent_service_discovery_service_name
 }
 
 # LiveKit Proxy outputs
 output "livekit_proxy_service_name" {
   description = "Name of the LiveKit proxy ECS service"
-  value       = module.livekit_proxy.service_name
+  value       = module.services.livekit_proxy_service_name
 }
 
 output "livekit_proxy_service_arn" {
   description = "ARN of the LiveKit proxy ECS service"
-  value       = module.livekit_proxy.service_arn
+  value       = module.services.livekit_proxy_service_arn
 }
 
 output "livekit_proxy_task_definition_arn" {
   description = "ARN of the LiveKit proxy task definition"
-  value       = module.livekit_proxy.task_definition_arn
+  value       = module.services.livekit_proxy_task_definition_arn
 }
 
 output "livekit_proxy_target_group_arn" {
   description = "ARN of the LiveKit proxy target group"
-  value       = module.livekit_proxy.target_group_arn
+  value       = module.services.livekit_proxy_target_group_arn
 }
 
 output "livekit_proxy_security_group_id" {
   description = "ID of the LiveKit proxy security group"
-  value       = module.livekit_proxy.security_group_id
+  value       = module.services.livekit_proxy_security_group_id
 }
 
 output "livekit_proxy_cloudwatch_log_group_name" {
   description = "Name of the LiveKit proxy CloudWatch log group"
-  value       = module.livekit_proxy.cloudwatch_log_group_name
+  value       = module.services.livekit_proxy_cloudwatch_log_group_name
 }
 
 output "livekit_proxy_service_discovery_service_name" {
   description = "Name of the LiveKit proxy service discovery service"
-  value       = module.livekit_proxy.service_discovery_service_name
+  value       = module.services.livekit_proxy_service_discovery_service_name
 }
 
 # Access URLs
@@ -214,7 +214,7 @@ output "voice_agent_url" {
 
 output "voice_agent_internal_url" {
   description = "Internal service discovery URL for the voice agent"
-  value       = module.voice_agent.service_discovery_service_name != null ? "http://voice-agent.${aws_service_discovery_private_dns_namespace.main.name}:${var.voice_agent_port}" : null
+  value       = module.services.voice_agent_service_discovery_service_name != null ? "http://voice-agent.${aws_service_discovery_private_dns_namespace.main.name}:${var.voice_agent_port}" : null
 }
 
 output "livekit_proxy_url" {
@@ -224,5 +224,5 @@ output "livekit_proxy_url" {
 
 output "livekit_proxy_internal_url" {
   description = "Internal service discovery URL for the LiveKit proxy"
-  value       = module.livekit_proxy.service_discovery_service_name != null ? "http://livekit-proxy.${aws_service_discovery_private_dns_namespace.main.name}:${var.livekit_proxy_port}" : null
+  value       = module.services.livekit_proxy_service_discovery_service_name != null ? "http://livekit-proxy.${aws_service_discovery_private_dns_namespace.main.name}:${var.livekit_proxy_port}" : null
 }

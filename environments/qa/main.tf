@@ -197,9 +197,9 @@ module "storage" {
   depends_on = [module.ecs]
 }
 
-# Voice Agent Service
-module "voice_agent" {
-  source = "../../modules/conversation-agent-ecs"
+# Services Module (Voice Agent + LiveKit Proxy)
+module "services" {
+  source = "../../modules/services"
 
   cluster_name = local.cluster_name
   cluster_id   = module.ecs.cluster_id
@@ -212,64 +212,16 @@ module "voice_agent" {
   task_execution_role_arn   = module.ecs.task_execution_role_arn
   task_role_arn            = module.storage.task_role_arn
 
-  # Container Configuration (matching nonprod EKS deployment)
-  ecr_repository_url = var.voice_agent_ecr_repository_url
-  image_tag         = var.voice_agent_image_tag
-  container_port    = var.voice_agent_port
-  task_cpu         = var.voice_agent_cpu
-  task_memory      = var.voice_agent_memory
-  enable_fargate   = var.enable_fargate
-
-  # Service Configuration
-  desired_count = var.voice_agent_desired_count
-
-  # Application Configuration (matching EKS variables)
-  log_level               = var.voice_agent_log_level
-  agent_collection_name   = var.voice_agent_agent_collection_name
-  frames_collection_name  = var.voice_agent_frames_collection_name
-  database_name          = var.voice_agent_database_name
-  mongodb_uri            = var.voice_agent_mongodb_uri
-
-  # LiveKit Configuration
-  livekit_service_name         = var.voice_agent_livekit_service
-  service_discovery_namespace  = aws_service_discovery_private_dns_namespace.main.name
-  livekit_api_key             = var.voice_agent_livekit_api_key
-  livekit_api_secret          = var.voice_agent_livekit_api_secret
-
-  # Secrets Configuration (use these in production)
-  anthropic_api_key_secret_arn    = var.voice_agent_anthropic_api_key_secret_arn
-  deepgram_api_key_secret_arn     = var.voice_agent_deepgram_api_key_secret_arn
-  cartesia_api_key_secret_arn     = var.voice_agent_cartesia_api_key_secret_arn
-  livekit_api_key_secret_arn      = var.voice_agent_livekit_api_key_secret_arn
-  livekit_api_secret_secret_arn   = var.voice_agent_livekit_api_secret_secret_arn
-
-  # Additional Environment Variables
-  additional_environment_variables = var.voice_agent_additional_environment_variables
-
-  # Health Check Configuration
-  enable_health_check              = var.voice_agent_enable_health_check
-  health_check_command            = var.voice_agent_health_check_command
-  health_check_path               = var.voice_agent_health_check_path
-  health_check_interval           = var.voice_agent_health_check_interval
-  health_check_timeout            = var.voice_agent_health_check_timeout
-  health_check_start_period       = var.voice_agent_health_check_start_period
-
-  # Auto Scaling Configuration
-  enable_auto_scaling        = var.voice_agent_enable_auto_scaling
-  auto_scaling_min_capacity  = var.voice_agent_min_capacity
-  auto_scaling_max_capacity  = var.voice_agent_max_capacity
-  auto_scaling_cpu_target    = var.voice_agent_cpu_target
-  auto_scaling_memory_target = var.voice_agent_memory_target
+  enable_fargate = var.enable_fargate
+  enable_execute_command = var.enable_execute_command
 
   # Service Discovery
-  enable_service_discovery      = var.voice_agent_enable_service_discovery
+  service_discovery_namespace    = aws_service_discovery_private_dns_namespace.main.name
   service_discovery_namespace_id = aws_service_discovery_private_dns_namespace.main.id
+  livekit_service_name          = var.voice_agent_livekit_service
 
-  # EFS Storage (if needed)
-  enable_efs           = var.voice_agent_enable_efs
-  efs_file_system_id   = module.storage.efs_id
-  efs_access_point_id  = module.storage.livekit_access_point_id
-  efs_mount_path      = var.voice_agent_efs_mount_path
+  # EFS Storage
+  efs_file_system_id = module.storage.efs_id
 
   # Capacity Provider Strategy
   capacity_provider_strategy = var.enable_fargate_spot ? [
@@ -291,106 +243,86 @@ module "voice_agent" {
     }
   ]
 
-  tags = merge(
-    var.tags,
-    {
-      "Environment" = var.environment
-      "Project"     = "LiveKit"
-      "Platform"    = "ECS"
-      "Component"   = "VoiceAgent"
-      "Terraform"   = "true"
-    }
-  )
+  # Voice Agent Configuration
+  voice_agent_ecr_repository_url = var.voice_agent_ecr_repository_url
+  voice_agent_image_tag          = var.voice_agent_image_tag
+  voice_agent_port               = var.voice_agent_port
+  voice_agent_cpu                = var.voice_agent_cpu
+  voice_agent_memory             = var.voice_agent_memory
+  voice_agent_desired_count      = var.voice_agent_desired_count
 
-  depends_on = [module.ecs, module.alb, module.storage]
-}
+  # Voice Agent Application Configuration
+  voice_agent_log_level               = var.voice_agent_log_level
+  voice_agent_agent_collection_name   = var.voice_agent_agent_collection_name
+  voice_agent_frames_collection_name  = var.voice_agent_frames_collection_name
+  voice_agent_database_name          = var.voice_agent_database_name
+  voice_agent_mongodb_uri            = var.voice_agent_mongodb_uri
+  voice_agent_livekit_api_key        = var.voice_agent_livekit_api_key
+  voice_agent_livekit_api_secret     = var.voice_agent_livekit_api_secret
 
-# LiveKit Proxy Service
-module "livekit_proxy" {
-  source = "../../modules/livekit-proxy-ecs"
+  # Voice Agent Secrets Configuration
+  voice_agent_anthropic_api_key_secret_arn    = var.voice_agent_anthropic_api_key_secret_arn
+  voice_agent_deepgram_api_key_secret_arn     = var.voice_agent_deepgram_api_key_secret_arn
+  voice_agent_cartesia_api_key_secret_arn     = var.voice_agent_cartesia_api_key_secret_arn
+  voice_agent_livekit_api_key_secret_arn      = var.voice_agent_livekit_api_key_secret_arn
+  voice_agent_livekit_api_secret_secret_arn   = var.voice_agent_livekit_api_secret_secret_arn
 
-  cluster_name = local.cluster_name
-  cluster_id   = module.ecs.cluster_id
-  environment  = var.environment
+  # Voice Agent Additional Configuration
+  voice_agent_additional_environment_variables = var.voice_agent_additional_environment_variables
+  voice_agent_enable_health_check              = var.voice_agent_enable_health_check
+  voice_agent_health_check_command            = var.voice_agent_health_check_command
+  voice_agent_health_check_interval           = var.voice_agent_health_check_interval
+  voice_agent_health_check_timeout            = var.voice_agent_health_check_timeout
+  voice_agent_health_check_start_period       = var.voice_agent_health_check_start_period
 
-  vpc_id                    = module.vpc.vpc_id
-  private_subnet_ids        = module.vpc.private_subnets
-  alb_security_group_id     = module.alb.alb_security_group_id
-  ecs_security_group_id     = module.ecs.ecs_security_group_id
-  task_execution_role_arn   = module.ecs.task_execution_role_arn
-  task_role_arn            = module.storage.task_role_arn
+  # Voice Agent Auto Scaling Configuration
+  voice_agent_enable_auto_scaling        = var.voice_agent_enable_auto_scaling
+  voice_agent_auto_scaling_min_capacity  = var.voice_agent_min_capacity
+  voice_agent_auto_scaling_max_capacity  = var.voice_agent_max_capacity
+  voice_agent_auto_scaling_cpu_target    = var.voice_agent_cpu_target
+  voice_agent_auto_scaling_memory_target = var.voice_agent_memory_target
 
-  # Container Configuration
-  ecr_repository_url = var.livekit_proxy_ecr_repository_url
-  image_tag         = var.livekit_proxy_image_tag
-  container_port    = var.livekit_proxy_port
-  task_cpu         = var.livekit_proxy_cpu
-  task_memory      = var.livekit_proxy_memory
-  enable_fargate   = var.enable_fargate
+  # Voice Agent Service Discovery and EFS
+  voice_agent_enable_service_discovery = var.voice_agent_enable_service_discovery
+  voice_agent_enable_efs               = var.voice_agent_enable_efs
+  voice_agent_efs_mount_path           = var.voice_agent_efs_mount_path
 
-  # Service Configuration
-  desired_count = var.livekit_proxy_desired_count
+  # LiveKit Proxy Configuration
+  livekit_proxy_ecr_repository_url = var.livekit_proxy_ecr_repository_url
+  livekit_proxy_image_tag          = var.livekit_proxy_image_tag
+  livekit_proxy_port               = var.livekit_proxy_port
+  livekit_proxy_cpu                = var.livekit_proxy_cpu
+  livekit_proxy_memory             = var.livekit_proxy_memory
+  livekit_proxy_desired_count      = var.livekit_proxy_desired_count
 
-  # Application Configuration
-  log_level = var.livekit_proxy_log_level
+  # LiveKit Proxy Application Configuration
+  livekit_proxy_log_level            = var.livekit_proxy_log_level
+  livekit_proxy_livekit_api_key      = var.livekit_proxy_livekit_api_key
+  livekit_proxy_livekit_api_secret   = var.livekit_proxy_livekit_api_secret
 
-  # LiveKit Configuration
-  livekit_service_name         = var.livekit_proxy_livekit_service
-  service_discovery_namespace  = aws_service_discovery_private_dns_namespace.main.name
-  livekit_api_key             = var.livekit_proxy_livekit_api_key
-  livekit_api_secret          = var.livekit_proxy_livekit_api_secret
+  # LiveKit Proxy Secrets Configuration
+  livekit_proxy_livekit_api_key_secret_arn      = var.livekit_proxy_livekit_api_key_secret_arn
+  livekit_proxy_livekit_api_secret_secret_arn   = var.livekit_proxy_livekit_api_secret_secret_arn
 
-  # Secrets Configuration (use these in production)
-  livekit_api_key_secret_arn      = var.livekit_proxy_livekit_api_key_secret_arn
-  livekit_api_secret_secret_arn   = var.livekit_proxy_livekit_api_secret_secret_arn
+  # LiveKit Proxy Additional Configuration
+  livekit_proxy_additional_environment_variables = var.livekit_proxy_additional_environment_variables
+  livekit_proxy_enable_health_check              = var.livekit_proxy_enable_health_check
+  livekit_proxy_health_check_command            = var.livekit_proxy_health_check_command
+  livekit_proxy_health_check_interval           = var.livekit_proxy_health_check_interval
+  livekit_proxy_health_check_timeout            = var.livekit_proxy_health_check_timeout
+  livekit_proxy_health_check_start_period       = var.livekit_proxy_health_check_start_period
 
-  # Additional Environment Variables
-  additional_environment_variables = var.livekit_proxy_additional_environment_variables
+  # LiveKit Proxy Auto Scaling Configuration
+  livekit_proxy_enable_auto_scaling        = var.livekit_proxy_enable_auto_scaling
+  livekit_proxy_auto_scaling_min_capacity  = var.livekit_proxy_min_capacity
+  livekit_proxy_auto_scaling_max_capacity  = var.livekit_proxy_max_capacity
+  livekit_proxy_auto_scaling_cpu_target    = var.livekit_proxy_cpu_target
+  livekit_proxy_auto_scaling_memory_target = var.livekit_proxy_memory_target
 
-  # Health Check Configuration
-  enable_health_check              = var.livekit_proxy_enable_health_check
-  health_check_command            = var.livekit_proxy_health_check_command
-  health_check_path               = var.livekit_proxy_health_check_path
-  health_check_interval           = var.livekit_proxy_health_check_interval
-  health_check_timeout            = var.livekit_proxy_health_check_timeout
-  health_check_start_period       = var.livekit_proxy_health_check_start_period
-
-  # Auto Scaling Configuration
-  enable_auto_scaling        = var.livekit_proxy_enable_auto_scaling
-  auto_scaling_min_capacity  = var.livekit_proxy_min_capacity
-  auto_scaling_max_capacity  = var.livekit_proxy_max_capacity
-  auto_scaling_cpu_target    = var.livekit_proxy_cpu_target
-  auto_scaling_memory_target = var.livekit_proxy_memory_target
-
-  # Service Discovery
-  enable_service_discovery      = var.livekit_proxy_enable_service_discovery
-  service_discovery_namespace_id = aws_service_discovery_private_dns_namespace.main.id
-
-  # EFS Storage (if needed)
-  enable_efs           = var.livekit_proxy_enable_efs
-  efs_file_system_id   = module.storage.efs_id
-  efs_access_point_id  = module.storage.livekit_access_point_id
-  efs_mount_path      = var.livekit_proxy_efs_mount_path
-
-  # Capacity Provider Strategy
-  capacity_provider_strategy = var.enable_fargate_spot ? [
-    {
-      capacity_provider = "FARGATE_SPOT"
-      weight           = 1
-      base             = 0
-    },
-    {
-      capacity_provider = "FARGATE"
-      weight           = 1
-      base             = 1
-    }
-  ] : [
-    {
-      capacity_provider = "FARGATE"
-      weight           = 1
-      base             = 1
-    }
-  ]
+  # LiveKit Proxy Service Discovery and EFS
+  livekit_proxy_enable_service_discovery = var.livekit_proxy_enable_service_discovery
+  livekit_proxy_enable_efs               = var.livekit_proxy_enable_efs
+  livekit_proxy_efs_mount_path           = var.livekit_proxy_efs_mount_path
 
   tags = merge(
     var.tags,
@@ -398,7 +330,7 @@ module "livekit_proxy" {
       "Environment" = var.environment
       "Project"     = "LiveKit"
       "Platform"    = "ECS"
-      "Component"   = "LiveKitProxy"
+      "Component"   = "Services"
       "Terraform"   = "true"
     }
   )
@@ -413,7 +345,7 @@ resource "aws_lb_listener_rule" "voice_agent" {
 
   action {
     type             = "forward"
-    target_group_arn = module.voice_agent.target_group_arn
+    target_group_arn = module.services.voice_agent_target_group_arn
   }
 
   condition {
@@ -439,7 +371,7 @@ resource "aws_lb_listener_rule" "livekit_proxy" {
 
   action {
     type             = "forward"
-    target_group_arn = module.livekit_proxy.target_group_arn
+    target_group_arn = module.services.livekit_proxy_target_group_arn
   }
 
   condition {
@@ -467,7 +399,7 @@ resource "aws_lb_listener_rule" "voice_agent_https" {
 
   action {
     type             = "forward"
-    target_group_arn = module.voice_agent.target_group_arn
+    target_group_arn = module.services.voice_agent_target_group_arn
   }
 
   condition {
@@ -495,7 +427,7 @@ resource "aws_lb_listener_rule" "livekit_proxy_https" {
 
   action {
     type             = "forward"
-    target_group_arn = module.livekit_proxy.target_group_arn
+    target_group_arn = module.services.livekit_proxy_target_group_arn
   }
 
   condition {
