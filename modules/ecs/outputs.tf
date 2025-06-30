@@ -64,8 +64,9 @@ output "service_discovery_services" {
 # Service URLs
 output "service_urls" {
   description = "Map of service URLs (internal service discovery)"
-  value = var.enable_service_discovery ? {
+  value       = var.enable_service_discovery ? {
     for name, config in var.services : name =>
     "http://${name}.${local.name_prefix}.local:${config.port}"
     if lookup(config, "enable_service_discovery", true)
   } : {}
+}
