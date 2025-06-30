@@ -11,7 +11,15 @@ resource "aws_lb" "main" {
   internal           = var.alb_internal
   load_balancer_type = "application"
   security_groups    = [aws_security_group.alb[0].id]
-  subnets            = var.alb_internal ? var.private_subnet_ids : var.public_subnet_ids
+
+  # Fixed: Ensure we have at least 2 subnets in different AZs
+  subnets = var.alb_internal ? (
+    length(var.private_subnet_ids) >= 2 ? var.private_subnet_ids :
+    concat(var.private_subnet_ids, var.public_subnet_ids)
+  ) : (
+    length(var.public_subnet_ids) >= 2 ? var.public_subnet_ids :
+    concat(var.public_subnet_ids, var.private_subnet_ids)
+  )
 
   # ALB Configuration
   enable_deletion_protection       = var.alb_enable_deletion_protection

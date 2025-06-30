@@ -91,21 +91,17 @@ locals {
         }
 
         # Health check configuration
+        # Health check configuration - FIXED
         healthCheck = lookup(config, "container_health_check", null) != null ? {
-          command = lookup(
-            config.container_health_check,
-            "command",
-            [
-              "CMD-SHELL",
-              "curl -f http://localhost:${config.port}/health || exit 1"
-            ]
-          )
-          interval    = lookup(config, "container_health_check.interval", 30)
-          timeout     = lookup(config, "container_health_check.timeout", 5)
-          retries     = lookup(config, "container_health_check.retries", 3)
-          startPeriod = lookup(config, "container_health_check.startPeriod", 0)
+          command = [
+            "CMD-SHELL",
+            lookup(config.container_health_check, "command", "curl -f http://localhost:${config.port}/health || exit 1")
+          ]
+          interval    = lookup(config.container_health_check, "interval", 30)
+          timeout     = lookup(config.container_health_check, "timeout", 5)
+          retries     = lookup(config.container_health_check, "retries", 3)
+          startPeriod = lookup(config.container_health_check, "start_period", 0)
         } : null
-
 
         # Mount points for EFS (if enabled)
         mountPoints = lookup(config, "efs_config", null) != null && config.efs_config.enabled ? [
