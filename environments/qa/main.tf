@@ -408,10 +408,7 @@ module "services" {
 }
 
 # Data source to retrieve MongoDB connection string from SSM (if using self-hosted MongoDB)
-data "aws_ssm_parameter" "mongodb_connection_string" {
-  count = var.mongodb_store_connection_string_in_ssm ? 1 : 0
-  name  = module.mongodb.ssm_parameter_name
-}
+
 
 # Security Group Rule to allow Voice Agent to access MongoDB
 resource "aws_security_group_rule" "voice_agent_to_mongodb" {
