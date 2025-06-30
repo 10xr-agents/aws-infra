@@ -171,67 +171,94 @@ module "alb" {
     }
   }
 
-  # HTTP Listener
-  listeners = {
-    http = {
-      port     = 80
-      protocol = "HTTP"
+  # Fixed Listeners Block
+  listeners = merge(
+    # HTTP Listener - always present
+    {
+      http = {
+        port     = 80
+        protocol = "HTTP"
 
-      # Redirect to HTTPS if certificate is provided
-      default_actions = var.acm_certificate_arn != "" ? [
-        {
-          type = "redirect"
-          redirect = {
-            port        = "443"
-            protocol    = "HTTPS"
-            status_code = "HTTP_301"
+        # Redirect to HTTPS if certificate is provided, otherwise forward to ui-console
+        default_actions = var.acm_certificate_arn != "" ? [
+          {
+            type = "redirect"
+            redirect = {
+              port        = "443"
+              protocol    = "HTTPS"
+              status_code = "HTTP_301"
+            }
           }
-        }
-      ] : [
-        {
-          type             = "forward"
-          target_group_key = "ui-console" # Default to UI console
-        }
-      ]
-    }
+        ] : [
+          {
+            type             = "forward"
+            target_group_key = "ui-console"
+          }
+        ]
 
-    # HTTPS Listener (if certificate is provided)
-    https = var.acm_certificate_arn != "" ? {
-      port            = 443
-      protocol        = "HTTPS"
-      certificate_arn = var.acm_certificate_arn
-      ssl_policy      = var.ssl_policy
+        # Rules for HTTP listener when no certificate (services routing)
+        rules = var.acm_certificate_arn == "" ? {
+          for service_name, service_config in local.ecs_services_with_overrides : service_name => {
+            priority = 100 + index(keys(local.ecs_services_with_overrides), service_name)
 
-      default_actions = [
-        {
-          type             = "forward"
-          target_group_key = "ui-console" # Default to UI console
-        }
-      ]
-
-      # Rules for each service based on path patterns
-      rules = {
-        for service_name, service_config in local.ecs_services_with_overrides : service_name => {
-          priority = 100 + index(keys(local.ecs_services_with_overrides), service_name)
-
-          conditions = [
-            {
-              path_pattern = {
-                values = lookup(service_config, "alb_path_patterns", ["/${service_name}/*"])
+            conditions = [
+              {
+                path_pattern = {
+                  values = lookup(service_config, "alb_path_patterns", ["/${service_name}/*"])
+                }
               }
-            }
-          ]
+            ]
 
-          actions = [
-            {
-              type             = "forward"
-              target_group_key = service_name
-            }
-          ]
-        } if lookup(service_config, "alb_path_patterns", null) != null
+            actions = [
+              {
+                type             = "forward"
+                target_group_key = service_name
+              }
+            ]
+          } if lookup(service_config, "alb_path_patterns", null) != null && service_name != "ui-console"
+        } : {}
       }
-    } : null
-  }
+    },
+
+    # HTTPS Listener - only if certificate is provided
+      var.acm_certificate_arn != "" ? {
+      https = {
+        port            = 443
+        protocol        = "HTTPS"
+        certificate_arn = var.acm_certificate_arn
+        ssl_policy      = var.ssl_policy
+
+        default_actions = [
+          {
+            type             = "forward"
+            target_group_key = "ui-console"
+          }
+        ]
+
+        # Rules for each service based on path patterns
+        rules = {
+          for service_name, service_config in local.ecs_services_with_overrides : service_name => {
+            priority = 100 + index(keys(local.ecs_services_with_overrides), service_name)
+
+            conditions = [
+              {
+                path_pattern = {
+                  values = lookup(service_config, "alb_path_patterns", ["/${service_name}/*"])
+                }
+              }
+            ]
+
+            actions = [
+              {
+                type             = "forward"
+                target_group_key = service_name
+              }
+            ]
+          } if lookup(service_config, "alb_path_patterns", null) != null && service_name != "ui-console"
+        }
+      }
+    } : {}
+  )
 
   tags = merge(
     var.tags,

@@ -35,14 +35,6 @@ output "service_ids" {
   }
 }
 
-# Target Group Outputs
-output "target_group_arns" {
-  description = "Map of service names to their target group ARNs"
-  value = {
-    for name, tg in aws_lb_target_group.services : name => tg.arn
-  }
-}
-
 # Service Discovery Outputs
 output "service_discovery_namespace_id" {
   description = "ID of the service discovery namespace"
