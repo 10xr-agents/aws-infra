@@ -19,10 +19,6 @@ module "vpc" {
   public_subnets   = var.public_subnets
   database_subnets = var.database_subnets
 
-  enable_nat_gateway = var.enable_nat_gateway
-  single_nat_gateway = var.single_nat_gateway
-  one_nat_gateway_per_az = var.one_nat_gateway_per_az
-
   map_public_ip_on_launch = var.map_public_ip_on_launch
 
   # ECS specific tags
@@ -32,8 +28,8 @@ module "vpc" {
     var.tags,
     {
       "Environment" = var.environment
-      "Project"     = "LiveKit"
-      "Platform"    = "ECS"
+      "Project"     = "10xR-Agents"
+      "Platform"    = "AWS"
       "Terraform"   = "true"
     }
   )
@@ -56,26 +52,53 @@ module "ecs" {
   # Capacity Providers
   enable_fargate           = var.enable_fargate
   enable_fargate_spot      = var.enable_fargate_spot
-  enable_ec2               = var.enable_ec2
-
-  # EC2 Capacity Provider settings (if enabled)
-  ec2_asg_min_size         = var.ec2_asg_min_size
-  ec2_asg_max_size         = var.ec2_asg_max_size
-  ec2_asg_desired_capacity = var.ec2_asg_desired_capacity
-  ec2_instance_types       = var.ec2_instance_types
-  ec2_ami_id              = var.ec2_ami_id
 
   tags = merge(
     var.tags,
     {
       "Environment" = var.environment
-      "Project"     = "LiveKit"
-      "Platform"    = "ECS"
+      "Project"     = "10xR-Agents"
+      "Platform"    = "AWS"
       "Terraform"   = "true"
     }
   )
 
   depends_on = [module.vpc]
+}
+
+# Storage Module (EFS for shared storage)
+module "storage" {
+  source = "../../modules/storage-ecs"
+
+  vpc_id                = module.vpc.vpc_id
+  private_subnet_ids    = module.vpc.private_subnets
+  cluster_name          = local.cluster_name
+  environment           = var.environment
+
+  # EFS configuration
+  efs_performance_mode  = var.efs_performance_mode
+  efs_throughput_mode   = var.efs_throughput_mode
+  efs_provisioned_throughput = var.efs_provisioned_throughput
+
+  # S3 configuration for recordings
+  create_recordings_bucket   = var.create_recordings_bucket
+  recordings_bucket_name     = "${var.cluster_name}-livekit-recordings"
+  recordings_expiration_days = var.recordings_expiration_days
+
+  # Security
+  ecs_security_group_id = module.ecs.ecs_security_group_id
+
+  tags = merge(
+    var.tags,
+    {
+      "Environment" = var.environment
+      "Project"     = "10xR-Agents"
+      "Platform"    = "AWS"
+      "Terraform"   = "true"
+    }
+  )
+
+  depends_on = [module.ecs]
 }
 
 # # MongoDB Cluster Module
@@ -137,9 +160,9 @@ module "ecs" {
 #     var.tags,
 #     {
 #       "Environment" = var.environment
-#       "Project"     = "LiveKit"
+#       "Project"     = "10xR-Agents"
 #       "Component"   = "MongoDB"
-#       "Platform"    = "ECS"
+#       "Platform"    = "AWS"
 #       "Terraform"   = "true"
 #     }
 #   )
@@ -203,8 +226,8 @@ module "ecs" {
 #     var.tags,
 #     {
 #       "Environment" = var.environment
-#       "Project"     = "LiveKit"
-#       "Platform"    = "ECS"
+#       "Project"     = "10xR-Agents"
+#       "Platform"    = "AWS"
 #       "Component"   = "ALB"
 #       "Terraform"   = "true"
 #     }
@@ -223,48 +246,14 @@ module "ecs" {
 #     var.tags,
 #     {
 #       "Environment" = var.environment
-#       "Project"     = "LiveKit"
-#       "Platform"    = "ECS"
+#       "Project"     = "10xR-Agents"
+#       "Platform"    = "AWS"
 #       "Component"   = "ServiceDiscovery"
 #       "Terraform"   = "true"
 #     }
 #   )
 # }
 #
-# # Storage Module (EFS for shared storage)
-# module "storage" {
-#   source = "../../modules/storage-ecs"
-#
-#   vpc_id                = module.vpc.vpc_id
-#   private_subnet_ids    = module.vpc.private_subnets
-#   cluster_name          = local.cluster_name
-#   environment           = var.environment
-#
-#   # EFS configuration
-#   efs_performance_mode  = var.efs_performance_mode
-#   efs_throughput_mode   = var.efs_throughput_mode
-#   efs_provisioned_throughput = var.efs_provisioned_throughput
-#
-#   # S3 configuration for recordings
-#   create_recordings_bucket   = var.create_recordings_bucket
-#   recordings_bucket_name     = "${var.cluster_name}-livekit-recordings"
-#   recordings_expiration_days = var.recordings_expiration_days
-#
-#   # Security
-#   ecs_security_group_id = module.ecs.ecs_security_group_id
-#
-#   tags = merge(
-#     var.tags,
-#     {
-#       "Environment" = var.environment
-#       "Project"     = "LiveKit"
-#       "Platform"    = "ECS"
-#       "Terraform"   = "true"
-#     }
-#   )
-#
-#   depends_on = [module.ecs]
-# }
 #
 # # Services Module (All Services)
 # module "services" {
@@ -492,8 +481,8 @@ module "ecs" {
 #     var.tags,
 #     {
 #       "Environment" = var.environment
-#       "Project"     = "LiveKit"
-#       "Platform"    = "ECS"
+#       "Project"     = "10xR-Agents"
+#       "Platform"    = "AWS"
 #       "Component"   = "Services"
 #       "Terraform"   = "true"
 #     }

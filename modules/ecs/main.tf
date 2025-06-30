@@ -1,10 +1,10 @@
 # modules/ecs/main.tf
 
 /**
- * # ECS Module for LiveKit Deployment
+ * # ECS Module
  *
  * This module creates an Amazon ECS cluster with support for both Fargate and EC2 capacity providers.
- * It's designed to run containerized LiveKit components with proper networking and scaling capabilities.
+ * It's designed to run containerized 10xR Agents with proper networking and scaling capabilities.
  *
  * The module creates:
  * - ECS cluster with Container Insights

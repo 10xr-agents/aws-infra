@@ -77,7 +77,7 @@ module "vpc" {
     {
       "Name"        = "${var.vpc_name}-default-sg"
       "Environment" = var.environment
-      "Project"     = "LiveKit"
+      "Project"     = "10xR-Agents"
       "Terraform"   = "true"
     }
   )
@@ -86,7 +86,7 @@ module "vpc" {
     var.tags,
     {
       "Environment" = var.environment
-      "Project"     = "LiveKit"
+      "Project"     = "10xR-Agents"
       "Terraform"   = "true"
     }
   )
