@@ -50,7 +50,7 @@ recordings_expiration_days = 30
 # Most existing configuration remains the same
 # Replace conversation_agent with voice_agent configuration
 
-voice_agent_ecr_repository_url = "761018882607.dkr.ecr.us-east-1.amazonaws.com/10xr/voice-agent"
+voice_agent_ecr_repository_url = "761018882607.dkr.ecr.us-east-1.amazonaws.com/10xr-agents/voice-agent:v1.0.0"
 voice_agent_image_tag          = "latest"
 voice_agent_port               = 9600
 voice_agent_cpu                = 2048
