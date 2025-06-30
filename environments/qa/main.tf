@@ -413,17 +413,17 @@ data "aws_ssm_parameter" "mongodb_connection_string" {
   name  = module.mongodb.ssm_parameter_name
 }
 
-# Security Group Rule to allow Conversation Agent to access MongoDB
-resource "aws_security_group_rule" "conversation_agent_to_mongodb" {
+# Security Group Rule to allow Voice Agent to access MongoDB
+resource "aws_security_group_rule" "voice_agent_to_mongodb" {
   count = var.mongodb_replica_count > 0 ? 1 : 0
 
   type                     = "ingress"
   from_port                = 27017
   to_port                  = 27017
   protocol                 = "tcp"
-  source_security_group_id = module.conversation_agent.security_group_id
+  source_security_group_id = module.services.voice_agent_security_group_id
   security_group_id        = module.mongodb.security_group_id
-  description              = "Allow Conversation Agent ECS tasks to access MongoDB"
+  description              = "Allow Voice Agent ECS tasks to access MongoDB"
 }
 
 # ALB Listener Rule for Voice Agent
