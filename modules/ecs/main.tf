@@ -26,23 +26,210 @@ locals {
     }
   )}
 
-  # Generate container definitions for each service from JSON files
+  # Generate container definitions for each service directly in Terraform
   container_definitions = { for name, config in local.services_config : name =>
-    templatefile("${path.module}/task-definitions/${name}.json", {
-      service_name    = name
-      image          = "${config.image}:${lookup(config, "image_tag", "latest")}"
-      cpu            = config.cpu
-      memory         = config.memory
-      port           = config.port
-      environment    = var.environment
-      log_group      = config.log_group_name
-      aws_region     = data.aws_region.current.name
-      # Pass additional variables for templating
-      environment_vars = lookup(config, "environment", {})
-      secrets         = lookup(config, "secrets", [])
-      health_check    = lookup(config, "container_health_check", null)
-      efs_config      = lookup(config, "efs_config", null)
-    })
+    jsonencode([
+      {
+        name  = name
+        image = "${config.image}:${lookup(config, "image_tag", "latest")}"
+
+        # Resource allocation
+        cpu    = config.cpu
+        memory = config.memory
+
+        # Essential container
+        essential = true
+
+        # Port mappings
+        portMappings = [
+          {
+            containerPort = config.port
+            protocol      = "tcp"
+          }
+        ]
+
+        # Environment variables
+        environment = concat(
+          [
+            {
+              name  = "ENVIRONMENT"
+              value = var.environment
+            },
+            {
+              name  = "AWS_REGION"
+              value = data.aws_region.current.name
+            },
+            {
+              name  = "SERVICE_NAME"
+              value = name
+            }
+          ],
+          [
+            for key, value in lookup(config, "environment", {}) : {
+            name  = key
+            value = tostring(value)
+          }
+          ]
+        )
+
+        # Secrets from AWS Secrets Manager or SSM Parameter Store
+        secrets = [
+          for secret in lookup(config, "secrets", []) : {
+            name      = secret.name
+            valueFrom = secret.valueFrom
+          }
+        ]
+
+        # Logging configuration
+        logConfiguration = {
+          logDriver = "awslogs"
+          options = {
+            "awslogs-group"         = config.log_group_name
+            "awslogs-region"        = data.aws_region.current.name
+            "awslogs-stream-prefix" = "ecs"
+          }
+        }
+
+        # Health check configuration
+        healthCheck = lookup(config, "container_health_check", null) != null ? {
+          command = lookup(config.container_health_check, "command", [
+            "CMD-SHELL",
+            "curl -f http://localhost:${config.port}/health || exit 1"
+          ])
+          interval    = lookup(config.container_health_check, "interval", 30)
+          timeout     = lookup(config.container_health_check, "timeout", 5)
+          retries     = lookup(config.container_health_check, "retries", 3)
+          startPeriod = lookup(config.container_health_check, "startPeriod", 0)
+        } : null
+
+        # Mount points for EFS (if enabled)
+        mountPoints = lookup(config, "efs_config", null) != null && config.efs_config.enabled ? [
+          {
+            sourceVolume  = "efs-storage"
+            containerPath = lookup(config.efs_config, "container_path", "/mnt/efs")
+            readOnly      = lookup(config.efs_config, "read_only", false)
+          }
+        ] : []
+
+        # Volume from (if needed)
+        volumesFrom = []
+
+        # Working directory
+        workingDirectory = lookup(config, "working_directory", null)
+
+        # Entry point and command
+        entryPoint = lookup(config, "entry_point", null)
+        command    = lookup(config, "command", null)
+
+        # User
+        user = lookup(config, "user", null)
+
+        # Hostname
+        hostname = lookup(config, "hostname", null)
+
+        # Domain name servers
+        dnsServers = lookup(config, "dns_servers", null)
+
+        # DNS search domains
+        dnsSearchDomains = lookup(config, "dns_search_domains", null)
+
+        # Extra hosts
+        extraHosts = lookup(config, "extra_hosts", null)
+
+        # Docker security options
+        dockerSecurityOptions = lookup(config, "docker_security_options", null)
+
+        # Interactive and pseudo-TTY
+        interactive = lookup(config, "interactive", false)
+        pseudoTerminal = lookup(config, "pseudo_terminal", false)
+
+        # Docker labels
+        dockerLabels = merge(
+          {
+            "service"     = name
+            "environment" = var.environment
+            "cluster"     = local.name_prefix
+          },
+          lookup(config, "docker_labels", {})
+        )
+
+        # Ulimits
+        ulimits = lookup(config, "ulimits", null) != null ? [
+          for ulimit in config.ulimits : {
+            name      = ulimit.name
+            softLimit = ulimit.soft_limit
+            hardLimit = ulimit.hard_limit
+          }
+        ] : null
+
+        # Repository credentials
+        repositoryCredentials = lookup(config, "repository_credentials", null) != null ? {
+          credentialsParameter = config.repository_credentials.credentials_parameter
+        } : null
+
+        # System controls
+        systemControls = lookup(config, "system_controls", null) != null ? [
+          for control in config.system_controls : {
+            namespace = control.namespace
+            value     = control.value
+          }
+        ] : null
+
+        # Resource requirements
+        resourceRequirements = lookup(config, "resource_requirements", null) != null ? [
+          for requirement in config.resource_requirements : {
+            type  = requirement.type
+            value = requirement.value
+          }
+        ] : null
+
+        # FireLens configuration for log routing
+        firelensConfiguration = lookup(config, "firelens_configuration", null) != null ? {
+          type    = config.firelens_configuration.type
+          options = lookup(config.firelens_configuration, "options", {})
+        } : null
+
+        # Dependencies on other containers
+        dependsOn = lookup(config, "depends_on", null) != null ? [
+          for dependency in config.depends_on : {
+            containerName = dependency.container_name
+            condition     = dependency.condition
+          }
+        ] : null
+
+        # Start timeout
+        startTimeout = lookup(config, "start_timeout", null)
+
+        # Stop timeout
+        stopTimeout = lookup(config, "stop_timeout", null)
+
+        # Linux parameters
+        linuxParameters = lookup(config, "linux_parameters", null) != null ? {
+          capabilities = lookup(config.linux_parameters, "capabilities", null) != null ? {
+            add  = lookup(config.linux_parameters.capabilities, "add", null)
+            drop = lookup(config.linux_parameters.capabilities, "drop", null)
+          } : null
+          devices = lookup(config.linux_parameters, "devices", null) != null ? [
+            for device in config.linux_parameters.devices : {
+              hostPath      = device.host_path
+              containerPath = device.container_path
+              permissions   = lookup(device, "permissions", null)
+            }
+          ] : null
+          initProcessEnabled = lookup(config.linux_parameters, "init_process_enabled", null)
+          maxSwap           = lookup(config.linux_parameters, "max_swap", null)
+          sharedMemorySize  = lookup(config.linux_parameters, "shared_memory_size", null)
+          swappiness        = lookup(config.linux_parameters, "swappiness", null)
+          tmpfs = lookup(config.linux_parameters, "tmpfs", null) != null ? [
+            for tmpf in config.linux_parameters.tmpfs : {
+              containerPath = tmpf.container_path
+              size          = tmpf.size
+              mountOptions  = lookup(tmpf, "mount_options", null)
+            }
+          ] : null
+        } : null
+      }
+    ])
   }
 }
 
@@ -389,9 +576,11 @@ resource "aws_ecs_service" "service" {
     }
   }
 
-  # Add these top-level arguments:
-  deployment_maximum_percent         = 200
-  deployment_minimum_healthy_percent = 100
+  # Deployment configuration
+  deployment_configuration {
+    maximum_percent         = 200
+    minimum_healthy_percent = 100
+  }
 
   # Force new deployment on task definition changes
   triggers = {
