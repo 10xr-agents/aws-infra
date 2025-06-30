@@ -28,37 +28,37 @@ output "database_subnets" {
 # ALB Outputs
 output "alb_id" {
   description = "The ID of the ALB"
-  value       = module.alb.id
+  value       = module.ecs.alb_id
 }
 
 output "alb_arn" {
   description = "The ARN of the ALB"
-  value       = module.alb.arn
+  value       = module.ecs.alb_arn
 }
 
 output "alb_dns_name" {
   description = "The DNS name of the ALB"
-  value       = module.alb.dns_name
+  value       = module.ecs.alb_dns_name
 }
 
 output "alb_zone_id" {
   description = "The canonical hosted zone ID of the ALB"
-  value       = module.alb.zone_id
+  value       = module.ecs.alb_zone_id
 }
 
 output "alb_security_group_id" {
   description = "The ID of the ALB security group"
-  value       = module.alb.security_group_id
+  value       = module.ecs.alb_security_group_id
 }
 
 output "alb_listener_arns" {
   description = "Map of listener ARNs"
-  value       = module.alb.listeners
+  value       = module.ecs.alb_listeners
 }
 
 output "alb_target_groups" {
   description = "Map of target groups created for services"
-  value       = module.alb.target_groups
+  value       = module.ecs.alb_target_groups
 }
 
 # ECS Cluster outputs
@@ -87,7 +87,7 @@ output "ecs_service_urls" {
   value = {
     for name, config in local.ecs_services_with_overrides : name => {
       internal_url = var.enable_service_discovery ? "http://${name}.${local.cluster_name}.local:${config.port}" : null
-      external_url = "http${var.acm_certificate_arn != "" ? "s" : ""}://${module.alb.dns_name}${lookup(config, "alb_path_patterns", ["/"])[0]}"
+      external_url = "http${var.acm_certificate_arn != "" ? "s" : ""}://${module.ecs.alb_dns_name}${lookup(config, "alb_path_patterns", ["/"])[0]}"
       paths        = lookup(config, "alb_path_patterns", ["/${name}/*"])
     }
   }
