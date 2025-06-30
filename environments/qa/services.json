@@ -1,0 +1,161 @@
+{
+  "voice-agent": {
+    "image": "761018882607.dkr.ecr.us-east-1.amazonaws.com/10xr-agents/voice-agent",
+    "image_tag": "v1.0.0",
+    "port": 9600,
+    "cpu": 2048,
+    "memory": 4096,
+    "desired_count": 2,
+    "environment": {
+      "MONGODB_URI": "mongodb+srv://doadmin:by6n2k14L8g53dt7@db-mongodb-nyc3-70786-efaf17f9.mongo.ondigitalocean.com/ten_xr_temp_agents_local?tls=true&authSource=admin&replicaSet=db-mongodb-nyc3-70786"
+    },
+    "secrets": [],
+    "capacity_provider_strategy": [
+      {
+        "capacity_provider": "FARGATE",
+        "weight": 1,
+        "base": 1
+      },
+      {
+        "capacity_provider": "FARGATE_SPOT",
+        "weight": 3,
+        "base": 0
+      }
+    ],
+    "container_health_check": {
+      "command": "curl -f http://localhost:9600/health || exit 1",
+      "interval": 30,
+      "timeout": 20,
+      "start_period": 90
+    },
+    "health_check": {
+      "path": "/health"
+    },
+    "enable_auto_scaling": true,
+    "auto_scaling_min_capacity": 1,
+    "auto_scaling_max_capacity": 10,
+    "auto_scaling_cpu_target": 70,
+    "auto_scaling_memory_target": 80,
+    "alb_path_patterns": ["/voice/*"],
+    "additional_task_policies": {
+      "S3Access": "arn:aws:iam::aws:policy/AmazonS3FullAccess"
+    }
+  },
+  "livekit-proxy": {
+    "image": "761018882607.dkr.ecr.us-east-1.amazonaws.com/10xr-agents/livekit-proxy-service",
+    "image_tag": "0.1.0",
+    "port": 8080,
+    "cpu": 1024,
+    "memory": 2048,
+    "desired_count": 2,
+    "environment": {
+    },
+    "capacity_provider_strategy": [
+      {
+        "capacity_provider": "FARGATE_SPOT",
+        "weight": 1,
+        "base": 0
+      }
+    ],
+    "container_health_check": {
+      "command": "curl -f http://localhost:8080/health || exit 1"
+    },
+    "health_check": {
+      "path": "/health"
+    },
+    "alb_path_patterns": ["/proxy/*", "/livekit/*"]
+  },
+  "agent-analytics": {
+    "image": "761018882607.dkr.ecr.us-east-1.amazonaws.com/10xr-agents/agent-analytics-service",
+    "image_tag": "latest",
+    "port": 3000,
+    "cpu": 1024,
+    "memory": 2048,
+    "desired_count": 2,
+    "environment": {
+      "LOG_LEVEL": "INFO",
+      "MONGODB_URI": "mongodb+srv://doadmin:by6n2k14L8g53dt7@db-mongodb-nyc3-70786-efaf17f9.mongo.ondigitalocean.com/ten_xr_temp_agents_local?tls=true&authSource=admin&replicaSet=db-mongodb-nyc3-70786"
+    },
+    "capacity_provider_strategy": [
+      {
+        "capacity_provider": "FARGATE",
+        "weight": 1,
+        "base": 1
+      },
+      {
+        "capacity_provider": "FARGATE_SPOT",
+        "weight": 2,
+        "base": 0
+      }
+    ],
+    "container_health_check": {
+      "command": "curl -f http://localhost:3000/health || exit 1"
+    },
+    "health_check": {
+      "path": "/health"
+    },
+    "alb_path_patterns": ["/analytics/*"]
+  },
+  "ui-console": {
+    "image": "761018882607.dkr.ecr.us-east-1.amazonaws.com/10xr-agents/ui-console",
+    "image_tag": "latest",
+    "port": 80,
+    "cpu": 512,
+    "memory": 1024,
+    "desired_count": 2,
+    "environment": {
+      "LOG_LEVEL": "INFO",
+      "REACT_APP_API_URL": "https://api.qa.10xr.com"
+    },
+    "capacity_provider_strategy": [
+      {
+        "capacity_provider": "FARGATE",
+        "weight": 1,
+        "base": 2
+      }
+    ],
+    "container_health_check": {
+      "command": "curl -f http://localhost:80/ || exit 1",
+      "start_period": 60
+    },
+    "health_check": {
+      "path": "/"
+    },
+    "alb_path_patterns": ["/console/*", "/ui/*", "/"]
+  },
+  "agentic-framework": {
+    "image": "761018882607.dkr.ecr.us-east-1.amazonaws.com/10xr-agents/agentic-framework-service",
+    "image_tag": "latest",
+    "port": 8000,
+    "cpu": 1024,
+    "memory": 2048,
+    "desired_count": 2,
+    "environment": {
+      "LOG_LEVEL": "INFO",
+      "MONGODB_URI": "mongodb+srv://doadmin:by6n2k14L8g53dt7@db-mongodb-nyc3-70786-efaf17f9.mongo.ondigitalocean.com/ten_xr_temp_agents_local?tls=true&authSource=admin&replicaSet=db-mongodb-nyc3-70786"
+    },
+    "capacity_provider_strategy": [
+      {
+        "capacity_provider": "FARGATE",
+        "weight": 1,
+        "base": 1
+      },
+      {
+        "capacity_provider": "FARGATE_SPOT",
+        "weight": 2,
+        "base": 0
+      }
+    ],
+    "container_health_check": {
+      "command": "curl -f http://localhost:8000/health || exit 1"
+    },
+    "health_check": {
+      "path": "/health"
+    },
+    "alb_path_patterns": ["/framework/*", "/agents/*"],
+    "efs_config": {
+      "enabled": false,
+      "mount_path": "/app/storage"
+    }
+  }
+}

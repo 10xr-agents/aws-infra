@@ -197,823 +197,6 @@ variable "recordings_expiration_days" {
   default     = 30
 }
 
-# Voice Agent Configuration
-variable "voice_agent_ecr_repository_url" {
-  description = "URL of the ECR repository for the voice agent image"
-  type        = string
-  default     = "761018882607.dkr.ecr.us-east-1.amazonaws.com/10xr/voice-agent"
-}
-
-variable "voice_agent_image_tag" {
-  description = "Tag of the Docker image to deploy"
-  type        = string
-  default     = "latest"
-}
-
-variable "voice_agent_port" {
-  description = "Port that the voice agent container listens on"
-  type        = number
-  default     = 9600
-}
-
-variable "voice_agent_cpu" {
-  description = "CPU units for the voice agent task (1024 = 1 vCPU)"
-  type        = number
-  default     = 2048
-}
-
-variable "voice_agent_memory" {
-  description = "Memory for the voice agent task in MB"
-  type        = number
-  default     = 4096
-}
-
-variable "voice_agent_desired_count" {
-  description = "Desired number of voice agent tasks"
-  type        = number
-  default     = 2
-}
-
-# Voice Agent Application Configuration
-variable "voice_agent_log_level" {
-  description = "Log level for the voice agent"
-  type        = string
-  default     = "DEBUG"
-}
-
-variable "voice_agent_agent_collection_name" {
-  description = "MongoDB collection name for agent context data"
-  type        = string
-  default     = "agent-context-data"
-}
-
-variable "voice_agent_frames_collection_name" {
-  description = "MongoDB collection name for voice AI frames"
-  type        = string
-  default     = "voice-ai-frames"
-}
-
-variable "voice_agent_database_name" {
-  description = "MongoDB database name"
-  type        = string
-  default     = "converse-server-qa"
-}
-
-variable "voice_agent_mongodb_uri" {
-  description = "MongoDB connection URI"
-  type        = string
-  default     = "mongodb+srv://doadmin:by6n2k14L8g53dt7@db-mongodb-nyc3-70786-efaf17f9.mongo.ondigitalocean.com/ten_xr_temp_agents_local?tls=true&authSource=admin&replicaSet=db-mongodb-nyc3-70786"
-  sensitive   = true
-}
-
-# Voice Agent LiveKit Configuration
-variable "voice_agent_livekit_service" {
-  description = "Name of the LiveKit service"
-  type        = string
-  default     = "livekit-server"
-}
-
-variable "voice_agent_livekit_api_key" {
-  description = "LiveKit API key"
-  type        = string
-  default     = "APIaSovFA9uQ4p5"
-  sensitive   = true
-}
-
-variable "voice_agent_livekit_api_secret" {
-  description = "LiveKit API secret"
-  type        = string
-  default     = "lTxgQzxS0e2n1vqwOhaiFUiwKWvYeyJukHvnJegbITmA"
-  sensitive   = true
-}
-
-# Voice Agent Secrets Configuration
-variable "voice_agent_anthropic_api_key_secret_arn" {
-  description = "ARN of the secret containing Anthropic API key"
-  type        = string
-  default     = ""
-}
-
-variable "voice_agent_deepgram_api_key_secret_arn" {
-  description = "ARN of the secret containing Deepgram API key"
-  type        = string
-  default     = ""
-}
-
-variable "voice_agent_cartesia_api_key_secret_arn" {
-  description = "ARN of the secret containing Cartesia API key"
-  type        = string
-  default     = ""
-}
-
-variable "voice_agent_livekit_api_key_secret_arn" {
-  description = "ARN of the secret containing LiveKit API key"
-  type        = string
-  default     = ""
-}
-
-variable "voice_agent_livekit_api_secret_secret_arn" {
-  description = "ARN of the secret containing LiveKit API secret"
-  type        = string
-  default     = ""
-}
-
-# Voice Agent Additional Environment Variables
-variable "voice_agent_additional_environment_variables" {
-  description = "Additional environment variables for the voice agent"
-  type        = map(string)
-  default     = {}
-}
-
-# Voice Agent Health Check Configuration
-variable "voice_agent_enable_health_check" {
-  description = "Whether to enable container health checks for voice agent"
-  type        = bool
-  default     = true
-}
-
-variable "voice_agent_health_check_command" {
-  description = "Health check command for voice agent"
-  type        = string
-  default     = "curl -f http://localhost:9600/health || exit 1"
-}
-
-variable "voice_agent_health_check_path" {
-  description = "Health check path for voice agent target group"
-  type        = string
-  default     = "/health"
-}
-
-variable "voice_agent_health_check_interval" {
-  description = "Health check interval in seconds"
-  type        = number
-  default     = 30
-}
-
-variable "voice_agent_health_check_timeout" {
-  description = "Health check timeout in seconds"
-  type        = number
-  default     = 20
-}
-
-variable "voice_agent_health_check_start_period" {
-  description = "Health check start period in seconds"
-  type        = number
-  default     = 90
-}
-
-# Voice Agent Auto Scaling Configuration
-variable "voice_agent_enable_auto_scaling" {
-  description = "Whether to enable auto scaling for voice agent"
-  type        = bool
-  default     = true
-}
-
-variable "voice_agent_min_capacity" {
-  description = "Minimum number of voice agent tasks"
-  type        = number
-  default     = 1
-}
-
-variable "voice_agent_max_capacity" {
-  description = "Maximum number of voice agent tasks"
-  type        = number
-  default     = 10
-}
-
-variable "voice_agent_cpu_target" {
-  description = "Target CPU utilization for voice agent auto scaling"
-  type        = number
-  default     = 70
-}
-
-variable "voice_agent_memory_target" {
-  description = "Target memory utilization for voice agent auto scaling"
-  type        = number
-  default     = 80
-}
-
-# Voice Agent Service Discovery Configuration
-variable "voice_agent_enable_service_discovery" {
-  description = "Whether to enable service discovery for voice agent"
-  type        = bool
-  default     = true
-}
-
-# Voice Agent EFS Configuration
-variable "voice_agent_enable_efs" {
-  description = "Whether to mount EFS storage for voice agent"
-  type        = bool
-  default     = false
-}
-
-variable "voice_agent_efs_mount_path" {
-  description = "Path to mount EFS in the voice agent container"
-  type        = string
-  default     = "/app/storage"
-}
-
-# LiveKit Proxy Configuration
-variable "livekit_proxy_ecr_repository_url" {
-  description = "URL of the ECR repository for the LiveKit proxy image"
-  type        = string
-  default     = "761018882607.dkr.ecr.us-east-1.amazonaws.com/10xr-agents/livekit-proxy-service"
-}
-
-variable "livekit_proxy_image_tag" {
-  description = "Tag of the Docker image to deploy"
-  type        = string
-  default     = "latest"
-}
-
-variable "livekit_proxy_port" {
-  description = "Port that the LiveKit proxy container listens on"
-  type        = number
-  default     = 8080
-}
-
-variable "livekit_proxy_cpu" {
-  description = "CPU units for the LiveKit proxy task (1024 = 1 vCPU)"
-  type        = number
-  default     = 1024
-}
-
-variable "livekit_proxy_memory" {
-  description = "Memory for the LiveKit proxy task in MB"
-  type        = number
-  default     = 2048
-}
-
-variable "livekit_proxy_desired_count" {
-  description = "Desired number of LiveKit proxy tasks"
-  type        = number
-  default     = 2
-}
-
-# LiveKit Proxy Application Configuration
-variable "livekit_proxy_log_level" {
-  description = "Log level for the LiveKit proxy"
-  type        = string
-  default     = "INFO"
-}
-
-# LiveKit Proxy LiveKit Configuration
-variable "livekit_proxy_livekit_service" {
-  description = "Name of the LiveKit service"
-  type        = string
-  default     = "livekit-server"
-}
-
-variable "livekit_proxy_livekit_api_key" {
-  description = "LiveKit API key for proxy"
-  type        = string
-  default     = "APIaSovFA9uQ4p5"
-  sensitive   = true
-}
-
-variable "livekit_proxy_livekit_api_secret" {
-  description = "LiveKit API secret for proxy"
-  type        = string
-  default     = "lTxgQzxS0e2n1vqwOhaiFUiwKWvYeyJukHvnJegbITmA"
-  sensitive   = true
-}
-
-# LiveKit Proxy Secrets Configuration
-variable "livekit_proxy_livekit_api_key_secret_arn" {
-  description = "ARN of the secret containing LiveKit API key for proxy"
-  type        = string
-  default     = ""
-}
-
-variable "livekit_proxy_livekit_api_secret_secret_arn" {
-  description = "ARN of the secret containing LiveKit API secret for proxy"
-  type        = string
-  default     = ""
-}
-
-# LiveKit Proxy Additional Environment Variables
-variable "livekit_proxy_additional_environment_variables" {
-  description = "Additional environment variables for the LiveKit proxy"
-  type        = map(string)
-  default     = {}
-}
-
-# LiveKit Proxy Health Check Configuration
-variable "livekit_proxy_enable_health_check" {
-  description = "Whether to enable container health checks for LiveKit proxy"
-  type        = bool
-  default     = true
-}
-
-variable "livekit_proxy_health_check_command" {
-  description = "Health check command for LiveKit proxy"
-  type        = string
-  default     = "curl -f http://localhost:8080/health || exit 1"
-}
-
-variable "livekit_proxy_health_check_path" {
-  description = "Health check path for LiveKit proxy target group"
-  type        = string
-  default     = "/health"
-}
-
-variable "livekit_proxy_health_check_interval" {
-  description = "Health check interval in seconds"
-  type        = number
-  default     = 30
-}
-
-variable "livekit_proxy_health_check_timeout" {
-  description = "Health check timeout in seconds"
-  type        = number
-  default     = 20
-}
-
-variable "livekit_proxy_health_check_start_period" {
-  description = "Health check start period in seconds"
-  type        = number
-  default     = 90
-}
-
-# LiveKit Proxy Auto Scaling Configuration
-variable "livekit_proxy_enable_auto_scaling" {
-  description = "Whether to enable auto scaling for LiveKit proxy"
-  type        = bool
-  default     = true
-}
-
-variable "livekit_proxy_min_capacity" {
-  description = "Minimum number of LiveKit proxy tasks"
-  type        = number
-  default     = 1
-}
-
-variable "livekit_proxy_max_capacity" {
-  description = "Maximum number of LiveKit proxy tasks"
-  type        = number
-  default     = 10
-}
-
-variable "livekit_proxy_cpu_target" {
-  description = "Target CPU utilization for LiveKit proxy auto scaling"
-  type        = number
-  default     = 70
-}
-
-variable "livekit_proxy_memory_target" {
-  description = "Target memory utilization for LiveKit proxy auto scaling"
-  type        = number
-  default     = 80
-}
-
-# LiveKit Proxy Service Discovery Configuration
-variable "livekit_proxy_enable_service_discovery" {
-  description = "Whether to enable service discovery for LiveKit proxy"
-  type        = bool
-  default     = true
-}
-
-# LiveKit Proxy EFS Configuration
-variable "livekit_proxy_enable_efs" {
-  description = "Whether to mount EFS storage for LiveKit proxy"
-  type        = bool
-  default     = false
-}
-
-variable "livekit_proxy_efs_mount_path" {
-  description = "Path to mount EFS in the LiveKit proxy container"
-  type        = string
-  default     = "/app/storage"
-}
-
-# Agent Analytics Service Configuration
-variable "agent_analytics_ecr_repository_url" {
-  description = "URL of the ECR repository for the agent analytics image"
-  type        = string
-  default     = "761018882607.dkr.ecr.us-east-1.amazonaws.com/10xr-agents/agent-analytics-service"
-}
-
-variable "agent_analytics_image_tag" {
-  description = "Tag of the Docker image to deploy"
-  type        = string
-  default     = "latest"
-}
-
-variable "agent_analytics_port" {
-  description = "Port that the agent analytics container listens on"
-  type        = number
-  default     = 3000
-}
-
-variable "agent_analytics_cpu" {
-  description = "CPU units for the agent analytics task (1024 = 1 vCPU)"
-  type        = number
-  default     = 1024
-}
-
-variable "agent_analytics_memory" {
-  description = "Memory for the agent analytics task in MB"
-  type        = number
-  default     = 2048
-}
-
-variable "agent_analytics_desired_count" {
-  description = "Desired number of agent analytics tasks"
-  type        = number
-  default     = 2
-}
-
-# Agent Analytics Application Configuration
-variable "agent_analytics_log_level" {
-  description = "Log level for the agent analytics service"
-  type        = string
-  default     = "INFO"
-}
-
-variable "agent_analytics_mongodb_uri" {
-  description = "MongoDB connection URI for agent analytics"
-  type        = string
-  default     = ""
-  sensitive   = true
-}
-
-variable "agent_analytics_additional_environment_variables" {
-  description = "Additional environment variables for the agent analytics service"
-  type        = map(string)
-  default     = {}
-}
-
-# Agent Analytics Health Check Configuration
-variable "agent_analytics_enable_health_check" {
-  description = "Whether to enable container health checks for agent analytics"
-  type        = bool
-  default     = true
-}
-
-variable "agent_analytics_health_check_command" {
-  description = "Health check command for agent analytics"
-  type        = string
-  default     = "curl -f http://localhost:3000/health || exit 1"
-}
-
-variable "agent_analytics_health_check_path" {
-  description = "Health check path for agent analytics target group"
-  type        = string
-  default     = "/health"
-}
-
-variable "agent_analytics_health_check_interval" {
-  description = "Health check interval in seconds"
-  type        = number
-  default     = 30
-}
-
-variable "agent_analytics_health_check_timeout" {
-  description = "Health check timeout in seconds"
-  type        = number
-  default     = 20
-}
-
-variable "agent_analytics_health_check_start_period" {
-  description = "Health check start period in seconds"
-  type        = number
-  default     = 90
-}
-
-# Agent Analytics Auto Scaling Configuration
-variable "agent_analytics_enable_auto_scaling" {
-  description = "Whether to enable auto scaling for agent analytics"
-  type        = bool
-  default     = true
-}
-
-variable "agent_analytics_min_capacity" {
-  description = "Minimum number of agent analytics tasks"
-  type        = number
-  default     = 1
-}
-
-variable "agent_analytics_max_capacity" {
-  description = "Maximum number of agent analytics tasks"
-  type        = number
-  default     = 10
-}
-
-variable "agent_analytics_cpu_target" {
-  description = "Target CPU utilization for agent analytics auto scaling"
-  type        = number
-  default     = 70
-}
-
-variable "agent_analytics_memory_target" {
-  description = "Target memory utilization for agent analytics auto scaling"
-  type        = number
-  default     = 80
-}
-
-# Agent Analytics Service Discovery Configuration
-variable "agent_analytics_enable_service_discovery" {
-  description = "Whether to enable service discovery for agent analytics"
-  type        = bool
-  default     = true
-}
-
-# Agent Analytics EFS Configuration
-variable "agent_analytics_enable_efs" {
-  description = "Whether to mount EFS storage for agent analytics"
-  type        = bool
-  default     = false
-}
-
-variable "agent_analytics_efs_mount_path" {
-  description = "Path to mount EFS in the agent analytics container"
-  type        = string
-  default     = "/app/storage"
-}
-
-# UI Console Service Configuration
-variable "ui_console_ecr_repository_url" {
-  description = "URL of the ECR repository for the UI console image"
-  type        = string
-  default     = "761018882607.dkr.ecr.us-east-1.amazonaws.com/10xr-agents/ui-console"
-}
-
-variable "ui_console_image_tag" {
-  description = "Tag of the Docker image to deploy"
-  type        = string
-  default     = "latest"
-}
-
-variable "ui_console_port" {
-  description = "Port that the UI console container listens on"
-  type        = number
-  default     = 80
-}
-
-variable "ui_console_cpu" {
-  description = "CPU units for the UI console task (1024 = 1 vCPU)"
-  type        = number
-  default     = 512
-}
-
-variable "ui_console_memory" {
-  description = "Memory for the UI console task in MB"
-  type        = number
-  default     = 1024
-}
-
-variable "ui_console_desired_count" {
-  description = "Desired number of UI console tasks"
-  type        = number
-  default     = 2
-}
-
-# UI Console Application Configuration
-variable "ui_console_log_level" {
-  description = "Log level for the UI console service"
-  type        = string
-  default     = "INFO"
-}
-
-variable "ui_console_additional_environment_variables" {
-  description = "Additional environment variables for the UI console service"
-  type        = map(string)
-  default     = {}
-}
-
-# UI Console Health Check Configuration
-variable "ui_console_enable_health_check" {
-  description = "Whether to enable container health checks for UI console"
-  type        = bool
-  default     = true
-}
-
-variable "ui_console_health_check_command" {
-  description = "Health check command for UI console"
-  type        = string
-  default     = "curl -f http://localhost:80/health || exit 1"
-}
-
-variable "ui_console_health_check_path" {
-  description = "Health check path for UI console target group"
-  type        = string
-  default     = "/"
-}
-
-variable "ui_console_health_check_interval" {
-  description = "Health check interval in seconds"
-  type        = number
-  default     = 30
-}
-
-variable "ui_console_health_check_timeout" {
-  description = "Health check timeout in seconds"
-  type        = number
-  default     = 20
-}
-
-variable "ui_console_health_check_start_period" {
-  description = "Health check start period in seconds"
-  type        = number
-  default     = 90
-}
-
-# UI Console Auto Scaling Configuration
-variable "ui_console_enable_auto_scaling" {
-  description = "Whether to enable auto scaling for UI console"
-  type        = bool
-  default     = true
-}
-
-variable "ui_console_min_capacity" {
-  description = "Minimum number of UI console tasks"
-  type        = number
-  default     = 1
-}
-
-variable "ui_console_max_capacity" {
-  description = "Maximum number of UI console tasks"
-  type        = number
-  default     = 10
-}
-
-variable "ui_console_cpu_target" {
-  description = "Target CPU utilization for UI console auto scaling"
-  type        = number
-  default     = 70
-}
-
-variable "ui_console_memory_target" {
-  description = "Target memory utilization for UI console auto scaling"
-  type        = number
-  default     = 80
-}
-
-# UI Console Service Discovery Configuration
-variable "ui_console_enable_service_discovery" {
-  description = "Whether to enable service discovery for UI console"
-  type        = bool
-  default     = true
-}
-
-# UI Console EFS Configuration
-variable "ui_console_enable_efs" {
-  description = "Whether to mount EFS storage for UI console"
-  type        = bool
-  default     = false
-}
-
-variable "ui_console_efs_mount_path" {
-  description = "Path to mount EFS in the UI console container"
-  type        = string
-  default     = "/app/storage"
-}
-
-# Agentic Framework Service Configuration
-variable "agentic_framework_ecr_repository_url" {
-  description = "URL of the ECR repository for the agentic framework image"
-  type        = string
-  default     = "761018882607.dkr.ecr.us-east-1.amazonaws.com/10xr-agents/agentic-framework-service"
-}
-
-variable "agentic_framework_image_tag" {
-  description = "Tag of the Docker image to deploy"
-  type        = string
-  default     = "latest"
-}
-
-variable "agentic_framework_port" {
-  description = "Port that the agentic framework container listens on"
-  type        = number
-  default     = 8000
-}
-
-variable "agentic_framework_cpu" {
-  description = "CPU units for the agentic framework task (1024 = 1 vCPU)"
-  type        = number
-  default     = 1024
-}
-
-variable "agentic_framework_memory" {
-  description = "Memory for the agentic framework task in MB"
-  type        = number
-  default     = 2048
-}
-
-variable "agentic_framework_desired_count" {
-  description = "Desired number of agentic framework tasks"
-  type        = number
-  default     = 2
-}
-
-# Agentic Framework Application Configuration
-variable "agentic_framework_log_level" {
-  description = "Log level for the agentic framework service"
-  type        = string
-  default     = "INFO"
-}
-
-variable "agentic_framework_mongodb_uri" {
-  description = "MongoDB connection URI for agentic framework"
-  type        = string
-  default     = ""
-  sensitive   = true
-}
-
-variable "agentic_framework_additional_environment_variables" {
-  description = "Additional environment variables for the agentic framework service"
-  type        = map(string)
-  default     = {}
-}
-
-# Agentic Framework Health Check Configuration
-variable "agentic_framework_enable_health_check" {
-  description = "Whether to enable container health checks for agentic framework"
-  type        = bool
-  default     = true
-}
-
-variable "agentic_framework_health_check_command" {
-  description = "Health check command for agentic framework"
-  type        = string
-  default     = "curl -f http://localhost:8000/health || exit 1"
-}
-
-variable "agentic_framework_health_check_path" {
-  description = "Health check path for agentic framework target group"
-  type        = string
-  default     = "/health"
-}
-
-variable "agentic_framework_health_check_interval" {
-  description = "Health check interval in seconds"
-  type        = number
-  default     = 30
-}
-
-variable "agentic_framework_health_check_timeout" {
-  description = "Health check timeout in seconds"
-  type        = number
-  default     = 20
-}
-
-variable "agentic_framework_health_check_start_period" {
-  description = "Health check start period in seconds"
-  type        = number
-  default     = 90
-}
-
-# Agentic Framework Auto Scaling Configuration
-variable "agentic_framework_enable_auto_scaling" {
-  description = "Whether to enable auto scaling for agentic framework"
-  type        = bool
-  default     = true
-}
-
-variable "agentic_framework_min_capacity" {
-  description = "Minimum number of agentic framework tasks"
-  type        = number
-  default     = 1
-}
-
-variable "agentic_framework_max_capacity" {
-  description = "Maximum number of agentic framework tasks"
-  type        = number
-  default     = 10
-}
-
-variable "agentic_framework_cpu_target" {
-  description = "Target CPU utilization for agentic framework auto scaling"
-  type        = number
-  default     = 70
-}
-
-variable "agentic_framework_memory_target" {
-  description = "Target memory utilization for agentic framework auto scaling"
-  type        = number
-  default     = 80
-}
-
-# Agentic Framework Service Discovery Configuration
-variable "agentic_framework_enable_service_discovery" {
-  description = "Whether to enable service discovery for agentic framework"
-  type        = bool
-  default     = true
-}
-
-# Agentic Framework EFS Configuration
-variable "agentic_framework_enable_efs" {
-  description = "Whether to mount EFS storage for agentic framework"
-  type        = bool
-  default     = false
-}
-
-variable "agentic_framework_efs_mount_path" {
-  description = "Path to mount EFS in the agentic framework container"
-  type        = string
-  default     = "/app/storage"
-}
-
 # MongoDB Configuration Variables
 variable "mongodb_replica_count" {
   description = "Number of MongoDB replica set members (should be odd number: 1, 3, 5, etc.)"
@@ -1172,14 +355,93 @@ variable "mongodb_enable_audit_logging" {
   default     = false
 }
 
+# environments/qa/variables-ecs.tf
+
+variable "ecs_services" {
+  description = "Map of ECS services to create with their configurations"
+  type = map(object({
+    # Core configuration
+    image         = string
+    image_tag     = optional(string, "latest")
+    port          = number
+    cpu           = number
+    memory        = number
+    desired_count = number
+
+    # Environment and secrets
+    environment = optional(map(string), {})
+    secrets = optional(list(object({
+      name       = string
+      value_from = string
+    })), [])
+
+    # Capacity provider strategy
+    capacity_provider_strategy = list(object({
+      capacity_provider = string
+      weight           = number
+      base             = number
+    }))
+
+    # Health checks
+    health_check = optional(object({
+      path                = optional(string, "/health")
+      interval            = optional(number, 30)
+      timeout             = optional(number, 20)
+      healthy_threshold   = optional(number, 2)
+      unhealthy_threshold = optional(number, 3)
+      matcher             = optional(string, "200")
+    }), {})
+
+    container_health_check = optional(object({
+      command      = string
+      interval     = optional(number, 30)
+      timeout      = optional(number, 20)
+      retries      = optional(number, 3)
+      start_period = optional(number, 90)
+    }))
+
+    # Auto scaling
+    enable_auto_scaling       = optional(bool, true)
+    auto_scaling_min_capacity = optional(number, 1)
+    auto_scaling_max_capacity = optional(number, 10)
+    auto_scaling_cpu_target   = optional(number, 70)
+    auto_scaling_memory_target = optional(number, 80)
+
+    # Service discovery and load balancer
+    enable_service_discovery = optional(bool, true)
+    enable_load_balancer     = optional(bool, true)
+    deregistration_delay     = optional(number, 30)
+
+    # ALB routing
+    alb_priority      = optional(number)
+    alb_path_patterns = optional(list(string))
+
+    # Additional configuration
+    efs_config = optional(object({
+      enabled    = bool
+      mount_path = string
+    }))
+    additional_task_policies = optional(map(string), {})
+    memory_reservation      = optional(number)
+    linux_parameters        = optional(any)
+    ulimits                = optional(any)
+  }))
+}
+
+variable "create_alb_rules" {
+  description = "Whether to create ALB listener rules"
+  type        = bool
+  default     = true
+}
+
 # Tags
 variable "tags" {
   description = "A map of tags to add to all resources"
   type        = map(string)
   default     = {
     Environment = "qa"
-    Project     = "LiveKit"
-    Platform    = "ECS"
+    Project     = "10xR-Agents"
+    Platform    = "AWS"
     Terraform   = "true"
   }
 }

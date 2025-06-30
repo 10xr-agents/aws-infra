@@ -1,4 +1,4 @@
-# modules/ecs/variables.tf
+# modules/ecs-refactored/variables.tf
 
 variable "cluster_name" {
   description = "Name of the ECS cluster"
@@ -20,9 +20,28 @@ variable "private_subnet_ids" {
   type        = list(string)
 }
 
-variable "public_subnet_ids" {
-  description = "List of public subnet IDs (used for load balancers)"
-  type        = list(string)
+variable "alb_security_group_id" {
+  description = "Security group ID of the ALB (if using ALB)"
+  type        = string
+  default     = ""
+}
+
+variable "alb_https_listener_arn" {
+  description = "HTTPS Listener ARN of the ALB (if using ALB)"
+  type        = string
+  default     = ""
+}
+
+variable "create_alb_rules" {
+  description = "Whether to create ALB listener rules"
+  type        = bool
+  default     = true
+}
+
+variable "acm_certificate_arn" {
+  description = "ARN of the ACM certificate for HTTPS"
+  type        = string
+  default     = ""
 }
 
 variable "enable_container_insights" {
@@ -31,62 +50,101 @@ variable "enable_container_insights" {
   default     = true
 }
 
-variable "enable_fargate" {
-  description = "Whether to enable Fargate capacity provider"
+variable "enable_execute_command" {
+  description = "Whether to enable ECS Exec for debugging"
+  type        = bool
+  default     = false
+}
+
+variable "enable_service_discovery" {
+  description = "Whether to enable service discovery"
   type        = bool
   default     = true
 }
 
-variable "enable_fargate_spot" {
-  description = "Whether to enable Fargate Spot capacity provider"
+variable "create_alb" {
+  description = "Whether to create ALB target groups"
   type        = bool
-  default     = false
-}
-
-variable "enable_ec2" {
-  description = "Whether to enable EC2 capacity provider"
-  type        = bool
-  default     = false
-}
-
-variable "ec2_asg_min_size" {
-  description = "Minimum size of the EC2 Auto Scaling Group"
-  type        = number
-  default     = 0
-}
-
-variable "ec2_asg_max_size" {
-  description = "Maximum size of the EC2 Auto Scaling Group"
-  type        = number
-  default     = 10
-}
-
-variable "ec2_asg_desired_capacity" {
-  description = "Desired capacity of the EC2 Auto Scaling Group"
-  type        = number
-  default     = 2
-}
-
-variable "ec2_instance_types" {
-  description = "List of EC2 instance types for the capacity provider"
-  type        = list(string)
-  default     = ["m5.large"]
-}
-
-variable "ec2_ami_id" {
-  description = "AMI ID for EC2 instances (defaults to latest ECS-optimized AMI)"
-  type        = string
-  default     = ""
-}
-
-variable "ec2_on_demand_percentage" {
-  description = "Percentage of on-demand instances in the Auto Scaling Group"
-  type        = number
-  default     = 0
+  default     = true
 }
 
 variable "tags" {
   description = "A map of tags to add to all resources"
   type        = map(string)
   default     = {}
+}
+
+variable "services" {
+  description = "Map of ECS services to create with their configurations"
+  type = map(object({
+    # Required fields
+    image         = string
+    port          = number
+    cpu           = number
+    memory        = number
+    desired_count = number
+
+    # Optional fields
+    image_tag = optional(string, "latest")
+
+    # Environment configuration
+    environment = optional(map(string), {})
+    secrets = optional(list(object({
+      name       = string
+      value_from = string
+    })), [])
+
+    # Capacity provider strategy
+    capacity_provider_strategy = list(object({
+      capacity_provider = string
+      weight           = number
+      base             = number
+    }))
+
+    # Health check configuration
+    health_check = optional(object({
+      path                = optional(string, "/health")
+      interval            = optional(number, 30)
+      timeout             = optional(number, 20)
+      healthy_threshold   = optional(number, 2)
+      unhealthy_threshold = optional(number, 3)
+      matcher             = optional(string, "200")
+    }), {})
+
+    container_health_check = optional(object({
+      command      = string
+      interval     = optional(number, 30)
+      timeout      = optional(number, 20)
+      retries      = optional(number, 3)
+      start_period = optional(number, 90)
+    }))
+
+    # Auto scaling configuration
+    enable_auto_scaling       = optional(bool, true)
+    auto_scaling_min_capacity = optional(number, 1)
+    auto_scaling_max_capacity = optional(number, 10)
+    auto_scaling_cpu_target   = optional(number, 70)
+    auto_scaling_memory_target = optional(number, 80)
+
+    # Service discovery
+    enable_service_discovery = optional(bool, true)
+
+    # Load balancer
+    enable_load_balancer = optional(bool, true)
+    deregistration_delay = optional(number, 30)
+
+    # EFS configuration
+    efs_config = optional(object({
+      enabled    = bool
+      mount_path = string
+    }))
+
+    # Additional IAM policies
+    additional_task_policies = optional(map(string), {})
+
+    # Advanced container settings
+    memory_reservation = optional(number)
+    linux_parameters   = optional(any)
+    ulimits           = optional(any)
+  }))
 }

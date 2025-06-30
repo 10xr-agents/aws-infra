@@ -1,51 +1,71 @@
-# modules/ecs/outputs.tf
+# modules/ecs-refactored/outputs.tf
 
-output "cluster_id" {
-  description = "The ID of the ECS cluster"
-  value       = aws_ecs_cluster.main.id
+# Cluster Outputs
+output "cluster_arn" {
+  description = "ARN that identifies the cluster"
+  value       = module.ecs.cluster_arn
 }
 
-output "cluster_arn" {
-  description = "The ARN of the ECS cluster"
-  value       = aws_ecs_cluster.main.arn
+output "cluster_id" {
+  description = "ID that identifies the cluster"
+  value       = module.ecs.cluster_id
 }
 
 output "cluster_name" {
-  description = "The name of the ECS cluster"
-  value       = aws_ecs_cluster.main.name
+  description = "Name that identifies the cluster"
+  value       = module.ecs.cluster_name
 }
 
-output "ecs_security_group_id" {
-  description = "Security group ID for ECS tasks"
-  value       = aws_security_group.ecs_tasks.id
+output "cluster_capacity_providers" {
+  description = "Map of cluster capacity providers attributes"
+  value       = module.ecs.cluster_capacity_providers
 }
 
-output "ecs_instances_security_group_id" {
-  description = "Security group ID for ECS instances (if EC2 is enabled)"
-  value       = var.enable_ec2 ? aws_security_group.ecs_instances[0].id : null
+# Services Outputs
+output "services" {
+  description = "Map of services created and their attributes"
+  value       = module.ecs.services
 }
 
-output "task_execution_role_arn" {
-  description = "ARN of the ECS task execution role"
-  value       = aws_iam_role.ecs_task_execution.arn
+# Service IDs
+output "service_ids" {
+  description = "Map of service names to their ARNs"
+  value = {
+    for name, service in module.ecs.services : name => service.id
+  }
 }
 
-output "task_execution_role_name" {
-  description = "Name of the ECS task execution role"
-  value       = aws_iam_role.ecs_task_execution.name
+# Target Group Outputs
+output "target_group_arns" {
+  description = "Map of service names to their target group ARNs"
+  value = {
+    for name, tg in aws_lb_target_group.services : name => tg.arn
+  }
 }
 
-output "capacity_providers" {
-  description = "List of capacity providers associated with the cluster"
-  value       = aws_ecs_cluster_capacity_providers.main.capacity_providers
+# Service Discovery Outputs
+output "service_discovery_namespace_id" {
+  description = "ID of the service discovery namespace"
+  value       = try(aws_service_discovery_private_dns_namespace.main[0].id, null)
 }
 
-output "ec2_asg_arn" {
-  description = "ARN of the EC2 Auto Scaling Group (if EC2 is enabled)"
-  value       = var.enable_ec2 ? aws_autoscaling_group.ecs[0].arn : null
+output "service_discovery_namespace_name" {
+  description = "Name of the service discovery namespace"
+  value       = try(aws_service_discovery_private_dns_namespace.main[0].name, null)
 }
 
-output "ec2_asg_name" {
-  description = "Name of the EC2 Auto Scaling Group (if EC2 is enabled)"
-  value       = var.enable_ec2 ? aws_autoscaling_group.ecs[0].name : null
+output "service_discovery_services" {
+  description = "Map of service discovery service ARNs"
+  value = {
+    for name, service in aws_service_discovery_service.services : name => service.arn
+  }
 }
+
+# Service URLs
+output "service_urls" {
+  description = "Map of service URLs (internal service discovery)"
+  value = var.enable_service_discovery ? {
+    for name, config in var.services : name =>
+    "http://${name}.${local.name_prefix}.local:${config.port}"
+    if lookup(config, "enable_service_discovery", true)
+  } : {}
