@@ -167,6 +167,7 @@ data "template_file" "user_data" {
     mongodb_keyfile_content = var.mongodb_keyfile_content
     enable_monitoring = var.enable_monitoring
     data_volume_device = var.data_volume_device
+    cluster_name      = var.cluster_name
   }
 }
 
