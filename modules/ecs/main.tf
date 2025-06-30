@@ -22,7 +22,7 @@ locals {
       task_exec_role_name  = "${local.name_prefix}-${name}-exec-role"
       log_group_name       = "/ecs/${local.name_prefix}/${name}"
       security_group_name  = "${local.name_prefix}-${name}-sg"
-      target_group_name    = "${local.name_prefix}-${name}-tg"
+      target_group_name    = "${name}-tg"
     }
   )}
 
