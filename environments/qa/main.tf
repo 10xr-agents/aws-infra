@@ -266,7 +266,7 @@ module "storage" {
   depends_on = [module.ecs]
 }
 
-# Services Module (Voice Agent + LiveKit Proxy)
+# Services Module (All Services)
 module "services" {
   source = "../../modules/services"
 
@@ -393,6 +393,101 @@ module "services" {
   livekit_proxy_enable_efs               = var.livekit_proxy_enable_efs
   livekit_proxy_efs_mount_path           = var.livekit_proxy_efs_mount_path
 
+  # Agent Analytics Configuration
+  agent_analytics_ecr_repository_url = var.agent_analytics_ecr_repository_url
+  agent_analytics_image_tag          = var.agent_analytics_image_tag
+  agent_analytics_port               = var.agent_analytics_port
+  agent_analytics_cpu                = var.agent_analytics_cpu
+  agent_analytics_memory             = var.agent_analytics_memory
+  agent_analytics_desired_count      = var.agent_analytics_desired_count
+
+  # Agent Analytics Application Configuration
+  agent_analytics_log_level  = var.agent_analytics_log_level
+  agent_analytics_mongodb_uri = var.agent_analytics_mongodb_uri
+
+  # Agent Analytics Additional Configuration
+  agent_analytics_additional_environment_variables = var.agent_analytics_additional_environment_variables
+  agent_analytics_enable_health_check              = var.agent_analytics_enable_health_check
+  agent_analytics_health_check_command            = var.agent_analytics_health_check_command
+  agent_analytics_health_check_interval           = var.agent_analytics_health_check_interval
+  agent_analytics_health_check_timeout            = var.agent_analytics_health_check_timeout
+  agent_analytics_health_check_start_period       = var.agent_analytics_health_check_start_period
+
+  # Agent Analytics Auto Scaling Configuration
+  agent_analytics_enable_auto_scaling        = var.agent_analytics_enable_auto_scaling
+  agent_analytics_auto_scaling_min_capacity  = var.agent_analytics_min_capacity
+  agent_analytics_auto_scaling_max_capacity  = var.agent_analytics_max_capacity
+  agent_analytics_auto_scaling_cpu_target    = var.agent_analytics_cpu_target
+  agent_analytics_auto_scaling_memory_target = var.agent_analytics_memory_target
+
+  # Agent Analytics Service Discovery and EFS
+  agent_analytics_enable_service_discovery = var.agent_analytics_enable_service_discovery
+  agent_analytics_enable_efs               = var.agent_analytics_enable_efs
+  agent_analytics_efs_mount_path           = var.agent_analytics_efs_mount_path
+
+  # UI Console Configuration
+  ui_console_ecr_repository_url = var.ui_console_ecr_repository_url
+  ui_console_image_tag          = var.ui_console_image_tag
+  ui_console_port               = var.ui_console_port
+  ui_console_cpu                = var.ui_console_cpu
+  ui_console_memory             = var.ui_console_memory
+  ui_console_desired_count      = var.ui_console_desired_count
+
+  # UI Console Application Configuration
+  ui_console_log_level = var.ui_console_log_level
+
+  # UI Console Additional Configuration
+  ui_console_additional_environment_variables = var.ui_console_additional_environment_variables
+  ui_console_enable_health_check              = var.ui_console_enable_health_check
+  ui_console_health_check_command            = var.ui_console_health_check_command
+  ui_console_health_check_interval           = var.ui_console_health_check_interval
+  ui_console_health_check_timeout            = var.ui_console_health_check_timeout
+  ui_console_health_check_start_period       = var.ui_console_health_check_start_period
+
+  # UI Console Auto Scaling Configuration
+  ui_console_enable_auto_scaling        = var.ui_console_enable_auto_scaling
+  ui_console_auto_scaling_min_capacity  = var.ui_console_min_capacity
+  ui_console_auto_scaling_max_capacity  = var.ui_console_max_capacity
+  ui_console_auto_scaling_cpu_target    = var.ui_console_cpu_target
+  ui_console_auto_scaling_memory_target = var.ui_console_memory_target
+
+  # UI Console Service Discovery and EFS
+  ui_console_enable_service_discovery = var.ui_console_enable_service_discovery
+  ui_console_enable_efs               = var.ui_console_enable_efs
+  ui_console_efs_mount_path           = var.ui_console_efs_mount_path
+
+  # Agentic Framework Configuration
+  agentic_framework_ecr_repository_url = var.agentic_framework_ecr_repository_url
+  agentic_framework_image_tag          = var.agentic_framework_image_tag
+  agentic_framework_port               = var.agentic_framework_port
+  agentic_framework_cpu                = var.agentic_framework_cpu
+  agentic_framework_memory             = var.agentic_framework_memory
+  agentic_framework_desired_count      = var.agentic_framework_desired_count
+
+  # Agentic Framework Application Configuration
+  agentic_framework_log_level  = var.agentic_framework_log_level
+  agentic_framework_mongodb_uri = var.agentic_framework_mongodb_uri
+
+  # Agentic Framework Additional Configuration
+  agentic_framework_additional_environment_variables = var.agentic_framework_additional_environment_variables
+  agentic_framework_enable_health_check              = var.agentic_framework_enable_health_check
+  agentic_framework_health_check_command            = var.agentic_framework_health_check_command
+  agentic_framework_health_check_interval           = var.agentic_framework_health_check_interval
+  agentic_framework_health_check_timeout            = var.agentic_framework_health_check_timeout
+  agentic_framework_health_check_start_period       = var.agentic_framework_health_check_start_period
+
+  # Agentic Framework Auto Scaling Configuration
+  agentic_framework_enable_auto_scaling        = var.agentic_framework_enable_auto_scaling
+  agentic_framework_auto_scaling_min_capacity  = var.agentic_framework_min_capacity
+  agentic_framework_auto_scaling_max_capacity  = var.agentic_framework_max_capacity
+  agentic_framework_auto_scaling_cpu_target    = var.agentic_framework_cpu_target
+  agentic_framework_auto_scaling_memory_target = var.agentic_framework_memory_target
+
+  # Agentic Framework Service Discovery and EFS
+  agentic_framework_enable_service_discovery = var.agentic_framework_enable_service_discovery
+  agentic_framework_enable_efs               = var.agentic_framework_enable_efs
+  agentic_framework_efs_mount_path           = var.agentic_framework_efs_mount_path
+
   tags = merge(
     var.tags,
     {
@@ -407,10 +502,7 @@ module "services" {
   depends_on = [module.ecs, module.alb, module.storage, module.mongodb]
 }
 
-# Data source to retrieve MongoDB connection string from SSM (if using self-hosted MongoDB)
-
-
-# Security Group Rule to allow Voice Agent to access MongoDB
+# Security Group Rules to allow services to access MongoDB
 resource "aws_security_group_rule" "voice_agent_to_mongodb" {
   count = var.mongodb_replica_count > 0 ? 1 : 0
 
@@ -423,7 +515,31 @@ resource "aws_security_group_rule" "voice_agent_to_mongodb" {
   description              = "Allow Voice Agent ECS tasks to access MongoDB"
 }
 
-# ALB Listener Rule for Voice Agent
+resource "aws_security_group_rule" "agent_analytics_to_mongodb" {
+  count = var.mongodb_replica_count > 0 ? 1 : 0
+
+  type                     = "ingress"
+  from_port                = 27017
+  to_port                  = 27017
+  protocol                 = "tcp"
+  source_security_group_id = module.services.agent_analytics_security_group_id
+  security_group_id        = module.mongodb.security_group_id
+  description              = "Allow Agent Analytics ECS tasks to access MongoDB"
+}
+
+resource "aws_security_group_rule" "agentic_framework_to_mongodb" {
+  count = var.mongodb_replica_count > 0 ? 1 : 0
+
+  type                     = "ingress"
+  from_port                = 27017
+  to_port                  = 27017
+  protocol                 = "tcp"
+  source_security_group_id = module.services.agentic_framework_security_group_id
+  security_group_id        = module.mongodb.security_group_id
+  description              = "Allow Agentic Framework ECS tasks to access MongoDB"
+}
+
+# ALB Listener Rules
 resource "aws_lb_listener_rule" "voice_agent" {
   listener_arn = module.alb.http_listener_arn
   priority     = 100
@@ -449,7 +565,6 @@ resource "aws_lb_listener_rule" "voice_agent" {
   )
 }
 
-# ALB Listener Rule for LiveKit Proxy
 resource "aws_lb_listener_rule" "livekit_proxy" {
   listener_arn = module.alb.http_listener_arn
   priority     = 200
@@ -475,7 +590,82 @@ resource "aws_lb_listener_rule" "livekit_proxy" {
   )
 }
 
-# HTTPS Listener Rule for Voice Agent (if certificate is provided)
+resource "aws_lb_listener_rule" "agent_analytics" {
+  listener_arn = module.alb.http_listener_arn
+  priority     = 300
+
+  action {
+    type             = "forward"
+    target_group_arn = module.services.agent_analytics_target_group_arn
+  }
+
+  condition {
+    path_pattern {
+      values = ["/analytics/*"]
+    }
+  }
+
+  tags = merge(
+    var.tags,
+    {
+      "Environment" = var.environment
+      "Service"     = "agent-analytics"
+      "Terraform"   = "true"
+    }
+  )
+}
+
+resource "aws_lb_listener_rule" "ui_console" {
+  listener_arn = module.alb.http_listener_arn
+  priority     = 400
+
+  action {
+    type             = "forward"
+    target_group_arn = module.services.ui_console_target_group_arn
+  }
+
+  condition {
+    path_pattern {
+      values = ["/console/*", "/ui/*", "/"]
+    }
+  }
+
+  tags = merge(
+    var.tags,
+    {
+      "Environment" = var.environment
+      "Service"     = "ui-console"
+      "Terraform"   = "true"
+    }
+  )
+}
+
+resource "aws_lb_listener_rule" "agentic_framework" {
+  listener_arn = module.alb.http_listener_arn
+  priority     = 500
+
+  action {
+    type             = "forward"
+    target_group_arn = module.services.agentic_framework_target_group_arn
+  }
+
+  condition {
+    path_pattern {
+      values = ["/framework/*", "/agents/*"]
+    }
+  }
+
+  tags = merge(
+    var.tags,
+    {
+      "Environment" = var.environment
+      "Service"     = "agentic-framework"
+      "Terraform"   = "true"
+    }
+  )
+}
+
+# HTTPS Listener Rules (if certificate is provided)
 resource "aws_lb_listener_rule" "voice_agent_https" {
   count = var.acm_certificate_arn != "" ? 1 : 0
 
@@ -503,7 +693,6 @@ resource "aws_lb_listener_rule" "voice_agent_https" {
   )
 }
 
-# HTTPS Listener Rule for LiveKit Proxy (if certificate is provided)
 resource "aws_lb_listener_rule" "livekit_proxy_https" {
   count = var.acm_certificate_arn != "" ? 1 : 0
 
@@ -526,6 +715,87 @@ resource "aws_lb_listener_rule" "livekit_proxy_https" {
     {
       "Environment" = var.environment
       "Service"     = "livekit-proxy"
+      "Terraform"   = "true"
+    }
+  )
+}
+
+resource "aws_lb_listener_rule" "agent_analytics_https" {
+  count = var.acm_certificate_arn != "" ? 1 : 0
+
+  listener_arn = module.alb.https_listener_arn
+  priority     = 300
+
+  action {
+    type             = "forward"
+    target_group_arn = module.services.agent_analytics_target_group_arn
+  }
+
+  condition {
+    path_pattern {
+      values = ["/analytics/*"]
+    }
+  }
+
+  tags = merge(
+    var.tags,
+    {
+      "Environment" = var.environment
+      "Service"     = "agent-analytics"
+      "Terraform"   = "true"
+    }
+  )
+}
+
+resource "aws_lb_listener_rule" "ui_console_https" {
+  count = var.acm_certificate_arn != "" ? 1 : 0
+
+  listener_arn = module.alb.https_listener_arn
+  priority     = 400
+
+  action {
+    type             = "forward"
+    target_group_arn = module.services.ui_console_target_group_arn
+  }
+
+  condition {
+    path_pattern {
+      values = ["/console/*", "/ui/*", "/"]
+    }
+  }
+
+  tags = merge(
+    var.tags,
+    {
+      "Environment" = var.environment
+      "Service"     = "ui-console"
+      "Terraform"   = "true"
+    }
+  )
+}
+
+resource "aws_lb_listener_rule" "agentic_framework_https" {
+  count = var.acm_certificate_arn != "" ? 1 : 0
+
+  listener_arn = module.alb.https_listener_arn
+  priority     = 500
+
+  action {
+    type             = "forward"
+    target_group_arn = module.services.agentic_framework_target_group_arn
+  }
+
+  condition {
+    path_pattern {
+      values = ["/framework/*", "/agents/*"]
+    }
+  }
+
+  tags = merge(
+    var.tags,
+    {
+      "Environment" = var.environment
+      "Service"     = "agentic-framework"
       "Terraform"   = "true"
     }
   )

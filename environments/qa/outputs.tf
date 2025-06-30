@@ -206,6 +206,114 @@ output "livekit_proxy_service_discovery_service_name" {
   value       = module.services.livekit_proxy_service_discovery_service_name
 }
 
+# Agent Analytics outputs
+output "agent_analytics_service_name" {
+  description = "Name of the agent analytics ECS service"
+  value       = module.services.agent_analytics_service_name
+}
+
+output "agent_analytics_service_arn" {
+  description = "ARN of the agent analytics ECS service"
+  value       = module.services.agent_analytics_service_arn
+}
+
+output "agent_analytics_task_definition_arn" {
+  description = "ARN of the agent analytics task definition"
+  value       = module.services.agent_analytics_task_definition_arn
+}
+
+output "agent_analytics_target_group_arn" {
+  description = "ARN of the agent analytics target group"
+  value       = module.services.agent_analytics_target_group_arn
+}
+
+output "agent_analytics_security_group_id" {
+  description = "ID of the agent analytics security group"
+  value       = module.services.agent_analytics_security_group_id
+}
+
+output "agent_analytics_cloudwatch_log_group_name" {
+  description = "Name of the agent analytics CloudWatch log group"
+  value       = module.services.agent_analytics_cloudwatch_log_group_name
+}
+
+output "agent_analytics_service_discovery_service_name" {
+  description = "Name of the agent analytics service discovery service"
+  value       = module.services.agent_analytics_service_discovery_service_name
+}
+
+# UI Console outputs
+output "ui_console_service_name" {
+  description = "Name of the UI console ECS service"
+  value       = module.services.ui_console_service_name
+}
+
+output "ui_console_service_arn" {
+  description = "ARN of the UI console ECS service"
+  value       = module.services.ui_console_service_arn
+}
+
+output "ui_console_task_definition_arn" {
+  description = "ARN of the UI console task definition"
+  value       = module.services.ui_console_task_definition_arn
+}
+
+output "ui_console_target_group_arn" {
+  description = "ARN of the UI console target group"
+  value       = module.services.ui_console_target_group_arn
+}
+
+output "ui_console_security_group_id" {
+  description = "ID of the UI console security group"
+  value       = module.services.ui_console_security_group_id
+}
+
+output "ui_console_cloudwatch_log_group_name" {
+  description = "Name of the UI console CloudWatch log group"
+  value       = module.services.ui_console_cloudwatch_log_group_name
+}
+
+output "ui_console_service_discovery_service_name" {
+  description = "Name of the UI console service discovery service"
+  value       = module.services.ui_console_service_discovery_service_name
+}
+
+# Agentic Framework outputs
+output "agentic_framework_service_name" {
+  description = "Name of the agentic framework ECS service"
+  value       = module.services.agentic_framework_service_name
+}
+
+output "agentic_framework_service_arn" {
+  description = "ARN of the agentic framework ECS service"
+  value       = module.services.agentic_framework_service_arn
+}
+
+output "agentic_framework_task_definition_arn" {
+  description = "ARN of the agentic framework task definition"
+  value       = module.services.agentic_framework_task_definition_arn
+}
+
+output "agentic_framework_target_group_arn" {
+  description = "ARN of the agentic framework target group"
+  value       = module.services.agentic_framework_target_group_arn
+}
+
+output "agentic_framework_security_group_id" {
+  description = "ID of the agentic framework security group"
+  value       = module.services.agentic_framework_security_group_id
+}
+
+output "agentic_framework_cloudwatch_log_group_name" {
+  description = "Name of the agentic framework CloudWatch log group"
+  value       = module.services.agentic_framework_cloudwatch_log_group_name
+}
+
+output "agentic_framework_service_discovery_service_name" {
+  description = "Name of the agentic framework service discovery service"
+  value       = module.services.agentic_framework_service_discovery_service_name
+}
+
 # Access URLs
 output "voice_agent_url" {
   description = "URL to access the voice agent service"
@@ -225,6 +333,36 @@ output "livekit_proxy_url" {
 output "livekit_proxy_internal_url" {
   description = "Internal service discovery URL for the LiveKit proxy"
   value       = module.services.livekit_proxy_service_discovery_service_name != null ? "http://livekit-proxy.${aws_service_discovery_private_dns_namespace.main.name}:${var.livekit_proxy_port}" : null
+}
+
+output "agent_analytics_url" {
+  description = "URL to access the agent analytics service"
+  value       = "http://${module.alb.alb_dns_name}/analytics/"
+}
+
+output "agent_analytics_internal_url" {
+  description = "Internal service discovery URL for the agent analytics"
+  value       = module.services.agent_analytics_service_discovery_service_name != null ? "http://agent-analytics.${aws_service_discovery_private_dns_namespace.main.name}:${var.agent_analytics_port}" : null
+}
+
+output "ui_console_url" {
+  description = "URL to access the UI console service"
+  value       = "http://${module.alb.alb_dns_name}/"
+}
+
+output "ui_console_internal_url" {
+  description = "Internal service discovery URL for the UI console"
+  value       = module.services.ui_console_service_discovery_service_name != null ? "http://ui-console.${aws_service_discovery_private_dns_namespace.main.name}:${var.ui_console_port}" : null
+}
+
+output "agentic_framework_url" {
+  description = "URL to access the agentic framework service"
+  value       = "http://${module.alb.alb_dns_name}/framework/"
+}
+
+output "agentic_framework_internal_url" {
+  description = "Internal service discovery URL for the agentic framework"
+  value       = module.services.agentic_framework_service_discovery_service_name != null ? "http://agentic-framework.${aws_service_discovery_private_dns_namespace.main.name}:${var.agentic_framework_port}" : null
 }
 
 # MongoDB outputs

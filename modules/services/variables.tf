@@ -610,6 +610,635 @@ variable "livekit_proxy_efs_mount_path" {
   default     = "/app/storage"
 }
 
+# Agent Analytics Service Configuration
+variable "agent_analytics_ecr_repository_url" {
+  description = "URL of the ECR repository for the agent analytics image"
+  type        = string
+  default     = "761018882607.dkr.ecr.us-east-1.amazonaws.com/10xr-agents/agent-analytics-service"
+}
+
+variable "agent_analytics_image_tag" {
+  description = "Tag of the Docker image to deploy"
+  type        = string
+  default     = "latest"
+}
+
+variable "agent_analytics_port" {
+  description = "Port that the agent analytics container listens on"
+  type        = number
+  default     = 3000
+}
+
+variable "agent_analytics_cpu" {
+  description = "CPU units for the agent analytics task (1024 = 1 vCPU)"
+  type        = number
+  default     = 1024
+}
+
+variable "agent_analytics_memory" {
+  description = "Memory for the agent analytics task in MB"
+  type        = number
+  default     = 2048
+}
+
+variable "agent_analytics_desired_count" {
+  description = "Desired number of agent analytics tasks"
+  type        = number
+  default     = 2
+}
+
+variable "agent_analytics_deployment_minimum_healthy_percent" {
+  description = "Minimum healthy percent during deployment"
+  type        = number
+  default     = 50
+}
+
+variable "agent_analytics_deployment_maximum_percent" {
+  description = "Maximum percent during deployment"
+  type        = number
+  default     = 200
+}
+
+# Agent Analytics Application Configuration
+variable "agent_analytics_log_level" {
+  description = "Log level for the agent analytics service"
+  type        = string
+  default     = "INFO"
+}
+
+variable "agent_analytics_mongodb_uri" {
+  description = "MongoDB connection URI for agent analytics"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "agent_analytics_additional_environment_variables" {
+  description = "Additional environment variables for the agent analytics service"
+  type        = map(string)
+  default     = {}
+}
+
+# Agent Analytics Health Check
+variable "agent_analytics_enable_health_check" {
+  description = "Whether to enable container health checks for agent analytics"
+  type        = bool
+  default     = true
+}
+
+variable "agent_analytics_health_check_command" {
+  description = "Health check command for agent analytics"
+  type        = string
+  default     = "curl -f http://localhost:3000/health || exit 1"
+}
+
+variable "agent_analytics_health_check_interval" {
+  description = "Health check interval in seconds"
+  type        = number
+  default     = 30
+}
+
+variable "agent_analytics_health_check_timeout" {
+  description = "Health check timeout in seconds"
+  type        = number
+  default     = 20
+}
+
+variable "agent_analytics_health_check_retries" {
+  description = "Health check retries"
+  type        = number
+  default     = 5
+}
+
+variable "agent_analytics_health_check_start_period" {
+  description = "Health check start period in seconds"
+  type        = number
+  default     = 90
+}
+
+# Agent Analytics Target Group Configuration
+variable "agent_analytics_target_group_health_check_healthy_threshold" {
+  description = "Number of consecutive health checks successes required"
+  type        = number
+  default     = 2
+}
+
+variable "agent_analytics_target_group_health_check_unhealthy_threshold" {
+  description = "Number of consecutive health check failures required"
+  type        = number
+  default     = 5
+}
+
+variable "agent_analytics_target_group_health_check_timeout" {
+  description = "Health check timeout"
+  type        = number
+  default     = 10
+}
+
+variable "agent_analytics_target_group_health_check_interval" {
+  description = "Health check interval"
+  type        = number
+  default     = 15
+}
+
+variable "agent_analytics_target_group_health_check_path" {
+  description = "Health check path"
+  type        = string
+  default     = "/health"
+}
+
+variable "agent_analytics_target_group_health_check_matcher" {
+  description = "Health check matcher"
+  type        = string
+  default     = "200"
+}
+
+variable "agent_analytics_target_group_deregistration_delay" {
+  description = "Target group deregistration delay"
+  type        = number
+  default     = 30
+}
+
+# Agent Analytics Auto Scaling
+variable "agent_analytics_enable_auto_scaling" {
+  description = "Whether to enable auto scaling for agent analytics"
+  type        = bool
+  default     = true
+}
+
+variable "agent_analytics_auto_scaling_min_capacity" {
+  description = "Minimum number of agent analytics tasks"
+  type        = number
+  default     = 1
+}
+
+variable "agent_analytics_auto_scaling_max_capacity" {
+  description = "Maximum number of agent analytics tasks"
+  type        = number
+  default     = 10
+}
+
+variable "agent_analytics_auto_scaling_cpu_target" {
+  description = "Target CPU utilization for agent analytics auto scaling"
+  type        = number
+  default     = 70
+}
+
+variable "agent_analytics_auto_scaling_memory_target" {
+  description = "Target memory utilization for agent analytics auto scaling"
+  type        = number
+  default     = 80
+}
+
+variable "agent_analytics_auto_scaling_scale_in_cooldown" {
+  description = "Scale in cooldown period in seconds"
+  type        = number
+  default     = 300
+}
+
+variable "agent_analytics_auto_scaling_scale_out_cooldown" {
+  description = "Scale out cooldown period in seconds"
+  type        = number
+  default     = 300
+}
+
+# Agent Analytics Service Discovery
+variable "agent_analytics_enable_service_discovery" {
+  description = "Whether to enable service discovery for agent analytics"
+  type        = bool
+  default     = true
+}
+
+# Agent Analytics EFS
+variable "agent_analytics_enable_efs" {
+  description = "Whether to mount EFS storage for agent analytics"
+  type        = bool
+  default     = false
+}
+
+variable "agent_analytics_efs_mount_path" {
+  description = "Path to mount EFS in the agent analytics container"
+  type        = string
+  default     = "/app/storage"
+}
+
+# UI Console Service Configuration
+variable "ui_console_ecr_repository_url" {
+  description = "URL of the ECR repository for the UI console image"
+  type        = string
+  default     = "761018882607.dkr.ecr.us-east-1.amazonaws.com/10xr-agents/ui-console"
+}
+
+variable "ui_console_image_tag" {
+  description = "Tag of the Docker image to deploy"
+  type        = string
+  default     = "latest"
+}
+
+variable "ui_console_port" {
+  description = "Port that the UI console container listens on"
+  type        = number
+  default     = 80
+}
+
+variable "ui_console_cpu" {
+  description = "CPU units for the UI console task (1024 = 1 vCPU)"
+  type        = number
+  default     = 512
+}
+
+variable "ui_console_memory" {
+  description = "Memory for the UI console task in MB"
+  type        = number
+  default     = 1024
+}
+
+variable "ui_console_desired_count" {
+  description = "Desired number of UI console tasks"
+  type        = number
+  default     = 2
+}
+
+variable "ui_console_deployment_minimum_healthy_percent" {
+  description = "Minimum healthy percent during deployment"
+  type        = number
+  default     = 50
+}
+
+variable "ui_console_deployment_maximum_percent" {
+  description = "Maximum percent during deployment"
+  type        = number
+  default     = 200
+}
+
+# UI Console Application Configuration
+variable "ui_console_log_level" {
+  description = "Log level for the UI console service"
+  type        = string
+  default     = "INFO"
+}
+
+variable "ui_console_additional_environment_variables" {
+  description = "Additional environment variables for the UI console service"
+  type        = map(string)
+  default     = {}
+}
+
+# UI Console Health Check
+variable "ui_console_enable_health_check" {
+  description = "Whether to enable container health checks for UI console"
+  type        = bool
+  default     = true
+}
+
+variable "ui_console_health_check_command" {
+  description = "Health check command for UI console"
+  type        = string
+  default     = "curl -f http://localhost:80/health || exit 1"
+}
+
+variable "ui_console_health_check_interval" {
+  description = "Health check interval in seconds"
+  type        = number
+  default     = 30
+}
+
+variable "ui_console_health_check_timeout" {
+  description = "Health check timeout in seconds"
+  type        = number
+  default     = 20
+}
+
+variable "ui_console_health_check_retries" {
+  description = "Health check retries"
+  type        = number
+  default     = 5
+}
+
+variable "ui_console_health_check_start_period" {
+  description = "Health check start period in seconds"
+  type        = number
+  default     = 90
+}
+
+# UI Console Target Group Configuration
+variable "ui_console_target_group_health_check_healthy_threshold" {
+  description = "Number of consecutive health checks successes required"
+  type        = number
+  default     = 2
+}
+
+variable "ui_console_target_group_health_check_unhealthy_threshold" {
+  description = "Number of consecutive health check failures required"
+  type        = number
+  default     = 5
+}
+
+variable "ui_console_target_group_health_check_timeout" {
+  description = "Health check timeout"
+  type        = number
+  default     = 10
+}
+
+variable "ui_console_target_group_health_check_interval" {
+  description = "Health check interval"
+  type        = number
+  default     = 15
+}
+
+variable "ui_console_target_group_health_check_path" {
+  description = "Health check path"
+  type        = string
+  default     = "/"
+}
+
+variable "ui_console_target_group_health_check_matcher" {
+  description = "Health check matcher"
+  type        = string
+  default     = "200"
+}
+
+variable "ui_console_target_group_deregistration_delay" {
+  description = "Target group deregistration delay"
+  type        = number
+  default     = 30
+}
+
+# UI Console Auto Scaling
+variable "ui_console_enable_auto_scaling" {
+  description = "Whether to enable auto scaling for UI console"
+  type        = bool
+  default     = true
+}
+
+variable "ui_console_auto_scaling_min_capacity" {
+  description = "Minimum number of UI console tasks"
+  type        = number
+  default     = 1
+}
+
+variable "ui_console_auto_scaling_max_capacity" {
+  description = "Maximum number of UI console tasks"
+  type        = number
+  default     = 10
+}
+
+variable "ui_console_auto_scaling_cpu_target" {
+  description = "Target CPU utilization for UI console auto scaling"
+  type        = number
+  default     = 70
+}
+
+variable "ui_console_auto_scaling_memory_target" {
+  description = "Target memory utilization for UI console auto scaling"
+  type        = number
+  default     = 80
+}
+
+variable "ui_console_auto_scaling_scale_in_cooldown" {
+  description = "Scale in cooldown period in seconds"
+  type        = number
+  default     = 300
+}
+
+variable "ui_console_auto_scaling_scale_out_cooldown" {
+  description = "Scale out cooldown period in seconds"
+  type        = number
+  default     = 300
+}
+
+# UI Console Service Discovery
+variable "ui_console_enable_service_discovery" {
+  description = "Whether to enable service discovery for UI console"
+  type        = bool
+  default     = true
+}
+
+# UI Console EFS
+variable "ui_console_enable_efs" {
+  description = "Whether to mount EFS storage for UI console"
+  type        = bool
+  default     = false
+}
+
+variable "ui_console_efs_mount_path" {
+  description = "Path to mount EFS in the UI console container"
+  type        = string
+  default     = "/app/storage"
+}
+
+# Agentic Framework Service Configuration
+variable "agentic_framework_ecr_repository_url" {
+  description = "URL of the ECR repository for the agentic framework image"
+  type        = string
+  default     = "761018882607.dkr.ecr.us-east-1.amazonaws.com/10xr-agents/agentic-framework-service"
+}
+
+variable "agentic_framework_image_tag" {
+  description = "Tag of the Docker image to deploy"
+  type        = string
+  default     = "latest"
+}
+
+variable "agentic_framework_port" {
+  description = "Port that the agentic framework container listens on"
+  type        = number
+  default     = 8000
+}
+
+variable "agentic_framework_cpu" {
+  description = "CPU units for the agentic framework task (1024 = 1 vCPU)"
+  type        = number
+  default     = 1024
+}
+
+variable "agentic_framework_memory" {
+  description = "Memory for the agentic framework task in MB"
+  type        = number
+  default     = 2048
+}
+
+variable "agentic_framework_desired_count" {
+  description = "Desired number of agentic framework tasks"
+  type        = number
+  default     = 2
+}
+
+variable "agentic_framework_deployment_minimum_healthy_percent" {
+  description = "Minimum healthy percent during deployment"
+  type        = number
+  default     = 50
+}
+
+variable "agentic_framework_deployment_maximum_percent" {
+  description = "Maximum percent during deployment"
+  type        = number
+  default     = 200
+}
+
+# Agentic Framework Application Configuration
+variable "agentic_framework_log_level" {
+  description = "Log level for the agentic framework service"
+  type        = string
+  default     = "INFO"
+}
+
+variable "agentic_framework_mongodb_uri" {
+  description = "MongoDB connection URI for agentic framework"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "agentic_framework_additional_environment_variables" {
+  description = "Additional environment variables for the agentic framework service"
+  type        = map(string)
+  default     = {}
+}
+
+# Agentic Framework Health Check
+variable "agentic_framework_enable_health_check" {
+  description = "Whether to enable container health checks for agentic framework"
+  type        = bool
+  default     = true
+}
+
+variable "agentic_framework_health_check_command" {
+  description = "Health check command for agentic framework"
+  type        = string
+  default     = "curl -f http://localhost:8000/health || exit 1"
+}
+
+variable "agentic_framework_health_check_interval" {
+  description = "Health check interval in seconds"
+  type        = number
+  default     = 30
+}
+
+variable "agentic_framework_health_check_timeout" {
+  description = "Health check timeout in seconds"
+  type        = number
+  default     = 20
+}
+
+variable "agentic_framework_health_check_retries" {
+  description = "Health check retries"
+  type        = number
+  default     = 5
+}
+
+variable "agentic_framework_health_check_start_period" {
+  description = "Health check start period in seconds"
+  type        = number
+  default     = 90
+}
+
+# Agentic Framework Target Group Configuration
+variable "agentic_framework_target_group_health_check_healthy_threshold" {
+  description = "Number of consecutive health checks successes required"
+  type        = number
+  default     = 2
+}
+
+variable "agentic_framework_target_group_health_check_unhealthy_threshold" {
+  description = "Number of consecutive health check failures required"
+  type        = number
+  default     = 5
+}
+
+variable "agentic_framework_target_group_health_check_timeout" {
+  description = "Health check timeout"
+  type        = number
+  default     = 10
+}
+
+variable "agentic_framework_target_group_health_check_interval" {
+  description = "Health check interval"
+  type        = number
+  default     = 15
+}
+
+variable "agentic_framework_target_group_health_check_path" {
+  description = "Health check path"
+  type        = string
+  default     = "/health"
+}
+
+variable "agentic_framework_target_group_health_check_matcher" {
+  description = "Health check matcher"
+  type        = string
+  default     = "200"
+}
+
+variable "agentic_framework_target_group_deregistration_delay" {
+  description = "Target group deregistration delay"
+  type        = number
+  default     = 30
+}
+
+# Agentic Framework Auto Scaling
+variable "agentic_framework_enable_auto_scaling" {
+  description = "Whether to enable auto scaling for agentic framework"
+  type        = bool
+  default     = true
+}
+
+variable "agentic_framework_auto_scaling_min_capacity" {
+  description = "Minimum number of agentic framework tasks"
+  type        = number
+  default     = 1
+}
+
+variable "agentic_framework_auto_scaling_max_capacity" {
+  description = "Maximum number of agentic framework tasks"
+  type        = number
+  default     = 10
+}
+
+variable "agentic_framework_auto_scaling_cpu_target" {
+  description = "Target CPU utilization for agentic framework auto scaling"
+  type        = number
+  default     = 70
+}
+
+variable "agentic_framework_auto_scaling_memory_target" {
+  description = "Target memory utilization for agentic framework auto scaling"
+  type        = number
+  default     = 80
+}
+
+variable "agentic_framework_auto_scaling_scale_in_cooldown" {
+  description = "Scale in cooldown period in seconds"
+  type        = number
+  default     = 300
+}
+
+variable "agentic_framework_auto_scaling_scale_out_cooldown" {
+  description = "Scale out cooldown period in seconds"
+  type        = number
+  default     = 300
+}
+
+# Agentic Framework Service Discovery
+variable "agentic_framework_enable_service_discovery" {
+  description = "Whether to enable service discovery for agentic framework"
+  type        = bool
+  default     = true
+}
+
+# Agentic Framework EFS
+variable "agentic_framework_enable_efs" {
+  description = "Whether to mount EFS storage for agentic framework"
+  type        = bool
+  default     = false
+}
+
+variable "agentic_framework_efs_mount_path" {
+  description = "Path to mount EFS in the agentic framework container"
+  type        = string
+  default     = "/app/storage"
+}
+
 variable "tags" {
   description = "A map of tags to add to all resources"
   type        = map(string)

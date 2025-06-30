@@ -586,16 +586,432 @@ variable "livekit_proxy_efs_mount_path" {
   default     = "/app/storage"
 }
 
-# Tags
-variable "tags" {
-  description = "A map of tags to add to all resources"
+# Agent Analytics Service Configuration
+variable "agent_analytics_ecr_repository_url" {
+  description = "URL of the ECR repository for the agent analytics image"
+  type        = string
+  default     = "761018882607.dkr.ecr.us-east-1.amazonaws.com/10xr-agents/agent-analytics-service"
+}
+
+variable "agent_analytics_image_tag" {
+  description = "Tag of the Docker image to deploy"
+  type        = string
+  default     = "latest"
+}
+
+variable "agent_analytics_port" {
+  description = "Port that the agent analytics container listens on"
+  type        = number
+  default     = 3000
+}
+
+variable "agent_analytics_cpu" {
+  description = "CPU units for the agent analytics task (1024 = 1 vCPU)"
+  type        = number
+  default     = 1024
+}
+
+variable "agent_analytics_memory" {
+  description = "Memory for the agent analytics task in MB"
+  type        = number
+  default     = 2048
+}
+
+variable "agent_analytics_desired_count" {
+  description = "Desired number of agent analytics tasks"
+  type        = number
+  default     = 2
+}
+
+# Agent Analytics Application Configuration
+variable "agent_analytics_log_level" {
+  description = "Log level for the agent analytics service"
+  type        = string
+  default     = "INFO"
+}
+
+variable "agent_analytics_mongodb_uri" {
+  description = "MongoDB connection URI for agent analytics"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "agent_analytics_additional_environment_variables" {
+  description = "Additional environment variables for the agent analytics service"
   type        = map(string)
-  default     = {
-    Environment = "qa"
-    Project     = "LiveKit"
-    Platform    = "ECS"
-    Terraform   = "true"
-  }
+  default     = {}
+}
+
+# Agent Analytics Health Check Configuration
+variable "agent_analytics_enable_health_check" {
+  description = "Whether to enable container health checks for agent analytics"
+  type        = bool
+  default     = true
+}
+
+variable "agent_analytics_health_check_command" {
+  description = "Health check command for agent analytics"
+  type        = string
+  default     = "curl -f http://localhost:3000/health || exit 1"
+}
+
+variable "agent_analytics_health_check_path" {
+  description = "Health check path for agent analytics target group"
+  type        = string
+  default     = "/health"
+}
+
+variable "agent_analytics_health_check_interval" {
+  description = "Health check interval in seconds"
+  type        = number
+  default     = 30
+}
+
+variable "agent_analytics_health_check_timeout" {
+  description = "Health check timeout in seconds"
+  type        = number
+  default     = 20
+}
+
+variable "agent_analytics_health_check_start_period" {
+  description = "Health check start period in seconds"
+  type        = number
+  default     = 90
+}
+
+# Agent Analytics Auto Scaling Configuration
+variable "agent_analytics_enable_auto_scaling" {
+  description = "Whether to enable auto scaling for agent analytics"
+  type        = bool
+  default     = true
+}
+
+variable "agent_analytics_min_capacity" {
+  description = "Minimum number of agent analytics tasks"
+  type        = number
+  default     = 1
+}
+
+variable "agent_analytics_max_capacity" {
+  description = "Maximum number of agent analytics tasks"
+  type        = number
+  default     = 10
+}
+
+variable "agent_analytics_cpu_target" {
+  description = "Target CPU utilization for agent analytics auto scaling"
+  type        = number
+  default     = 70
+}
+
+variable "agent_analytics_memory_target" {
+  description = "Target memory utilization for agent analytics auto scaling"
+  type        = number
+  default     = 80
+}
+
+# Agent Analytics Service Discovery Configuration
+variable "agent_analytics_enable_service_discovery" {
+  description = "Whether to enable service discovery for agent analytics"
+  type        = bool
+  default     = true
+}
+
+# Agent Analytics EFS Configuration
+variable "agent_analytics_enable_efs" {
+  description = "Whether to mount EFS storage for agent analytics"
+  type        = bool
+  default     = false
+}
+
+variable "agent_analytics_efs_mount_path" {
+  description = "Path to mount EFS in the agent analytics container"
+  type        = string
+  default     = "/app/storage"
+}
+
+# UI Console Service Configuration
+variable "ui_console_ecr_repository_url" {
+  description = "URL of the ECR repository for the UI console image"
+  type        = string
+  default     = "761018882607.dkr.ecr.us-east-1.amazonaws.com/10xr-agents/ui-console"
+}
+
+variable "ui_console_image_tag" {
+  description = "Tag of the Docker image to deploy"
+  type        = string
+  default     = "latest"
+}
+
+variable "ui_console_port" {
+  description = "Port that the UI console container listens on"
+  type        = number
+  default     = 80
+}
+
+variable "ui_console_cpu" {
+  description = "CPU units for the UI console task (1024 = 1 vCPU)"
+  type        = number
+  default     = 512
+}
+
+variable "ui_console_memory" {
+  description = "Memory for the UI console task in MB"
+  type        = number
+  default     = 1024
+}
+
+variable "ui_console_desired_count" {
+  description = "Desired number of UI console tasks"
+  type        = number
+  default     = 2
+}
+
+# UI Console Application Configuration
+variable "ui_console_log_level" {
+  description = "Log level for the UI console service"
+  type        = string
+  default     = "INFO"
+}
+
+variable "ui_console_additional_environment_variables" {
+  description = "Additional environment variables for the UI console service"
+  type        = map(string)
+  default     = {}
+}
+
+# UI Console Health Check Configuration
+variable "ui_console_enable_health_check" {
+  description = "Whether to enable container health checks for UI console"
+  type        = bool
+  default     = true
+}
+
+variable "ui_console_health_check_command" {
+  description = "Health check command for UI console"
+  type        = string
+  default     = "curl -f http://localhost:80/health || exit 1"
+}
+
+variable "ui_console_health_check_path" {
+  description = "Health check path for UI console target group"
+  type        = string
+  default     = "/"
+}
+
+variable "ui_console_health_check_interval" {
+  description = "Health check interval in seconds"
+  type        = number
+  default     = 30
+}
+
+variable "ui_console_health_check_timeout" {
+  description = "Health check timeout in seconds"
+  type        = number
+  default     = 20
+}
+
+variable "ui_console_health_check_start_period" {
+  description = "Health check start period in seconds"
+  type        = number
+  default     = 90
+}
+
+# UI Console Auto Scaling Configuration
+variable "ui_console_enable_auto_scaling" {
+  description = "Whether to enable auto scaling for UI console"
+  type        = bool
+  default     = true
+}
+
+variable "ui_console_min_capacity" {
+  description = "Minimum number of UI console tasks"
+  type        = number
+  default     = 1
+}
+
+variable "ui_console_max_capacity" {
+  description = "Maximum number of UI console tasks"
+  type        = number
+  default     = 10
+}
+
+variable "ui_console_cpu_target" {
+  description = "Target CPU utilization for UI console auto scaling"
+  type        = number
+  default     = 70
+}
+
+variable "ui_console_memory_target" {
+  description = "Target memory utilization for UI console auto scaling"
+  type        = number
+  default     = 80
+}
+
+# UI Console Service Discovery Configuration
+variable "ui_console_enable_service_discovery" {
+  description = "Whether to enable service discovery for UI console"
+  type        = bool
+  default     = true
+}
+
+# UI Console EFS Configuration
+variable "ui_console_enable_efs" {
+  description = "Whether to mount EFS storage for UI console"
+  type        = bool
+  default     = false
+}
+
+variable "ui_console_efs_mount_path" {
+  description = "Path to mount EFS in the UI console container"
+  type        = string
+  default     = "/app/storage"
+}
+
+# Agentic Framework Service Configuration
+variable "agentic_framework_ecr_repository_url" {
+  description = "URL of the ECR repository for the agentic framework image"
+  type        = string
+  default     = "761018882607.dkr.ecr.us-east-1.amazonaws.com/10xr-agents/agentic-framework-service"
+}
+
+variable "agentic_framework_image_tag" {
+  description = "Tag of the Docker image to deploy"
+  type        = string
+  default     = "latest"
+}
+
+variable "agentic_framework_port" {
+  description = "Port that the agentic framework container listens on"
+  type        = number
+  default     = 8000
+}
+
+variable "agentic_framework_cpu" {
+  description = "CPU units for the agentic framework task (1024 = 1 vCPU)"
+  type        = number
+  default     = 1024
+}
+
+variable "agentic_framework_memory" {
+  description = "Memory for the agentic framework task in MB"
+  type        = number
+  default     = 2048
+}
+
+variable "agentic_framework_desired_count" {
+  description = "Desired number of agentic framework tasks"
+  type        = number
+  default     = 2
+}
+
+# Agentic Framework Application Configuration
+variable "agentic_framework_log_level" {
+  description = "Log level for the agentic framework service"
+  type        = string
+  default     = "INFO"
+}
+
+variable "agentic_framework_mongodb_uri" {
+  description = "MongoDB connection URI for agentic framework"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "agentic_framework_additional_environment_variables" {
+  description = "Additional environment variables for the agentic framework service"
+  type        = map(string)
+  default     = {}
+}
+
+# Agentic Framework Health Check Configuration
+variable "agentic_framework_enable_health_check" {
+  description = "Whether to enable container health checks for agentic framework"
+  type        = bool
+  default     = true
+}
+
+variable "agentic_framework_health_check_command" {
+  description = "Health check command for agentic framework"
+  type        = string
+  default     = "curl -f http://localhost:8000/health || exit 1"
+}
+
+variable "agentic_framework_health_check_path" {
+  description = "Health check path for agentic framework target group"
+  type        = string
+  default     = "/health"
+}
+
+variable "agentic_framework_health_check_interval" {
+  description = "Health check interval in seconds"
+  type        = number
+  default     = 30
+}
+
+variable "agentic_framework_health_check_timeout" {
+  description = "Health check timeout in seconds"
+  type        = number
+  default     = 20
+}
+
+variable "agentic_framework_health_check_start_period" {
+  description = "Health check start period in seconds"
+  type        = number
+  default     = 90
+}
+
+# Agentic Framework Auto Scaling Configuration
+variable "agentic_framework_enable_auto_scaling" {
+  description = "Whether to enable auto scaling for agentic framework"
+  type        = bool
+  default     = true
+}
+
+variable "agentic_framework_min_capacity" {
+  description = "Minimum number of agentic framework tasks"
+  type        = number
+  default     = 1
+}
+
+variable "agentic_framework_max_capacity" {
+  description = "Maximum number of agentic framework tasks"
+  type        = number
+  default     = 10
+}
+
+variable "agentic_framework_cpu_target" {
+  description = "Target CPU utilization for agentic framework auto scaling"
+  type        = number
+  default     = 70
+}
+
+variable "agentic_framework_memory_target" {
+  description = "Target memory utilization for agentic framework auto scaling"
+  type        = number
+  default     = 80
+}
+
+# Agentic Framework Service Discovery Configuration
+variable "agentic_framework_enable_service_discovery" {
+  description = "Whether to enable service discovery for agentic framework"
+  type        = bool
+  default     = true
+}
+
+# Agentic Framework EFS Configuration
+variable "agentic_framework_enable_efs" {
+  description = "Whether to mount EFS storage for agentic framework"
+  type        = bool
+  default     = false
+}
+
+variable "agentic_framework_efs_mount_path" {
+  description = "Path to mount EFS in the agentic framework container"
+  type        = string
+  default     = "/app/storage"
 }
 
 # MongoDB Configuration Variables
@@ -754,4 +1170,16 @@ variable "mongodb_enable_audit_logging" {
   description = "Whether to enable MongoDB audit logging"
   type        = bool
   default     = false
+}
+
+# Tags
+variable "tags" {
+  description = "A map of tags to add to all resources"
+  type        = map(string)
+  default     = {
+    Environment = "qa"
+    Project     = "LiveKit"
+    Platform    = "ECS"
+    Terraform   = "true"
+  }
 }

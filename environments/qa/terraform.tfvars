@@ -142,7 +142,123 @@ livekit_proxy_enable_service_discovery = true
 livekit_proxy_enable_efs     = false
 livekit_proxy_efs_mount_path = "/app/storage"
 
+# Agent Analytics Service Configuration
+agent_analytics_ecr_repository_url = "761018882607.dkr.ecr.us-east-1.amazonaws.com/10xr-agents/agent-analytics-service"
+agent_analytics_image_tag          = "latest"
+agent_analytics_port               = 3000
+agent_analytics_cpu                = 1024
+agent_analytics_memory             = 2048
+agent_analytics_desired_count      = 2
 
+agent_analytics_log_level = "INFO"
+
+# Use the same MongoDB URI as voice agent or configure separately
+agent_analytics_mongodb_uri = "mongodb+srv://doadmin:by6n2k14L8g53dt7@db-mongodb-nyc3-70786-efaf17f9.mongo.ondigitalocean.com/ten_xr_temp_agents_local?tls=true&authSource=admin&replicaSet=db-mongodb-nyc3-70786"
+
+# Agent Analytics Additional Environment Variables (if needed)
+agent_analytics_additional_environment_variables = {
+  # Add any additional environment variables specific to your deployment
+}
+
+# Agent Analytics Health Check Configuration
+agent_analytics_enable_health_check    = true
+agent_analytics_health_check_command   = "curl -f http://localhost:3000/health || exit 1"
+agent_analytics_health_check_path      = "/health"
+agent_analytics_health_check_interval  = 30
+agent_analytics_health_check_timeout   = 20
+agent_analytics_health_check_start_period = 90
+
+# Agent Analytics Auto Scaling Configuration
+agent_analytics_enable_auto_scaling = true
+agent_analytics_min_capacity        = 1
+agent_analytics_max_capacity        = 10
+agent_analytics_cpu_target          = 70
+agent_analytics_memory_target       = 80
+
+# Agent Analytics Service Discovery
+agent_analytics_enable_service_discovery = true
+
+# Agent Analytics EFS Storage (enable if your service needs persistent storage)
+agent_analytics_enable_efs     = false
+agent_analytics_efs_mount_path = "/app/storage"
+
+# UI Console Service Configuration
+ui_console_ecr_repository_url = "761018882607.dkr.ecr.us-east-1.amazonaws.com/10xr-agents/ui-console"
+ui_console_image_tag          = "latest"
+ui_console_port               = 80
+ui_console_cpu                = 512
+ui_console_memory             = 1024
+ui_console_desired_count      = 2
+
+ui_console_log_level = "INFO"
+
+# UI Console Additional Environment Variables (if needed)
+ui_console_additional_environment_variables = {
+  # Add any additional environment variables specific to your deployment
+  # REACT_APP_API_URL = "http://your-api-url"
+}
+
+# UI Console Health Check Configuration
+ui_console_enable_health_check    = true
+ui_console_health_check_command   = "curl -f http://localhost:80/ || exit 1"
+ui_console_health_check_path      = "/"
+ui_console_health_check_interval  = 30
+ui_console_health_check_timeout   = 20
+ui_console_health_check_start_period = 60
+
+# UI Console Auto Scaling Configuration
+ui_console_enable_auto_scaling = true
+ui_console_min_capacity        = 1
+ui_console_max_capacity        = 10
+ui_console_cpu_target          = 70
+ui_console_memory_target       = 80
+
+# UI Console Service Discovery
+ui_console_enable_service_discovery = true
+
+# UI Console EFS Storage (typically not needed for UI applications)
+ui_console_enable_efs     = false
+ui_console_efs_mount_path = "/app/storage"
+
+# Agentic Framework Service Configuration
+agentic_framework_ecr_repository_url = "761018882607.dkr.ecr.us-east-1.amazonaws.com/10xr-agents/agentic-framework-service"
+agentic_framework_image_tag          = "latest"
+agentic_framework_port               = 8000
+agentic_framework_cpu                = 1024
+agentic_framework_memory             = 2048
+agentic_framework_desired_count      = 2
+
+agentic_framework_log_level = "INFO"
+
+# Use the same MongoDB URI as voice agent or configure separately
+agentic_framework_mongodb_uri = "mongodb+srv://doadmin:by6n2k14L8g53dt7@db-mongodb-nyc3-70786-efaf17f9.mongo.ondigitalocean.com/ten_xr_temp_agents_local?tls=true&authSource=admin&replicaSet=db-mongodb-nyc3-70786"
+
+# Agentic Framework Additional Environment Variables (if needed)
+agentic_framework_additional_environment_variables = {
+  # Add any additional environment variables specific to your deployment
+}
+
+# Agentic Framework Health Check Configuration
+agentic_framework_enable_health_check    = true
+agentic_framework_health_check_command   = "curl -f http://localhost:8000/health || exit 1"
+agentic_framework_health_check_path      = "/health"
+agentic_framework_health_check_interval  = 30
+agentic_framework_health_check_timeout   = 20
+agentic_framework_health_check_start_period = 90
+
+# Agentic Framework Auto Scaling Configuration
+agentic_framework_enable_auto_scaling = true
+agentic_framework_min_capacity        = 1
+agentic_framework_max_capacity        = 10
+agentic_framework_cpu_target          = 70
+agentic_framework_memory_target       = 80
+
+# Agentic Framework Service Discovery
+agentic_framework_enable_service_discovery = true
+
+# Agentic Framework EFS Storage (enable if your service needs persistent storage)
+agentic_framework_enable_efs     = false
+agentic_framework_efs_mount_path = "/app/storage"
 
 # MongoDB Configuration
 mongodb_replica_count    = 3
