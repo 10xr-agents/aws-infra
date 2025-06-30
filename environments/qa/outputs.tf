@@ -226,3 +226,61 @@ output "livekit_proxy_internal_url" {
   description = "Internal service discovery URL for the LiveKit proxy"
   value       = module.services.livekit_proxy_service_discovery_service_name != null ? "http://livekit-proxy.${aws_service_discovery_private_dns_namespace.main.name}:${var.livekit_proxy_port}" : null
 }
+
+output "livekit_proxy_internal_url" {
+  description = "Internal service discovery URL for the LiveKit proxy"
+  value       = module.services.livekit_proxy_service_discovery_service_name != null ? "http://livekit-proxy.${aws_service_discovery_private_dns_namespace.main.name}:${var.livekit_proxy_port}" : null
+}
+
+# MongoDB outputs
+output "mongodb_instance_ids" {
+  description = "IDs of the MongoDB EC2 instances"
+  value       = module.mongodb.instance_ids
+}
+
+output "mongodb_endpoints" {
+  description = "List of MongoDB endpoints (ip:port)"
+  value       = module.mongodb.endpoints
+}
+
+output "mongodb_connection_string" {
+  description = "MongoDB connection string"
+  value       = module.mongodb.connection_string
+  sensitive   = true
+}
+
+output "mongodb_srv_connection_string" {
+  description = "MongoDB SRV connection string (if DNS is enabled)"
+  value       = module.mongodb.srv_connection_string
+  sensitive   = true
+}
+
+output "mongodb_replica_set_name" {
+  description = "Name of the MongoDB replica set"
+  value       = module.mongodb.replica_set_name
+}
+
+output "mongodb_primary_endpoint" {
+  description = "Primary MongoDB endpoint"
+  value       = module.mongodb.primary_endpoint
+}
+
+output "mongodb_security_group_id" {
+  description = "ID of the MongoDB security group"
+  value       = module.mongodb.security_group_id
+}
+
+output "mongodb_ssm_parameter_name" {
+  description = "Name of the SSM parameter containing the MongoDB connection string"
+  value       = module.mongodb.ssm_parameter_name
+}
+
+output "mongodb_dns_records" {
+  description = "Map of DNS records for MongoDB nodes"
+  value       = module.mongodb.dns_records
+}
+
+output "mongodb_cluster_details" {
+  description = "Detailed information about the MongoDB cluster"
+  value       = module.mongodb.cluster_details
+}

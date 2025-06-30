@@ -597,3 +597,161 @@ variable "tags" {
     Terraform   = "true"
   }
 }
+
+# MongoDB Configuration Variables
+variable "mongodb_replica_count" {
+  description = "Number of MongoDB replica set members (should be odd number: 1, 3, 5, etc.)"
+  type        = number
+  default     = 3
+}
+
+variable "mongodb_instance_type" {
+  description = "EC2 instance type for MongoDB nodes"
+  type        = string
+  default     = "t3.large"
+}
+
+variable "mongodb_ami_id" {
+  description = "AMI ID for MongoDB instances. If empty, will use latest Ubuntu 22.04"
+  type        = string
+  default     = ""
+}
+
+variable "mongodb_key_name" {
+  description = "Name of the SSH key pair for MongoDB EC2 instances"
+  type        = string
+}
+
+variable "mongodb_version" {
+  description = "MongoDB version to install"
+  type        = string
+  default     = "7.0"
+}
+
+variable "mongodb_admin_username" {
+  description = "MongoDB admin username"
+  type        = string
+  default     = "admin"
+  sensitive   = true
+}
+
+variable "mongodb_admin_password" {
+  description = "MongoDB admin password"
+  type        = string
+  sensitive   = true
+}
+
+variable "mongodb_keyfile_content" {
+  description = "Content of the MongoDB keyfile for replica set authentication"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "mongodb_default_database" {
+  description = "Default database name"
+  type        = string
+  default     = "livekit_qa"
+}
+
+variable "mongodb_root_volume_size" {
+  description = "Size of the root EBS volume in GB"
+  type        = number
+  default     = 20
+}
+
+variable "mongodb_data_volume_size" {
+  description = "Size of the data EBS volume in GB"
+  type        = number
+  default     = 100
+}
+
+variable "mongodb_data_volume_type" {
+  description = "Type of the data EBS volume (gp2, gp3, io1, io2)"
+  type        = string
+  default     = "gp3"
+}
+
+variable "mongodb_data_volume_iops" {
+  description = "IOPS for the data volume (only for gp3, io1, io2)"
+  type        = number
+  default     = 3000
+}
+
+variable "mongodb_data_volume_throughput" {
+  description = "Throughput in MiB/s for the data volume (only for gp3)"
+  type        = number
+  default     = 125
+}
+
+variable "mongodb_allow_ssh" {
+  description = "Whether to allow SSH access to MongoDB instances"
+  type        = bool
+  default     = false
+}
+
+variable "mongodb_ssh_cidr_blocks" {
+  description = "CIDR blocks allowed to SSH to MongoDB instances"
+  type        = list(string)
+  default     = []
+}
+
+variable "mongodb_enable_monitoring" {
+  description = "Whether to enable CloudWatch monitoring for MongoDB"
+  type        = bool
+  default     = true
+}
+
+variable "mongodb_log_retention_days" {
+  description = "CloudWatch log retention in days for MongoDB"
+  type        = number
+  default     = 7
+}
+
+variable "mongodb_create_dns_records" {
+  description = "Whether to create Route53 DNS records for MongoDB"
+  type        = bool
+  default     = true
+}
+
+variable "mongodb_private_domain" {
+  description = "Private domain for MongoDB DNS records"
+  type        = string
+  default     = ""
+}
+
+variable "mongodb_backup_enabled" {
+  description = "Whether to enable automated EBS snapshots for MongoDB"
+  type        = bool
+  default     = true
+}
+
+variable "mongodb_backup_schedule" {
+  description = "Cron expression for MongoDB backup schedule"
+  type        = string
+  default     = "cron(0 2 * * ? *)"
+}
+
+variable "mongodb_backup_retention_days" {
+  description = "Number of days to retain MongoDB backups"
+  type        = number
+  default     = 7
+}
+
+variable "mongodb_store_connection_string_in_ssm" {
+  description = "Whether to store MongoDB connection string in AWS Systems Manager Parameter Store"
+  type        = bool
+  default     = true
+}
+
+variable "mongodb_enable_encryption_at_rest" {
+  description = "Whether to enable MongoDB encryption at rest"
+  type        = bool
+  default     = true
+}
+
+variable "mongodb_enable_audit_logging" {
+  description = "Whether to enable MongoDB audit logging"
+  type        = bool
+  default     = false
+}

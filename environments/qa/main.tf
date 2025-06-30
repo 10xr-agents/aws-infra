@@ -39,6 +39,75 @@ module "vpc" {
   )
 }
 
+# MongoDB Cluster Module
+module "mongodb" {
+  source = "../../modules/mongodb"
+
+  cluster_name = "${local.cluster_name}-mongodb"
+  environment  = var.environment
+
+  vpc_id     = module.vpc.vpc_id
+  subnet_ids = module.vpc.database_subnets  # Using database subnets for MongoDB
+
+  # Instance configuration
+  replica_count    = var.mongodb_replica_count
+  instance_type    = var.mongodb_instance_type
+  ami_id          = var.mongodb_ami_id
+  key_name        = var.mongodb_key_name
+
+  # MongoDB configuration
+  mongodb_version         = var.mongodb_version
+  mongodb_admin_username  = var.mongodb_admin_username
+  mongodb_admin_password  = var.mongodb_admin_password
+  mongodb_keyfile_content = var.mongodb_keyfile_content
+  default_database        = var.mongodb_default_database
+
+  # Storage configuration
+  root_volume_size       = var.mongodb_root_volume_size
+  data_volume_size       = var.mongodb_data_volume_size
+  data_volume_type       = var.mongodb_data_volume_type
+  data_volume_iops       = var.mongodb_data_volume_iops
+  data_volume_throughput = var.mongodb_data_volume_throughput
+
+  # Security configuration
+  create_security_group = true
+  allowed_cidr_blocks  = [module.vpc.vpc_cidr_block]
+  additional_security_group_ids = []
+  allow_ssh            = var.mongodb_allow_ssh
+  ssh_cidr_blocks      = var.mongodb_ssh_cidr_blocks
+
+  # Monitoring and logging
+  enable_monitoring  = var.mongodb_enable_monitoring
+  log_retention_days = var.mongodb_log_retention_days
+
+  # DNS configuration
+  create_dns_records = var.mongodb_create_dns_records
+  private_domain     = var.mongodb_private_domain
+
+  # Backup configuration
+  backup_enabled        = var.mongodb_backup_enabled
+  backup_schedule       = var.mongodb_backup_schedule
+  backup_retention_days = var.mongodb_backup_retention_days
+
+  # Additional features
+  store_connection_string_in_ssm = var.mongodb_store_connection_string_in_ssm
+  enable_encryption_at_rest      = var.mongodb_enable_encryption_at_rest
+  enable_audit_logging          = var.mongodb_enable_audit_logging
+
+  tags = merge(
+    var.tags,
+    {
+      "Environment" = var.environment
+      "Project"     = "LiveKit"
+      "Component"   = "MongoDB"
+      "Platform"    = "ECS"
+      "Terraform"   = "true"
+    }
+  )
+
+  depends_on = [module.vpc]
+}
+
 # ECS Cluster Module
 module "ecs" {
   source = "../../modules/ecs"
@@ -335,7 +404,26 @@ module "services" {
     }
   )
 
-  depends_on = [module.ecs, module.alb, module.storage]
+  depends_on = [module.ecs, module.alb, module.storage, module.mongodb]
+}
+
+# Data source to retrieve MongoDB connection string from SSM (if using self-hosted MongoDB)
+data "aws_ssm_parameter" "mongodb_connection_string" {
+  count = var.mongodb_store_connection_string_in_ssm ? 1 : 0
+  name  = module.mongodb.ssm_parameter_name
+}
+
+# Security Group Rule to allow Conversation Agent to access MongoDB
+resource "aws_security_group_rule" "conversation_agent_to_mongodb" {
+  count = var.mongodb_replica_count > 0 ? 1 : 0
+
+  type                     = "ingress"
+  from_port                = 27017
+  to_port                  = 27017
+  protocol                 = "tcp"
+  source_security_group_id = module.conversation_agent.security_group_id
+  security_group_id        = module.mongodb.security_group_id
+  description              = "Allow Conversation Agent ECS tasks to access MongoDB"
 }
 
 # ALB Listener Rule for Voice Agent
