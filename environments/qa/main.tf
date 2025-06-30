@@ -46,9 +46,9 @@ module "mongodb" {
   subnet_ids = module.vpc.database_subnets  # Using database subnets for MongoDB
 
   # Instance configuration
-  replica_count    = var.mongodb_replica_count
-  instance_type    = var.mongodb_instance_type
-  ami_id          = var.mongodb_ami_id
+  replica_count = var.mongodb_replica_count
+  instance_type = var.mongodb_instance_type
+  ami_id        = var.mongodb_ami_id
   # Removed key_name - key pair will be created automatically
 
   # MongoDB configuration
@@ -56,39 +56,39 @@ module "mongodb" {
   mongodb_admin_username  = var.mongodb_admin_username
   mongodb_admin_password  = var.mongodb_admin_password
   mongodb_keyfile_content = var.mongodb_keyfile_content
-  default_database        = var.mongodb_default_database
+  default_database = var.mongodb_default_database
 
   # Storage configuration
-  root_volume_size       = var.mongodb_root_volume_size
-  data_volume_size       = var.mongodb_data_volume_size
-  data_volume_type       = var.mongodb_data_volume_type
-  data_volume_iops       = var.mongodb_data_volume_iops
+  root_volume_size = var.mongodb_root_volume_size
+  data_volume_size = var.mongodb_data_volume_size
+  data_volume_type = var.mongodb_data_volume_type
+  data_volume_iops = var.mongodb_data_volume_iops
   data_volume_throughput = var.mongodb_data_volume_throughput
 
   # Security configuration
   create_security_group = true
-  allowed_cidr_blocks  = [module.vpc.vpc_cidr_block]
+  allowed_cidr_blocks = [module.vpc.vpc_cidr_block]
   additional_security_group_ids = []
-  allow_ssh            = var.mongodb_allow_ssh
-  ssh_cidr_blocks      = var.mongodb_ssh_cidr_blocks
+  allow_ssh             = var.mongodb_allow_ssh
+  ssh_cidr_blocks = var.mongodb_ssh_cidr_blocks
 
   # Monitoring and logging
-  enable_monitoring  = var.mongodb_enable_monitoring
+  enable_monitoring = var.mongodb_enable_monitoring
   log_retention_days = var.mongodb_log_retention_days
 
   # DNS configuration
   create_dns_records = var.mongodb_create_dns_records
-  private_domain     = var.mongodb_private_domain
+  private_domain = var.mongodb_private_domain
 
   # Backup configuration
-  backup_enabled        = var.mongodb_backup_enabled
-  backup_schedule       = var.mongodb_backup_schedule
+  backup_enabled  = var.mongodb_backup_enabled
+  backup_schedule = var.mongodb_backup_schedule
   backup_retention_days = var.mongodb_backup_retention_days
 
   # Additional features
   store_connection_string_in_ssm = var.mongodb_store_connection_string_in_ssm
   enable_encryption_at_rest      = var.mongodb_enable_encryption_at_rest
-  enable_audit_logging          = var.mongodb_enable_audit_logging
+  enable_audit_logging           = var.mongodb_enable_audit_logging
 
   tags = merge(
     var.tags,
@@ -112,13 +112,13 @@ module "alb" {
   name               = "${local.cluster_name}-alb"
   load_balancer_type = "application"
 
-  vpc_id  = module.vpc.vpc_id
+  vpc_id = module.vpc.vpc_id
   subnets = module.vpc.public_subnets
 
   # ALB Configuration
   enable_deletion_protection = var.alb_enable_deletion_protection
-  enable_http2              = var.alb_enable_http2
-  idle_timeout              = var.alb_idle_timeout
+  enable_http2               = var.alb_enable_http2
+  idle_timeout = var.alb_idle_timeout
 
   # Security Groups
   security_group_ingress_rules = {
@@ -149,21 +149,21 @@ module "alb" {
   # Target Groups for each service
   target_groups = {
     for service_name, service_config in local.ecs_services_with_overrides : service_name => {
-      name_prefix          = substr(service_name, 0, 6)
-      protocol             = "HTTP"
-      port                 = service_config.port
-      target_type          = "ip"
+      name_prefix = substr(service_name, 0, 6)
+      protocol    = "HTTP"
+      port        = service_config.port
+      target_type = "ip"
       deregistration_delay = lookup(service_config, "deregistration_delay", 30)
 
       health_check = {
-        enabled             = true
-        healthy_threshold   = lookup(service_config.health_check, "healthy_threshold", 2)
-        interval            = lookup(service_config.health_check, "interval", 30)
-        matcher             = lookup(service_config.health_check, "matcher", "200")
-        path                = lookup(service_config.health_check, "path", "/health")
-        port                = "traffic-port"
-        protocol            = "HTTP"
-        timeout             = lookup(service_config.health_check, "timeout", 20)
+        enabled  = true
+        healthy_threshold = lookup(service_config.health_check, "healthy_threshold", 2)
+        interval = lookup(service_config.health_check, "interval", 30)
+        matcher = lookup(service_config.health_check, "matcher", "200")
+        path = lookup(service_config.health_check, "path", "/health")
+        port     = "traffic-port"
+        protocol = "HTTP"
+        timeout = lookup(service_config.health_check, "timeout", 20)
         unhealthy_threshold = lookup(service_config.health_check, "unhealthy_threshold", 3)
       }
 
@@ -176,23 +176,25 @@ module "alb" {
     # HTTP Listener - always present
     {
       http = {
-        port     = 80
+        port = 80
         protocol = "HTTP"
 
         # Redirect to HTTPS if certificate is provided, otherwise forward to ui-console
-        default_actions = var.acm_certificate_arn != "" ? [
-          {
+        default_actions = [
+            var.acm_certificate_arn != "" ? {
             type = "redirect"
             redirect = {
               port        = "443"
               protocol    = "HTTPS"
               status_code = "HTTP_301"
             }
-          }
-        ] : [
-          {
-            type             = "forward"
-            target_group_key = "ui-console"
+            forward = null
+          } : {
+            type     = "forward"
+            redirect = null
+            forward = {
+              target_group_key = "ui-console"
+            }
           }
         ]
 
@@ -279,18 +281,17 @@ module "ecs" {
   cluster_name = var.cluster_name
   environment  = var.environment
 
-  vpc_id                 = module.vpc.vpc_id
-  private_subnet_ids     = module.vpc.private_subnets
-  alb_security_group_id  = module.alb.security_group_id
-  alb_https_listener_arn = module.alb.https_listener_arn
+  vpc_id                = module.vpc.vpc_id
+  private_subnet_ids    = module.vpc.private_subnets
+  alb_security_group_id = module.alb.security_group_id
 
-  acm_certificate_arn    = ""
-  create_alb_rules       = true
+  acm_certificate_arn = ""
+  create_alb_rules    = true
 
   enable_container_insights = var.enable_container_insights
   enable_execute_command    = var.enable_execute_command
   enable_service_discovery  = true
-  create_alb               = true
+  create_alb = true
 
   # Pass the entire services configuration from variables
   services = local.ecs_services_with_overrides

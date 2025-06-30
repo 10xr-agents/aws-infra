@@ -26,12 +26,6 @@ variable "alb_security_group_id" {
   default     = ""
 }
 
-variable "alb_https_listener_arn" {
-  description = "HTTPS Listener ARN of the ALB (if using ALB)"
-  type        = string
-  default     = ""
-}
-
 variable "create_alb_rules" {
   description = "Whether to create ALB listener rules"
   type        = bool
