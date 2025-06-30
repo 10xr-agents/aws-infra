@@ -35,32 +35,6 @@ module "vpc" {
   )
 }
 
-# ECS Cluster Module
-module "ecs" {
-  source = "../../modules/ecs"
-
-  cluster_name = var.cluster_name
-  environment  = var.environment
-
-  vpc_id                 = module.vpc.vpc_id
-  private_subnet_ids     = module.vpc.private_subnets
-  alb_security_group_id  = module.alb.security_group_id
-  alb_https_listener_arn = module.alb.https_listener_arn
-
-  acm_certificate_arn    = ""
-  create_alb_rules       = true
-
-  enable_container_insights = var.enable_container_insights
-  enable_execute_command    = var.enable_execute_command
-  enable_service_discovery  = true
-  create_alb               = true
-
-  # Pass the entire services configuration from variables
-  services = var.ecs_services
-
-  tags = var.tags
-}
-
 # MongoDB Cluster Module
 module "mongodb" {
   source = "../../modules/mongodb"
@@ -128,4 +102,32 @@ module "mongodb" {
   )
 
   depends_on = [module.vpc]
+}
+
+# ECS Cluster Module
+module "ecs" {
+  source = "../../modules/ecs"
+
+  cluster_name = var.cluster_name
+  environment  = var.environment
+
+  vpc_id                 = module.vpc.vpc_id
+  private_subnet_ids     = module.vpc.private_subnets
+  alb_security_group_id  = module.alb.security_group_id
+  alb_https_listener_arn = module.alb.https_listener_arn
+
+  acm_certificate_arn    = ""
+  create_alb_rules       = true
+
+  enable_container_insights = var.enable_container_insights
+  enable_execute_command    = var.enable_execute_command
+  enable_service_discovery  = true
+  create_alb               = true
+
+  # Pass the entire services configuration from variables
+  services = var.ecs_services
+
+  tags = var.tags
+
+  depends_on = [module.ecs]
 }
