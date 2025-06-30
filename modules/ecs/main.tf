@@ -537,7 +537,7 @@ resource "aws_ecs_service" "service" {
   cluster         = aws_ecs_cluster.main.id
   task_definition = aws_ecs_task_definition.service[each.key].arn
   desired_count   = each.value.desired_count
-  launch_type     = "FARGATE"
+  # launch_type     = "FARGATE"
 
   # Enable ECS Exec if specified
   enable_execute_command = var.enable_execute_command
