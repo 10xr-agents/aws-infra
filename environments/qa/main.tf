@@ -199,7 +199,7 @@ module "storage" {
 
 # Voice Agent Service
 module "voice_agent" {
-  source = "../../modules/voice-agent-ecs"
+  source = "../../modules/conversation-agent-ecs"
 
   cluster_name = local.cluster_name
   cluster_id   = module.ecs.cluster_id
