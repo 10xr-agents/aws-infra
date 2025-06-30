@@ -30,7 +30,7 @@ ecs_services = local.ecs_services_with_overrides
 # MongoDB Configuration
 mongodb_replica_count    = 3
 mongodb_instance_type    = "t3.large"
-mongodb_key_name         = "ten-xr-qa-keypair"  # Replace with your actual key pair name
+# Removed mongodb_key_name - key pair will be created automatically
 
 mongodb_version          = "7.0"
 mongodb_admin_username   = "admin"

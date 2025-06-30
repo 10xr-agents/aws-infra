@@ -20,6 +20,34 @@ locals {
   )
 }
 
+# Generate a new SSH key pair for MongoDB instances
+resource "tls_private_key" "mongodb_key" {
+  algorithm = "RSA"
+  rsa_bits  = 4096
+}
+
+# Create AWS key pair from the generated private key
+resource "aws_key_pair" "mongodb_key" {
+  key_name   = "${var.cluster_name}-mongodb-keypair"
+  public_key = tls_private_key.mongodb_key.public_key_openssh
+
+  tags = merge(
+    local.common_tags,
+    {
+      Name = "${var.cluster_name}-mongodb-keypair"
+    }
+  )
+}
+
+# Store the private key in AWS Systems Manager Parameter Store for secure access
+resource "aws_ssm_parameter" "mongodb_private_key" {
+  name  = "/${var.environment}/${var.cluster_name}/mongodb/ssh-private-key"
+  type  = "SecureString"
+  value = tls_private_key.mongodb_key.private_key_pem
+
+  tags = local.common_tags
+}
+
 # Data source for latest Ubuntu AMI if not specified
 data "aws_ami" "ubuntu" {
   count = var.ami_id == "" ? 1 : 0
@@ -178,7 +206,7 @@ resource "aws_instance" "mongodb" {
   ami           = var.ami_id != "" ? var.ami_id : data.aws_ami.ubuntu[0].id
   instance_type = var.instance_type
   subnet_id     = element(var.subnet_ids, count.index)
-  key_name      = var.key_name
+  key_name      = aws_key_pair.mongodb_key.key_name  # Use the created key pair
 
   vpc_security_group_ids = concat(
       var.create_security_group ? [aws_security_group.mongodb[0].id] : [],
@@ -213,6 +241,9 @@ resource "aws_instance" "mongodb" {
   lifecycle {
     ignore_changes = [ami]
   }
+
+  # Ensure the key pair is created before the instance
+  depends_on = [aws_key_pair.mongodb_key]
 }
 
 # EBS Volumes for MongoDB data

@@ -91,6 +91,17 @@ output "admin_username" {
   sensitive   = true
 }
 
+# New outputs for SSH key pair
+output "key_pair_name" {
+  description = "Name of the SSH key pair created for MongoDB instances"
+  value       = aws_key_pair.mongodb_key.key_name
+}
+
+output "private_key_ssm_parameter" {
+  description = "SSM parameter name containing the private key for SSH access"
+  value       = aws_ssm_parameter.mongodb_private_key.name
+}
+
 output "cluster_details" {
   description = "Detailed information about the MongoDB cluster"
   value = {
@@ -102,5 +113,6 @@ output "cluster_details" {
     data_volume_size = var.data_volume_size
     vpc_id          = var.vpc_id
     subnet_ids      = var.subnet_ids
+    key_pair_name   = aws_key_pair.mongodb_key.key_name
   }
 }

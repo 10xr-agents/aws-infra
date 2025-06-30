@@ -49,7 +49,7 @@ module "mongodb" {
   replica_count    = var.mongodb_replica_count
   instance_type    = var.mongodb_instance_type
   ami_id          = var.mongodb_ami_id
-  key_name        = var.mongodb_key_name
+  # Removed key_name - key pair will be created automatically
 
   # MongoDB configuration
   mongodb_version         = var.mongodb_version
@@ -129,5 +129,5 @@ module "ecs" {
 
   tags = var.tags
 
-  depends_on = [module.ecs]
+  depends_on = [module.mongodb]
 }

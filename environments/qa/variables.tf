@@ -216,10 +216,7 @@ variable "mongodb_ami_id" {
   default     = ""
 }
 
-variable "mongodb_key_name" {
-  description = "Name of the SSH key pair for MongoDB EC2 instances"
-  type        = string
-}
+# Removed mongodb_key_name variable - key pair will be created automatically
 
 variable "mongodb_version" {
   description = "MongoDB version to install"
