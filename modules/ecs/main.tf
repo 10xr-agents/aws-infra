@@ -373,11 +373,9 @@ resource "aws_ecs_service" "service" {
 
   # Load balancer configuration
   dynamic "load_balancer" {
-    for_each = lookup(each.value, "enable_load_balancer", true) && var.create_alb ? [1] : []
+    for_each = lookup(each.value, "enable_load_balancer", true) && (var.create_alb || var.target_group_arns != {}) ? [1] : []
     content {
-      target_group_arn = var.target_group_arns != "" && lookup(var.target_group_arns, each.key, null) != null ?
-        var.target_group_arns[each.key] :
-        aws_lb_target_group.service[each.key].arn
+      target_group_arn = var.target_group_arns != {} && lookup(var.target_group_arns, each.key, null) != null ? var.target_group_arns[each.key] : aws_lb_target_group.service[each.key].arn
       container_name   = each.key
       container_port   = each.value.port
     }

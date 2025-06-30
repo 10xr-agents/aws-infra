@@ -14,11 +14,11 @@ resource "aws_lb" "main" {
   subnets            = var.alb_internal ? var.private_subnet_ids : var.public_subnet_ids
 
   # ALB Configuration
-  enable_deletion_protection     = var.alb_enable_deletion_protection
-  enable_http2                  = var.alb_enable_http2
+  enable_deletion_protection       = var.alb_enable_deletion_protection
+  enable_http2                    = var.alb_enable_http2
   enable_cross_zone_load_balancing = var.alb_enable_cross_zone_load_balancing
-  idle_timeout                  = var.alb_idle_timeout
-  enable_waf_fail_open         = var.alb_enable_waf_fail_open
+  idle_timeout                    = var.alb_idle_timeout
+  enable_waf_fail_open           = var.alb_enable_waf_fail_open
 
   # Access logs
   dynamic "access_logs" {
@@ -173,9 +173,10 @@ resource "aws_lb_listener" "http" {
       for_each = var.acm_certificate_arn == "" ? [1] : []
       content {
         target_group {
-          arn = var.default_target_group_arn != "" ? var.default_target_group_arn :
-            (var.create_default_target_group ? aws_lb_target_group.alb_default[0].arn :
-              values(aws_lb_target_group.service)[0].arn)
+          arn = var.default_target_group_arn != "" ? var.default_target_group_arn : (
+            var.create_default_target_group ? aws_lb_target_group.alb_default[0].arn :
+              length(aws_lb_target_group.service) > 0 ? values(aws_lb_target_group.service)[0].arn : null
+          )
         }
       }
     }
@@ -205,9 +206,10 @@ resource "aws_lb_listener" "https" {
     type = "forward"
     forward {
       target_group {
-        arn = var.default_target_group_arn != "" ? var.default_target_group_arn :
-          (var.create_default_target_group ? aws_lb_target_group.alb_default[0].arn :
-            values(aws_lb_target_group.service)[0].arn)
+        arn = var.default_target_group_arn != "" ? var.default_target_group_arn : (
+          var.create_default_target_group ? aws_lb_target_group.alb_default[0].arn :
+            length(aws_lb_target_group.service) > 0 ? values(aws_lb_target_group.service)[0].arn : null
+        )
       }
     }
   }
@@ -235,9 +237,7 @@ resource "aws_lb_listener_rule" "https_service_rules" {
 
   action {
     type             = "forward"
-    target_group_arn = var.target_group_arns != {} && lookup(var.target_group_arns, each.key, null) != null ?
-      var.target_group_arns[each.key] :
-      aws_lb_target_group.service[each.key].arn
+    target_group_arn = var.target_group_arns != {} && lookup(var.target_group_arns, each.key, null) != null ? var.target_group_arns[each.key] : aws_lb_target_group.service[each.key].arn
   }
 
   condition {
@@ -266,9 +266,7 @@ resource "aws_lb_listener_rule" "http_service_rules" {
 
   action {
     type             = "forward"
-    target_group_arn = var.target_group_arns != {} && lookup(var.target_group_arns, each.key, null) != null ?
-      var.target_group_arns[each.key] :
-      aws_lb_target_group.service[each.key].arn
+    target_group_arn = var.target_group_arns != {} && lookup(var.target_group_arns, each.key, null) != null ? var.target_group_arns[each.key] : aws_lb_target_group.service[each.key].arn
   }
 
   condition {
@@ -297,9 +295,7 @@ resource "aws_lb_listener_rule" "https_host_rules" {
 
   action {
     type             = "forward"
-    target_group_arn = var.target_group_arns != {} && lookup(var.target_group_arns, each.key, null) != null ?
-      var.target_group_arns[each.key] :
-      aws_lb_target_group.service[each.key].arn
+    target_group_arn = var.target_group_arns != {} && lookup(var.target_group_arns, each.key, null) != null ? var.target_group_arns[each.key] : aws_lb_target_group.service[each.key].arn
   }
 
   condition {
@@ -328,9 +324,7 @@ resource "aws_lb_listener_rule" "http_host_rules" {
 
   action {
     type             = "forward"
-    target_group_arn = var.target_group_arns != {} && lookup(var.target_group_arns, each.key, null) != null ?
-      var.target_group_arns[each.key] :
-      aws_lb_target_group.service[each.key].arn
+    target_group_arn = var.target_group_arns != {} && lookup(var.target_group_arns, each.key, null) != null ? var.target_group_arns[each.key] : aws_lb_target_group.service[each.key].arn
   }
 
   condition {

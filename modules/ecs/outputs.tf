@@ -179,8 +179,7 @@ output "service_details" {
       security_group_id     = aws_security_group.ecs_service[name].id
       target_group_arn      = try(aws_lb_target_group.service[name].arn, null)
       log_group_name        = config.log_group_name
-      service_url           = var.enable_service_discovery && lookup(config, "enable_service_discovery", true) ?
-        "http://${name}.${local.name_prefix}.local:${config.port}" : null
+      service_url           = var.enable_service_discovery && lookup(config, "enable_service_discovery", true) ? "http://${name}.${local.name_prefix}.local:${config.port}" : null
       task_execution_role_arn = aws_iam_role.task_execution_role[name].arn
       task_role_arn          = aws_iam_role.task_role[name].arn
     }
