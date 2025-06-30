@@ -320,19 +320,19 @@ resource "aws_route53_record" "mongodb_nodes" {
   records = [aws_instance.mongodb[count.index].private_ip]
 }
 
-# DNS Record for MongoDB replica set
 resource "aws_route53_record" "mongodb_rs" {
-  count = var.create_dns_records ? 1 : 0
+  for_each = var.create_dns_records ? {
+    for idx, ip in aws_instance.mongodb[*].private_ip : idx => ip
+  } : {}
 
   zone_id = aws_route53_zone.mongodb[0].zone_id
   name    = "mongodb-rs"
   type    = "A"
-  ttl     = "60"
+  ttl     = 60
 
-  set_identifier = "multivalue"
+  set_identifier                  = each.key
   multivalue_answer_routing_policy = true
-
-  records = aws_instance.mongodb[*].private_ip
+  records                         = [each.value]  # exactly one IP
 }
 
 # Systems Manager Parameter for connection string
