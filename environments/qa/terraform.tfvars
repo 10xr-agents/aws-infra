@@ -45,59 +45,62 @@ create_recordings_bucket   = true
 recordings_expiration_days = 30
 
 
-conversation_agent_ecr_repository_url = "761018882607.dkr.ecr.us-east-1.amazonaws.com/10xr/conversation-agent"
-conversation_agent_image_tag          = "latest"
-conversation_agent_port               = 9600
-conversation_agent_cpu                = 2048  # 2000m from EKS config
-conversation_agent_memory             = 4096  # 4Gi from EKS config
-conversation_agent_desired_count      = 2
+# environments/qa/terraform.tfvars
 
-conversation_agent_log_level               = "DEBUG"
-conversation_agent_agent_collection_name   = "agent-context-data"
-conversation_agent_frames_collection_name  = "voice-ai-frames"
-conversation_agent_database_name          = "converse-server-qa"
+# Most existing configuration remains the same
+# Replace conversation_agent with voice_agent configuration
 
+voice_agent_ecr_repository_url = "761018882607.dkr.ecr.us-east-1.amazonaws.com/10xr/voice-agent"
+voice_agent_image_tag          = "latest"
+voice_agent_port               = 9600
+voice_agent_cpu                = 2048
+voice_agent_memory             = 4096
+voice_agent_desired_count      = 2
 
-conversation_agent_mongodb_uri = "mongodb+srv://doadmin:by6n2k14L8g53dt7@db-mongodb-nyc3-70786-efaf17f9.mongo.ondigitalocean.com/ten_xr_temp_agents_local?tls=true&authSource=admin&replicaSet=db-mongodb-nyc3-70786"
+voice_agent_log_level               = "DEBUG"
+voice_agent_agent_collection_name   = "agent-context-data"
+voice_agent_frames_collection_name  = "voice-ai-frames"
+voice_agent_database_name          = "converse-server-qa"
 
-conversation_agent_livekit_service    = "livekit-server"
-conversation_agent_livekit_api_key    = "APIoiCmJzAYqd5v"
-conversation_agent_livekit_api_secret = "upXGZbqbwpeftLexnICK401jqQFfvrl1o42N84lsSWcC"
+voice_agent_mongodb_uri = "mongodb+srv://doadmin:by6n2k14L8g53dt7@db-mongodb-nyc3-70786-efaf17f9.mongo.ondigitalocean.com/ten_xr_temp_agents_local?tls=true&authSource=admin&replicaSet=db-mongodb-nyc3-70786"
+
+voice_agent_livekit_service    = "livekit-server"
+voice_agent_livekit_api_key    = "APIoiCmJzAYqd5v"
+voice_agent_livekit_api_secret = "upXGZbqbwpeftLexnICK401jqQFfvrl1o42N84lsSWcC"
 
 # Secrets Configuration (use these ARNs for production deployment)
-# Store sensitive API keys in AWS Secrets Manager and reference them here
-# conversation_agent_anthropic_api_key_secret_arn    = "arn:aws:secretsmanager:us-east-1:123456789012:secret:conversation-agent/anthropic-api-key-AbCdEf"
-# conversation_agent_deepgram_api_key_secret_arn     = "arn:aws:secretsmanager:us-east-1:123456789012:secret:conversation-agent/deepgram-api-key-GhIjKl"
-# conversation_agent_cartesia_api_key_secret_arn     = "arn:aws:secretsmanager:us-east-1:123456789012:secret:conversation-agent/cartesia-api-key-MnOpQr"
-# conversation_agent_livekit_api_key_secret_arn      = "arn:aws:secretsmanager:us-east-1:123456789012:secret:conversation-agent/livekit-api-key-StUvWx"
-# conversation_agent_livekit_api_secret_secret_arn   = "arn:aws:secretsmanager:us-east-1:123456789012:secret:conversation-agent/livekit-api-secret-YzAbCd"
+# voice_agent_anthropic_api_key_secret_arn    = "arn:aws:secretsmanager:us-east-1:123456789012:secret:voice-agent/anthropic-api-key-AbCdEf"
+# voice_agent_deepgram_api_key_secret_arn     = "arn:aws:secretsmanager:us-east-1:123456789012:secret:voice-agent/deepgram-api-key-GhIjKl"
+# voice_agent_cartesia_api_key_secret_arn     = "arn:aws:secretsmanager:us-east-1:123456789012:secret:voice-agent/cartesia-api-key-MnOpQr"
+# voice_agent_livekit_api_key_secret_arn      = "arn:aws:secretsmanager:us-east-1:123456789012:secret:voice-agent/livekit-api-key-StUvWx"
+# voice_agent_livekit_api_secret_secret_arn   = "arn:aws:secretsmanager:us-east-1:123456789012:secret:voice-agent/livekit-api-secret-YzAbCd"
 
 # Additional Environment Variables (if needed)
-conversation_agent_additional_environment_variables = {
+voice_agent_additional_environment_variables = {
   # Add any additional environment variables specific to your deployment
 }
 
-# Health Check Configuration (matching EKS timeouts)
-conversation_agent_enable_health_check    = true
-conversation_agent_health_check_command   = "curl -f http://localhost:9600/health || exit 1"
-conversation_agent_health_check_path      = "/health"
-conversation_agent_health_check_interval  = 30
-conversation_agent_health_check_timeout   = 20
-conversation_agent_health_check_start_period = 90  # Increased initial delay
+# Health Check Configuration
+voice_agent_enable_health_check    = true
+voice_agent_health_check_command   = "curl -f http://localhost:9600/health || exit 1"
+voice_agent_health_check_path      = "/health"
+voice_agent_health_check_interval  = 30
+voice_agent_health_check_timeout   = 20
+voice_agent_health_check_start_period = 90
 
 # Auto Scaling Configuration
-conversation_agent_enable_auto_scaling = true
-conversation_agent_min_capacity        = 1
-conversation_agent_max_capacity        = 10
-conversation_agent_cpu_target          = 70
-conversation_agent_memory_target       = 80
+voice_agent_enable_auto_scaling = true
+voice_agent_min_capacity        = 1
+voice_agent_max_capacity        = 10
+voice_agent_cpu_target          = 70
+voice_agent_memory_target       = 80
 
 # Service Discovery
-conversation_agent_enable_service_discovery = true
+voice_agent_enable_service_discovery = true
 
-# EFS Storage (enable if your conversation agent needs persistent storage)
-conversation_agent_enable_efs     = false
-conversation_agent_efs_mount_path = "/app/storage"
+# EFS Storage (enable if your voice agent needs persistent storage)
+voice_agent_enable_efs     = false
+voice_agent_efs_mount_path = "/app/storage"
 
 # Tags
 tags = {

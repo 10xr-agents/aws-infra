@@ -197,9 +197,9 @@ module "storage" {
   depends_on = [module.ecs]
 }
 
-# Conversation Agent Service
-module "conversation_agent" {
-  source = "../../modules/conversation-agent-ecs"
+# Voice Agent Service
+module "voice_agent" {
+  source = "../../modules/voice-agent-ecs"
 
   cluster_name = local.cluster_name
   cluster_id   = module.ecs.cluster_id
@@ -213,63 +213,63 @@ module "conversation_agent" {
   task_role_arn            = module.storage.task_role_arn
 
   # Container Configuration (matching nonprod EKS deployment)
-  ecr_repository_url = var.conversation_agent_ecr_repository_url
-  image_tag         = var.conversation_agent_image_tag
-  container_port    = var.conversation_agent_port
-  task_cpu         = var.conversation_agent_cpu
-  task_memory      = var.conversation_agent_memory
+  ecr_repository_url = var.voice_agent_ecr_repository_url
+  image_tag         = var.voice_agent_image_tag
+  container_port    = var.voice_agent_port
+  task_cpu         = var.voice_agent_cpu
+  task_memory      = var.voice_agent_memory
   enable_fargate   = var.enable_fargate
 
   # Service Configuration
-  desired_count = var.conversation_agent_desired_count
+  desired_count = var.voice_agent_desired_count
 
   # Application Configuration (matching EKS variables)
-  log_level               = var.conversation_agent_log_level
-  agent_collection_name   = var.conversation_agent_agent_collection_name
-  frames_collection_name  = var.conversation_agent_frames_collection_name
-  database_name          = var.conversation_agent_database_name
-  mongodb_uri            = var.conversation_agent_mongodb_uri
+  log_level               = var.voice_agent_log_level
+  agent_collection_name   = var.voice_agent_agent_collection_name
+  frames_collection_name  = var.voice_agent_frames_collection_name
+  database_name          = var.voice_agent_database_name
+  mongodb_uri            = var.voice_agent_mongodb_uri
 
   # LiveKit Configuration
-  livekit_service_name         = var.conversation_agent_livekit_service
+  livekit_service_name         = var.voice_agent_livekit_service
   service_discovery_namespace  = aws_service_discovery_private_dns_namespace.main.name
-  livekit_api_key             = var.conversation_agent_livekit_api_key
-  livekit_api_secret          = var.conversation_agent_livekit_api_secret
+  livekit_api_key             = var.voice_agent_livekit_api_key
+  livekit_api_secret          = var.voice_agent_livekit_api_secret
 
   # Secrets Configuration (use these in production)
-  anthropic_api_key_secret_arn    = var.conversation_agent_anthropic_api_key_secret_arn
-  deepgram_api_key_secret_arn     = var.conversation_agent_deepgram_api_key_secret_arn
-  cartesia_api_key_secret_arn     = var.conversation_agent_cartesia_api_key_secret_arn
-  livekit_api_key_secret_arn      = var.conversation_agent_livekit_api_key_secret_arn
-  livekit_api_secret_secret_arn   = var.conversation_agent_livekit_api_secret_secret_arn
+  anthropic_api_key_secret_arn    = var.voice_agent_anthropic_api_key_secret_arn
+  deepgram_api_key_secret_arn     = var.voice_agent_deepgram_api_key_secret_arn
+  cartesia_api_key_secret_arn     = var.voice_agent_cartesia_api_key_secret_arn
+  livekit_api_key_secret_arn      = var.voice_agent_livekit_api_key_secret_arn
+  livekit_api_secret_secret_arn   = var.voice_agent_livekit_api_secret_secret_arn
 
   # Additional Environment Variables
-  additional_environment_variables = var.conversation_agent_additional_environment_variables
+  additional_environment_variables = var.voice_agent_additional_environment_variables
 
   # Health Check Configuration
-  enable_health_check              = var.conversation_agent_enable_health_check
-  health_check_command            = var.conversation_agent_health_check_command
-  health_check_path               = var.conversation_agent_health_check_path
-  health_check_interval           = var.conversation_agent_health_check_interval
-  health_check_timeout            = var.conversation_agent_health_check_timeout
-  health_check_start_period       = var.conversation_agent_health_check_start_period
+  enable_health_check              = var.voice_agent_enable_health_check
+  health_check_command            = var.voice_agent_health_check_command
+  health_check_path               = var.voice_agent_health_check_path
+  health_check_interval           = var.voice_agent_health_check_interval
+  health_check_timeout            = var.voice_agent_health_check_timeout
+  health_check_start_period       = var.voice_agent_health_check_start_period
 
   # Auto Scaling Configuration
-  enable_auto_scaling        = var.conversation_agent_enable_auto_scaling
-  auto_scaling_min_capacity  = var.conversation_agent_min_capacity
-  auto_scaling_max_capacity  = var.conversation_agent_max_capacity
-  auto_scaling_cpu_target    = var.conversation_agent_cpu_target
-  auto_scaling_memory_target = var.conversation_agent_memory_target
+  enable_auto_scaling        = var.voice_agent_enable_auto_scaling
+  auto_scaling_min_capacity  = var.voice_agent_min_capacity
+  auto_scaling_max_capacity  = var.voice_agent_max_capacity
+  auto_scaling_cpu_target    = var.voice_agent_cpu_target
+  auto_scaling_memory_target = var.voice_agent_memory_target
 
   # Service Discovery
-  enable_service_discovery      = var.conversation_agent_enable_service_discovery
+  enable_service_discovery      = var.voice_agent_enable_service_discovery
   service_discovery_namespace_id = aws_service_discovery_private_dns_namespace.main.id
 
   # EFS Storage (if needed)
-  enable_efs           = var.conversation_agent_enable_efs
+  enable_efs           = var.voice_agent_enable_efs
   efs_file_system_id   = module.storage.efs_id
   efs_access_point_id  = module.storage.livekit_access_point_id
-  efs_mount_path      = var.conversation_agent_efs_mount_path
+  efs_mount_path      = var.voice_agent_efs_mount_path
 
   # Capacity Provider Strategy
   capacity_provider_strategy = var.enable_fargate_spot ? [
@@ -297,7 +297,7 @@ module "conversation_agent" {
       "Environment" = var.environment
       "Project"     = "LiveKit"
       "Platform"    = "ECS"
-      "Component"   = "ConversationAgent"
+      "Component"   = "VoiceAgent"
       "Terraform"   = "true"
     }
   )
@@ -305,19 +305,19 @@ module "conversation_agent" {
   depends_on = [module.ecs, module.alb, module.storage]
 }
 
-# ALB Listener Rule for Conversation Agent
-resource "aws_lb_listener_rule" "conversation_agent" {
+# ALB Listener Rule for Voice Agent
+resource "aws_lb_listener_rule" "voice_agent" {
   listener_arn = module.alb.http_listener_arn
   priority     = 100
 
   action {
     type             = "forward"
-    target_group_arn = module.conversation_agent.target_group_arn
+    target_group_arn = module.voice_agent.target_group_arn
   }
 
   condition {
     path_pattern {
-      values = ["/conversation/*"]
+      values = ["/voice/*"]
     }
   }
 
@@ -325,14 +325,14 @@ resource "aws_lb_listener_rule" "conversation_agent" {
     var.tags,
     {
       "Environment" = var.environment
-      "Service"     = "conversation-agent"
+      "Service"     = "voice-agent"
       "Terraform"   = "true"
     }
   )
 }
 
-# HTTPS Listener Rule for Conversation Agent (if certificate is provided)
-resource "aws_lb_listener_rule" "conversation_agent_https" {
+# HTTPS Listener Rule for Voice Agent (if certificate is provided)
+resource "aws_lb_listener_rule" "voice_agent_https" {
   count = var.acm_certificate_arn != "" ? 1 : 0
 
   listener_arn = module.alb.https_listener_arn
@@ -340,12 +340,12 @@ resource "aws_lb_listener_rule" "conversation_agent_https" {
 
   action {
     type             = "forward"
-    target_group_arn = module.conversation_agent.target_group_arn
+    target_group_arn = module.voice_agent.target_group_arn
   }
 
   condition {
     path_pattern {
-      values = ["/conversation/*"]
+      values = ["/voice/*"]
     }
   }
 
@@ -353,7 +353,7 @@ resource "aws_lb_listener_rule" "conversation_agent_https" {
     var.tags,
     {
       "Environment" = var.environment
-      "Service"     = "conversation-agent"
+      "Service"     = "voice-agent"
       "Terraform"   = "true"
     }
   )

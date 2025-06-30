@@ -1,4 +1,7 @@
-# modules/conversation-agent-ecs/variables.tf
+# modules/voice-agent-ecs/variables.tf
+
+# Most variables remain the same as in the conversation-agent module
+# Potentially rename some variables or add service-specific configurations
 
 variable "cluster_name" {
   description = "Name of the ECS cluster"
@@ -45,11 +48,10 @@ variable "task_role_arn" {
   type        = string
 }
 
-# Container Configuration (matching EKS deployment)
+# Container Configuration
 variable "ecr_repository_url" {
-  description = "URL of the ECR repository for the conversation agent image"
+  description = "URL of the ECR repository for the voice agent image"
   type        = string
-  default     = "761018882607.dkr.ecr.us-east-1.amazonaws.com/10xr/conversation-agent"
 }
 
 variable "image_tag" {
@@ -59,21 +61,21 @@ variable "image_tag" {
 }
 
 variable "container_port" {
-  description = "Port that the conversation agent container listens on"
+  description = "Port that the voice agent container listens on"
   type        = number
-  default     = 9600  # Matching the EKS deployment
+  default     = 9600
 }
 
 variable "task_cpu" {
   description = "CPU units for the task (1024 = 1 vCPU)"
   type        = number
-  default     = 2048  # Matching app_cpu_limit from EKS
+  default     = 2048
 }
 
 variable "task_memory" {
   description = "Memory for the task in MB"
   type        = number
-  default     = 4096  # Matching app_memory_limit from EKS (4Gi)
+  default     = 4096
 }
 
 variable "enable_fargate" {
@@ -86,7 +88,7 @@ variable "enable_fargate" {
 variable "desired_count" {
   description = "Desired number of tasks"
   type        = number
-  default     = 2  # Matching app_replicas from EKS
+  default     = 2
 }
 
 variable "deployment_minimum_healthy_percent" {
@@ -107,7 +109,7 @@ variable "enable_execute_command" {
   default     = false
 }
 
-# Application Configuration (matching EKS variables)
+# Application Configuration
 variable "log_level" {
   description = "Log level for the application"
   type        = string
@@ -135,7 +137,6 @@ variable "database_name" {
 variable "mongodb_uri" {
   description = "MongoDB connection URI"
   type        = string
-  default     = "mongodb+srv://doadmin:by6n2k14L8g53dt7@db-mongodb-nyc3-70786-efaf17f9.mongo.ondigitalocean.com/ten_xr_temp_agents_local?tls=true&authSource=admin&replicaSet=db-mongodb-nyc3-70786"
   sensitive   = true
 }
 
@@ -151,7 +152,7 @@ variable "service_discovery_namespace" {
   type        = string
 }
 
-# Secrets Configuration (using AWS Secrets Manager or SSM Parameter Store)
+# Secrets Configuration
 variable "anthropic_api_key_secret_arn" {
   description = "ARN of the secret containing Anthropic API key"
   type        = string
@@ -186,20 +187,20 @@ variable "livekit_api_secret_secret_arn" {
 variable "livekit_api_key" {
   description = "LiveKit API key (use secret for production)"
   type        = string
-  default     = "APIoiCmJzAYqd5v"
+  default     = ""
   sensitive   = true
 }
 
 variable "livekit_api_secret" {
   description = "LiveKit API secret (use secret for production)"
   type        = string
-  default     = "upXGZbqbwpeftLexnICK401jqQFfvrl1o42N84lsSWcC"
+  default     = ""
   sensitive   = true
 }
 
 # Additional Environment Variables
 variable "additional_environment_variables" {
-  description = "Additional environment variables for the conversation agent"
+  description = "Additional environment variables for the voice agent"
   type        = map(string)
   default     = {}
 }

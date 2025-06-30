@@ -134,49 +134,53 @@ output "storage_task_role_arn" {
   value       = module.storage.task_role_arn
 }
 
-# Conversation Agent outputs
-output "conversation_agent_service_name" {
-  description = "Name of the conversation agent ECS service"
-  value       = module.conversation_agent.service_name
+# environments/qa/outputs.tf
+
+# Previous VPC, ECS, ALB, and Storage outputs remain the same
+
+# Voice Agent outputs
+output "voice_agent_service_name" {
+  description = "Name of the voice agent ECS service"
+  value       = module.voice_agent.service_name
 }
 
-output "conversation_agent_service_arn" {
-  description = "ARN of the conversation agent ECS service"
-  value       = module.conversation_agent.service_arn
+output "voice_agent_service_arn" {
+  description = "ARN of the voice agent ECS service"
+  value       = module.voice_agent.service_arn
 }
 
-output "conversation_agent_task_definition_arn" {
-  description = "ARN of the conversation agent task definition"
-  value       = module.conversation_agent.task_definition_arn
+output "voice_agent_task_definition_arn" {
+  description = "ARN of the voice agent task definition"
+  value       = module.voice_agent.task_definition_arn
 }
 
-output "conversation_agent_target_group_arn" {
-  description = "ARN of the conversation agent target group"
-  value       = module.conversation_agent.target_group_arn
+output "voice_agent_target_group_arn" {
+  description = "ARN of the voice agent target group"
+  value       = module.voice_agent.target_group_arn
 }
 
-output "conversation_agent_security_group_id" {
-  description = "ID of the conversation agent security group"
-  value       = module.conversation_agent.security_group_id
+output "voice_agent_security_group_id" {
+  description = "ID of the voice agent security group"
+  value       = module.voice_agent.security_group_id
 }
 
-output "conversation_agent_cloudwatch_log_group_name" {
-  description = "Name of the conversation agent CloudWatch log group"
-  value       = module.conversation_agent.cloudwatch_log_group_name
+output "voice_agent_cloudwatch_log_group_name" {
+  description = "Name of the voice agent CloudWatch log group"
+  value       = module.voice_agent.cloudwatch_log_group_name
 }
 
-output "conversation_agent_service_discovery_service_name" {
-  description = "Name of the conversation agent service discovery service"
-  value       = module.conversation_agent.service_discovery_service_name
+output "voice_agent_service_discovery_service_name" {
+  description = "Name of the voice agent service discovery service"
+  value       = module.voice_agent.service_discovery_service_name
 }
 
 # Access URLs
-output "conversation_agent_url" {
-  description = "URL to access the conversation agent service"
-  value       = "http://${module.alb.alb_dns_name}/conversation/"
+output "voice_agent_url" {
+  description = "URL to access the voice agent service"
+  value       = "http://${module.alb.alb_dns_name}/voice/"
 }
 
-output "conversation_agent_internal_url" {
-  description = "Internal service discovery URL for the conversation agent"
-  value       = module.conversation_agent.service_discovery_service_name != null ? "http://conversation-agent.${aws_service_discovery_private_dns_namespace.main.name}:${var.conversation_agent_port}" : null
+output "voice_agent_internal_url" {
+  description = "Internal service discovery URL for the voice agent"
+  value       = module.voice_agent.service_discovery_service_name != null ? "http://voice-agent.${aws_service_discovery_private_dns_namespace.main.name}:${var.voice_agent_port}" : null
 }

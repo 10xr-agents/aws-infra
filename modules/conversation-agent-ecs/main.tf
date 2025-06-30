@@ -1,10 +1,10 @@
-# modules/conversation-agent-ecs/main.tf
+# modules/voice-agent-ecs/main.tf
 
 /**
- * # Conversation Agent Service Module for ECS
+ * # Voice Agent Service Module for ECS
  *
- * This module creates an ECS service for the conversation agent with:
- * - ECS Task Definition with conversation agent container
+ * This module creates an ECS service for the voice agent with:
+ * - ECS Task Definition with voice agent container
  * - ECS Service with auto-scaling capabilities
  * - Target Group for load balancer integration
  * - Service Discovery for internal communication
@@ -13,21 +13,21 @@
  */
 
 # CloudWatch Log Group for the service
-resource "aws_cloudwatch_log_group" "conversation_agent" {
-  name              = "/ecs/${var.cluster_name}/conversation-agent"
+resource "aws_cloudwatch_log_group" "voice_agent" {
+  name              = "/ecs/${var.cluster_name}/voice-agent"
   retention_in_days = var.log_retention_days
 
   tags = merge(
     var.tags,
     {
-      Name = "${var.cluster_name}-conversation-agent-logs"
+      Name = "${var.cluster_name}-voice-agent-logs"
     }
   )
 }
 
-# Task Definition for Conversation Agent
-resource "aws_ecs_task_definition" "conversation_agent" {
-  family                   = "${var.cluster_name}-conversation-agent"
+# Task Definition for Voice Agent
+resource "aws_ecs_task_definition" "voice_agent" {
+  family                   = "${var.cluster_name}-voice-agent"
   network_mode             = "awsvpc"
   requires_compatibilities = var.enable_fargate ? ["FARGATE"] : ["EC2"]
   cpu                      = var.task_cpu
@@ -37,7 +37,7 @@ resource "aws_ecs_task_definition" "conversation_agent" {
 
   container_definitions = jsonencode([
     {
-      name  = "conversation-agent"
+      name  = "voice-agent"
       image = "${var.ecr_repository_url}:${var.image_tag}"
       
       essential = true
@@ -144,7 +144,7 @@ resource "aws_ecs_task_definition" "conversation_agent" {
       logConfiguration = {
         logDriver = "awslogs"
         options = {
-          "awslogs-group"         = aws_cloudwatch_log_group.conversation_agent.name
+          "awslogs-group"         = aws_cloudwatch_log_group.voice_agent.name
           "awslogs-region"        = data.aws_region.current.name
           "awslogs-stream-prefix" = "ecs"
         }
@@ -188,14 +188,14 @@ resource "aws_ecs_task_definition" "conversation_agent" {
   tags = merge(
     var.tags,
     {
-      Name = "${var.cluster_name}-conversation-agent-task"
+      Name = "${var.cluster_name}-voice-agent-task"
     }
   )
 }
 
 # Target Group for ALB
-resource "aws_lb_target_group" "conversation_agent" {
-  name        = format("%.32s", "${var.cluster_name}-conv-agent-tg")
+resource "aws_lb_target_group" "voice_agent" {
+  name        = format("%.32s", "${var.cluster_name}-voice-agent-tg")
   port        = var.container_port
   protocol    = "HTTP"
   vpc_id      = var.vpc_id
@@ -218,7 +218,7 @@ resource "aws_lb_target_group" "conversation_agent" {
   tags = merge(
     var.tags,
     {
-      Name = "${var.cluster_name}-conversation-agent-tg"
+      Name = "${var.cluster_name}-voice-agent-tg"
     }
   )
 
@@ -228,10 +228,10 @@ resource "aws_lb_target_group" "conversation_agent" {
 }
 
 # Service Discovery Service
-resource "aws_service_discovery_service" "conversation_agent" {
+resource "aws_service_discovery_service" "voice_agent" {
   count = var.enable_service_discovery ? 1 : 0
 
-  name = "conversation-agent"
+  name = "voice-agent"
 
   dns_config {
     namespace_id = var.service_discovery_namespace_id
@@ -247,16 +247,16 @@ resource "aws_service_discovery_service" "conversation_agent" {
   tags = merge(
     var.tags,
     {
-      Name = "${var.cluster_name}-conversation-agent-discovery"
+      Name = "${var.cluster_name}-voice-agent-discovery"
     }
   )
 }
 
 # ECS Service
-resource "aws_ecs_service" "conversation_agent" {
-  name            = "conversation-agent"
+resource "aws_ecs_service" "voice_agent" {
+  name            = "voice-agent"
   cluster         = var.cluster_id
-  task_definition = aws_ecs_task_definition.conversation_agent.arn
+  task_definition = aws_ecs_task_definition.voice_agent.arn
   desired_count   = var.desired_count
 
   deployment_minimum_healthy_percent = var.deployment_minimum_healthy_percent
@@ -266,20 +266,20 @@ resource "aws_ecs_service" "conversation_agent" {
 
   network_configuration {
     subnets          = var.private_subnet_ids
-    security_groups  = [aws_security_group.conversation_agent.id]
+    security_groups  = [aws_security_group.voice_agent.id]
     assign_public_ip = false
   }
 
   load_balancer {
-    target_group_arn = aws_lb_target_group.conversation_agent.arn
-    container_name   = "conversation-agent"
+    target_group_arn = aws_lb_target_group.voice_agent.arn
+    container_name   = "voice-agent"
     container_port   = var.container_port
   }
 
   dynamic "service_registries" {
     for_each = var.enable_service_discovery ? [1] : []
     content {
-      registry_arn = aws_service_discovery_service.conversation_agent[0].arn
+      registry_arn = aws_service_discovery_service.voice_agent[0].arn
     }
   }
 
@@ -295,21 +295,21 @@ resource "aws_ecs_service" "conversation_agent" {
   tags = merge(
     var.tags,
     {
-      Name = "${var.cluster_name}-conversation-agent-service"
+      Name = "${var.cluster_name}-voice-agent-service"
     }
   )
 
-  depends_on = [aws_lb_target_group.conversation_agent]
+  depends_on = [aws_lb_target_group.voice_agent]
 
   lifecycle {
     ignore_changes = [desired_count]
   }
 }
 
-# Security Group for Conversation Agent
-resource "aws_security_group" "conversation_agent" {
-  name        = "${var.cluster_name}-conversation-agent-sg"
-  description = "Security group for conversation agent service"
+# Security Group for Voice Agent
+resource "aws_security_group" "voice_agent" {
+  name        = "${var.cluster_name}-voice-agent-sg"
+  description = "Security group for voice agent service"
   vpc_id      = var.vpc_id
 
   ingress {
@@ -340,18 +340,18 @@ resource "aws_security_group" "conversation_agent" {
   tags = merge(
     var.tags,
     {
-      Name = "${var.cluster_name}-conversation-agent-sg"
+      Name = "${var.cluster_name}-voice-agent-sg"
     }
   )
 }
 
 # Auto Scaling Target
-resource "aws_appautoscaling_target" "conversation_agent" {
+resource "aws_appautoscaling_target" "voice_agent" {
   count = var.enable_auto_scaling ? 1 : 0
 
   max_capacity       = var.auto_scaling_max_capacity
   min_capacity       = var.auto_scaling_min_capacity
-  resource_id        = "service/${var.cluster_name}/${aws_ecs_service.conversation_agent.name}"
+  resource_id        = "service/${var.cluster_name}/${aws_ecs_service.voice_agent.name}"
   scalable_dimension = "ecs:service:DesiredCount"
   service_namespace  = "ecs"
 
@@ -359,14 +359,14 @@ resource "aws_appautoscaling_target" "conversation_agent" {
 }
 
 # Auto Scaling Policy - CPU
-resource "aws_appautoscaling_policy" "conversation_agent_cpu" {
+resource "aws_appautoscaling_policy" "voice_agent_cpu" {
   count = var.enable_auto_scaling ? 1 : 0
 
-  name               = "${var.cluster_name}-conversation-agent-cpu-scaling"
+  name               = "${var.cluster_name}-voice-agent-cpu-scaling"
   policy_type        = "TargetTrackingScaling"
-  resource_id        = aws_appautoscaling_target.conversation_agent[0].resource_id
-  scalable_dimension = aws_appautoscaling_target.conversation_agent[0].scalable_dimension
-  service_namespace  = aws_appautoscaling_target.conversation_agent[0].service_namespace
+  resource_id        = aws_appautoscaling_target.voice_agent[0].resource_id
+  scalable_dimension = aws_appautoscaling_target.voice_agent[0].scalable_dimension
+  service_namespace  = aws_appautoscaling_target.voice_agent[0].service_namespace
 
   target_tracking_scaling_policy_configuration {
     predefined_metric_specification {
@@ -379,14 +379,14 @@ resource "aws_appautoscaling_policy" "conversation_agent_cpu" {
 }
 
 # Auto Scaling Policy - Memory
-resource "aws_appautoscaling_policy" "conversation_agent_memory" {
+resource "aws_appautoscaling_policy" "voice_agent_memory" {
   count = var.enable_auto_scaling ? 1 : 0
 
-  name               = "${var.cluster_name}-conversation-agent-memory-scaling"
+  name               = "${var.cluster_name}-voice-agent-memory-scaling"
   policy_type        = "TargetTrackingScaling"
-  resource_id        = aws_appautoscaling_target.conversation_agent[0].resource_id
-  scalable_dimension = aws_appautoscaling_target.conversation_agent[0].scalable_dimension
-  service_namespace  = aws_appautoscaling_target.conversation_agent[0].service_namespace
+  resource_id        = aws_appautoscaling_target.voice_agent[0].resource_id
+  scalable_dimension = aws_appautoscaling_target.voice_agent[0].scalable_dimension
+  service_namespace  = aws_appautoscaling_target.voice_agent[0].service_namespace
 
   target_tracking_scaling_policy_configuration {
     predefined_metric_specification {
