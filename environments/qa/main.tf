@@ -266,7 +266,7 @@ module "ecs" {
   create_alb               = true
 
   # Pass the entire services configuration from variables
-  services = var.ecs_services
+  services = local.ecs_services_with_overrides
 
   tags = var.tags
 

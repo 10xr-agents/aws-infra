@@ -25,7 +25,252 @@ enable_container_insights = true
 enable_fargate           = true
 enable_fargate_spot      = true
 
-ecs_services = local.ecs_services_with_overrides
+ecs_services = {
+  "voice-agent": {
+    "image": "761018882607.dkr.ecr.us-east-1.amazonaws.com/10xr-agents/voice-agent",
+    "image_tag": "v1.0.0",
+    "port": 9600,
+    "cpu": 2048,
+    "memory": 4096,
+    "desired_count": 2,
+    "environment": {
+      "MONGODB_URI": "mongodb+srv://doadmin:by6n2k14L8g53dt7@db-mongodb-nyc3-70786-efaf17f9.mongo.ondigitalocean.com/ten_xr_temp_agents_local?tls=true&authSource=admin&replicaSet=db-mongodb-nyc3-70786",
+      "SERVICE_PORT": "9600"
+    },
+    "secrets": [],
+    "capacity_provider_strategy": [
+      {
+        "capacity_provider": "FARGATE",
+        "weight": 1,
+        "base": 1
+      },
+      {
+        "capacity_provider": "FARGATE_SPOT",
+        "weight": 3,
+        "base": 0
+      }
+    ],
+    "container_health_check": {
+      "command": "curl -f http://localhost:9600/health || exit 1",
+      "interval": 30,
+      "timeout": 20,
+      "start_period": 90,
+      "retries": 3
+    },
+    "health_check": {
+      "path": "/health",
+      "interval": 30,
+      "timeout": 20,
+      "healthy_threshold": 2,
+      "unhealthy_threshold": 3,
+      "matcher": "200"
+    },
+    "enable_auto_scaling": true,
+    "auto_scaling_min_capacity": 1,
+    "auto_scaling_max_capacity": 10,
+    "auto_scaling_cpu_target": 70,
+    "auto_scaling_memory_target": 80,
+    "alb_path_patterns": ["/voice/*"],
+    "enable_load_balancer": true,
+    "enable_service_discovery": true,
+    "deregistration_delay": 30,
+    "additional_task_policies": {
+      "S3Access": "arn:aws:iam::aws:policy/AmazonS3FullAccess"
+    }
+  },
+  "livekit-proxy": {
+    "image": "761018882607.dkr.ecr.us-east-1.amazonaws.com/10xr-agents/livekit-proxy-service",
+    "image_tag": "0.1.0",
+    "port": 9000,
+    "cpu": 1024,
+    "memory": 2048,
+    "desired_count": 2,
+    "environment": {
+      "SERVICE_PORT": "9000"
+    },
+    "secrets": [],
+    "capacity_provider_strategy": [
+      {
+        "capacity_provider": "FARGATE_SPOT",
+        "weight": 1,
+        "base": 0
+      }
+    ],
+    "container_health_check": {
+      "command": "curl -f http://localhost:9000/api/v1/management/health || exit 1",
+      "interval": 30,
+      "timeout": 20,
+      "start_period": 60,
+      "retries": 3
+    },
+    "health_check": {
+      "path": "/api/v1/management/health",
+      "interval": 30,
+      "timeout": 20,
+      "healthy_threshold": 2,
+      "unhealthy_threshold": 3,
+      "matcher": "200"
+    },
+    "enable_auto_scaling": true,
+    "auto_scaling_min_capacity": 1,
+    "auto_scaling_max_capacity": 8,
+    "auto_scaling_cpu_target": 70,
+    "auto_scaling_memory_target": 80,
+    "alb_path_patterns": ["/proxy/*", "/livekit/*"],
+    "enable_load_balancer": true,
+    "enable_service_discovery": true,
+    "deregistration_delay": 30
+  },
+  "agent-analytics": {
+    "image": "761018882607.dkr.ecr.us-east-1.amazonaws.com/10xr-agents/agent-analytics-service",
+    "image_tag": "latest",
+    "port": 9800,
+    "cpu": 1024,
+    "memory": 2048,
+    "desired_count": 2,
+    "environment": {
+      "LOG_LEVEL": "INFO",
+      "MONGODB_URI": "mongodb+srv://doadmin:by6n2k14L8g53dt7@db-mongodb-nyc3-70786-efaf17f9.mongo.ondigitalocean.com/ten_xr_temp_agents_local?tls=true&authSource=admin&replicaSet=db-mongodb-nyc3-70786",
+      "SERVICE_PORT": "9800"
+    },
+    "secrets": [],
+    "capacity_provider_strategy": [
+      {
+        "capacity_provider": "FARGATE",
+        "weight": 1,
+        "base": 1
+      },
+      {
+        "capacity_provider": "FARGATE_SPOT",
+        "weight": 2,
+        "base": 0
+      }
+    ],
+    "container_health_check": {
+      "command": "curl -f http://localhost:9800/management/health || exit 1",
+      "interval": 30,
+      "timeout": 20,
+      "start_period": 90,
+      "retries": 3
+    },
+    "health_check": {
+      "path": "/management/health",
+      "interval": 30,
+      "timeout": 20,
+      "healthy_threshold": 2,
+      "unhealthy_threshold": 3,
+      "matcher": "200"
+    },
+    "enable_auto_scaling": true,
+    "auto_scaling_min_capacity": 1,
+    "auto_scaling_max_capacity": 8,
+    "auto_scaling_cpu_target": 70,
+    "auto_scaling_memory_target": 80,
+    "alb_path_patterns": ["/analytics/*"],
+    "enable_load_balancer": true,
+    "enable_service_discovery": true,
+    "deregistration_delay": 30
+  },
+  "ui-console": {
+    "image": "761018882607.dkr.ecr.us-east-1.amazonaws.com/10xr-agents/ui-console",
+    "image_tag": "latest",
+    "port": 3000,
+    "cpu": 512,
+    "memory": 1024,
+    "desired_count": 2,
+    "environment": {
+      "LOG_LEVEL": "INFO",
+      "REACT_APP_API_URL": "https://api.qa.10xr.com",
+      "SERVICE_PORT": "3000"
+    },
+    "secrets": [],
+    "capacity_provider_strategy": [
+      {
+        "capacity_provider": "FARGATE",
+        "weight": 1,
+        "base": 2
+      }
+    ],
+    "container_health_check": {
+      "command": "curl -f http://localhost:3000/api/management/health || exit 1",
+      "interval": 30,
+      "timeout": 20,
+      "start_period": 60,
+      "retries": 3
+    },
+    "health_check": {
+      "path": "/api/management/health",
+      "interval": 30,
+      "timeout": 20,
+      "healthy_threshold": 2,
+      "unhealthy_threshold": 3,
+      "matcher": "200"
+    },
+    "enable_auto_scaling": true,
+    "auto_scaling_min_capacity": 2,
+    "auto_scaling_max_capacity": 6,
+    "auto_scaling_cpu_target": 70,
+    "auto_scaling_memory_target": 80,
+    "alb_path_patterns": ["/console/*", "/ui/*", "/"],
+    "enable_load_balancer": true,
+    "enable_service_discovery": true,
+    "deregistration_delay": 30
+  },
+  "agentic-framework": {
+    "image": "761018882607.dkr.ecr.us-east-1.amazonaws.com/10xr-agents/agentic-framework-service",
+    "image_tag": "latest",
+    "port": 8080,
+    "cpu": 1024,
+    "memory": 2048,
+    "desired_count": 2,
+    "environment": {
+      "LOG_LEVEL": "INFO",
+      "MONGODB_URI": "mongodb+srv://doadmin:by6n2k14L8g53dt7@db-mongodb-nyc3-70786-efaf17f9.mongo.ondigitalocean.com/ten_xr_temp_agents_local?tls=true&authSource=admin&replicaSet=db-mongodb-nyc3-70786",
+      "SERVICE_PORT": "8080"
+    },
+    "secrets": [],
+    "capacity_provider_strategy": [
+      {
+        "capacity_provider": "FARGATE",
+        "weight": 1,
+        "base": 1
+      },
+      {
+        "capacity_provider": "FARGATE_SPOT",
+        "weight": 2,
+        "base": 0
+      }
+    ],
+    "container_health_check": {
+      "command": "curl -f http://localhost:8080/actuator/health || exit 1",
+      "interval": 30,
+      "timeout": 20,
+      "start_period": 90,
+      "retries": 3
+    },
+    "health_check": {
+      "path": "/actuator/health",
+      "interval": 30,
+      "timeout": 20,
+      "healthy_threshold": 2,
+      "unhealthy_threshold": 3,
+      "matcher": "200"
+    },
+    "enable_auto_scaling": true,
+    "auto_scaling_min_capacity": 1,
+    "auto_scaling_max_capacity": 8,
+    "auto_scaling_cpu_target": 70,
+    "auto_scaling_memory_target": 80,
+    "alb_path_patterns": ["/framework/*", "/agents/*"],
+    "enable_load_balancer": true,
+    "enable_service_discovery": true,
+    "deregistration_delay": 30,
+    "efs_config": {
+      "enabled": false,
+      "mount_path": "/app/storage"
+    }
+  }
+}
 
 # SSL Configuration (add your certificate ARN here if you have one)
 acm_certificate_arn = ""  # Add your ACM certificate ARN here for HTTPS

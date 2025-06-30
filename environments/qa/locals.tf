@@ -1,14 +1,11 @@
 # environments/qa/locals.tf
 
 locals {
-  # Load services configuration from JSON file
-  services_json = jsondecode(file("${path.module}/services-qa.json"))
 
-  # Or define inline if preferred
-  ecs_services = local.services_json
+  ecs_services = var.ecs_services
 
   # You can also merge with environment-specific overrides
-  ecs_services_with_overrides = { for name, config in local.services_json : name => merge(
+  ecs_services_with_overrides = { for name, config in local.ecs_services : name => merge(
     config,
     {
       # Override specific values per environment if needed
