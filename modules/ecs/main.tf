@@ -389,11 +389,9 @@ resource "aws_ecs_service" "service" {
     }
   }
 
-  # Deployment configuration
-  deployment_configuration {
-    maximum_percent         = 200
-    minimum_healthy_percent = 100
-  }
+  # Add these top-level arguments:
+  deployment_maximum_percent         = 200
+  deployment_minimum_healthy_percent = 100
 
   # Force new deployment on task definition changes
   triggers = {
