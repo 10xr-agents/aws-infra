@@ -1633,7 +1633,7 @@ resource "aws_appautoscaling_policy" "ui_console_memory" {
     scale_in_cooldown  = var.ui_console_auto_scaling_scale_in_cooldown
     scale_out_cooldown = var.ui_console_auto_scaling_scale_out_cooldown
   }
-}console_auto_scaling_scale_out_cooldown
+}
  
 
 resource "aws_appautoscaling_policy" "agentic_framework_cpu" {
@@ -1694,22 +1694,5 @@ resource "aws_appautoscaling_policy" "livekit_proxy_memory" {
   }
 }
 
-resource "aws_appautoscaling_policy" "agent_analytics_memory" {
-  count = var.agent_analytics_enable_auto_scaling ? 1 : 0
 
-  name               = "${var.cluster_name}-agent-analytics-memory-scaling"
-  policy_type        = "TargetTrackingScaling"
-  resource_id        = aws_appautoscaling_target.agent_analytics[0].resource_id
-  scalable_dimension = aws_appautoscaling_target.agent_analytics[0].scalable_dimension
-  service_namespace  = aws_appautoscaling_target.agent_analytics[0].service_namespace
-
-  target_tracking_scaling_policy_configuration {
-    predefined_metric_specification {
-      predefined_metric_type = "ECSServiceAverageMemoryUtilization"
-    }
-    target_value       = var.agent_analytics_auto_scaling_memory_target
-    scale_in_cooldown  = var.agent_analytics_auto_scaling_scale_in_cooldown
-    scale_out_cooldown = var.agent_analytics_auto_scaling_scale_out_cooldown
-  }
-}
 
