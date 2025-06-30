@@ -30,7 +30,7 @@ locals {
 ################################################################################
 module "ecs" {
   source  = "terraform-aws-modules/ecs/aws"
-  version = "5.11.0"
+  version = "5.12.1"
 
   cluster_name = local.name_prefix
 
