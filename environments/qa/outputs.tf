@@ -227,11 +227,6 @@ output "livekit_proxy_internal_url" {
   value       = module.services.livekit_proxy_service_discovery_service_name != null ? "http://livekit-proxy.${aws_service_discovery_private_dns_namespace.main.name}:${var.livekit_proxy_port}" : null
 }
 
-output "livekit_proxy_internal_url" {
-  description = "Internal service discovery URL for the LiveKit proxy"
-  value       = module.services.livekit_proxy_service_discovery_service_name != null ? "http://livekit-proxy.${aws_service_discovery_private_dns_namespace.main.name}:${var.livekit_proxy_port}" : null
-}
-
 # MongoDB outputs
 output "mongodb_instance_ids" {
   description = "IDs of the MongoDB EC2 instances"
