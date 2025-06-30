@@ -191,11 +191,7 @@ variable "recordings_expiration_days" {
   default     = 30
 }
 
-# environments/qa/variables.tf
-
-# Most existing variables remain the same
-# Replace conversation_agent variables with voice_agent
-
+# Voice Agent Configuration
 variable "voice_agent_ecr_repository_url" {
   description = "URL of the ECR repository for the voice agent image"
   type        = string
@@ -232,7 +228,7 @@ variable "voice_agent_desired_count" {
   default     = 2
 }
 
-# Application Configuration
+# Voice Agent Application Configuration
 variable "voice_agent_log_level" {
   description = "Log level for the voice agent"
   type        = string
@@ -264,7 +260,7 @@ variable "voice_agent_mongodb_uri" {
   sensitive   = true
 }
 
-# LiveKit Configuration
+# Voice Agent LiveKit Configuration
 variable "voice_agent_livekit_service" {
   description = "Name of the LiveKit service"
   type        = string
@@ -285,7 +281,7 @@ variable "voice_agent_livekit_api_secret" {
   sensitive   = true
 }
 
-# Secrets Configuration
+# Voice Agent Secrets Configuration
 variable "voice_agent_anthropic_api_key_secret_arn" {
   description = "ARN of the secret containing Anthropic API key"
   type        = string
@@ -316,14 +312,14 @@ variable "voice_agent_livekit_api_secret_secret_arn" {
   default     = ""
 }
 
-# Additional Environment Variables
+# Voice Agent Additional Environment Variables
 variable "voice_agent_additional_environment_variables" {
   description = "Additional environment variables for the voice agent"
   type        = map(string)
   default     = {}
 }
 
-# Health Check Configuration
+# Voice Agent Health Check Configuration
 variable "voice_agent_enable_health_check" {
   description = "Whether to enable container health checks for voice agent"
   type        = bool
@@ -360,7 +356,7 @@ variable "voice_agent_health_check_start_period" {
   default     = 90
 }
 
-# Auto Scaling Configuration
+# Voice Agent Auto Scaling Configuration
 variable "voice_agent_enable_auto_scaling" {
   description = "Whether to enable auto scaling for voice agent"
   type        = bool
@@ -391,14 +387,14 @@ variable "voice_agent_memory_target" {
   default     = 80
 }
 
-# Service Discovery Configuration
+# Voice Agent Service Discovery Configuration
 variable "voice_agent_enable_service_discovery" {
   description = "Whether to enable service discovery for voice agent"
   type        = bool
   default     = true
 }
 
-# EFS Configuration
+# Voice Agent EFS Configuration
 variable "voice_agent_enable_efs" {
   description = "Whether to mount EFS storage for voice agent"
   type        = bool
@@ -407,6 +403,179 @@ variable "voice_agent_enable_efs" {
 
 variable "voice_agent_efs_mount_path" {
   description = "Path to mount EFS in the voice agent container"
+  type        = string
+  default     = "/app/storage"
+}
+
+# LiveKit Proxy Configuration
+variable "livekit_proxy_ecr_repository_url" {
+  description = "URL of the ECR repository for the LiveKit proxy image"
+  type        = string
+  default     = "761018882607.dkr.ecr.us-east-1.amazonaws.com/10xr-agents/livekit-proxy-service"
+}
+
+variable "livekit_proxy_image_tag" {
+  description = "Tag of the Docker image to deploy"
+  type        = string
+  default     = "latest"
+}
+
+variable "livekit_proxy_port" {
+  description = "Port that the LiveKit proxy container listens on"
+  type        = number
+  default     = 8080
+}
+
+variable "livekit_proxy_cpu" {
+  description = "CPU units for the LiveKit proxy task (1024 = 1 vCPU)"
+  type        = number
+  default     = 1024
+}
+
+variable "livekit_proxy_memory" {
+  description = "Memory for the LiveKit proxy task in MB"
+  type        = number
+  default     = 2048
+}
+
+variable "livekit_proxy_desired_count" {
+  description = "Desired number of LiveKit proxy tasks"
+  type        = number
+  default     = 2
+}
+
+# LiveKit Proxy Application Configuration
+variable "livekit_proxy_log_level" {
+  description = "Log level for the LiveKit proxy"
+  type        = string
+  default     = "INFO"
+}
+
+# LiveKit Proxy LiveKit Configuration
+variable "livekit_proxy_livekit_service" {
+  description = "Name of the LiveKit service"
+  type        = string
+  default     = "livekit-server"
+}
+
+variable "livekit_proxy_livekit_api_key" {
+  description = "LiveKit API key for proxy"
+  type        = string
+  default     = "APIaSovFA9uQ4p5"
+  sensitive   = true
+}
+
+variable "livekit_proxy_livekit_api_secret" {
+  description = "LiveKit API secret for proxy"
+  type        = string
+  default     = "lTxgQzxS0e2n1vqwOhaiFUiwKWvYeyJukHvnJegbITmA"
+  sensitive   = true
+}
+
+# LiveKit Proxy Secrets Configuration
+variable "livekit_proxy_livekit_api_key_secret_arn" {
+  description = "ARN of the secret containing LiveKit API key for proxy"
+  type        = string
+  default     = ""
+}
+
+variable "livekit_proxy_livekit_api_secret_secret_arn" {
+  description = "ARN of the secret containing LiveKit API secret for proxy"
+  type        = string
+  default     = ""
+}
+
+# LiveKit Proxy Additional Environment Variables
+variable "livekit_proxy_additional_environment_variables" {
+  description = "Additional environment variables for the LiveKit proxy"
+  type        = map(string)
+  default     = {}
+}
+
+# LiveKit Proxy Health Check Configuration
+variable "livekit_proxy_enable_health_check" {
+  description = "Whether to enable container health checks for LiveKit proxy"
+  type        = bool
+  default     = true
+}
+
+variable "livekit_proxy_health_check_command" {
+  description = "Health check command for LiveKit proxy"
+  type        = string
+  default     = "curl -f http://localhost:8080/health || exit 1"
+}
+
+variable "livekit_proxy_health_check_path" {
+  description = "Health check path for LiveKit proxy target group"
+  type        = string
+  default     = "/health"
+}
+
+variable "livekit_proxy_health_check_interval" {
+  description = "Health check interval in seconds"
+  type        = number
+  default     = 30
+}
+
+variable "livekit_proxy_health_check_timeout" {
+  description = "Health check timeout in seconds"
+  type        = number
+  default     = 20
+}
+
+variable "livekit_proxy_health_check_start_period" {
+  description = "Health check start period in seconds"
+  type        = number
+  default     = 90
+}
+
+# LiveKit Proxy Auto Scaling Configuration
+variable "livekit_proxy_enable_auto_scaling" {
+  description = "Whether to enable auto scaling for LiveKit proxy"
+  type        = bool
+  default     = true
+}
+
+variable "livekit_proxy_min_capacity" {
+  description = "Minimum number of LiveKit proxy tasks"
+  type        = number
+  default     = 1
+}
+
+variable "livekit_proxy_max_capacity" {
+  description = "Maximum number of LiveKit proxy tasks"
+  type        = number
+  default     = 10
+}
+
+variable "livekit_proxy_cpu_target" {
+  description = "Target CPU utilization for LiveKit proxy auto scaling"
+  type        = number
+  default     = 70
+}
+
+variable "livekit_proxy_memory_target" {
+  description = "Target memory utilization for LiveKit proxy auto scaling"
+  type        = number
+  default     = 80
+}
+
+# LiveKit Proxy Service Discovery Configuration
+variable "livekit_proxy_enable_service_discovery" {
+  description = "Whether to enable service discovery for LiveKit proxy"
+  type        = bool
+  default     = true
+}
+
+# LiveKit Proxy EFS Configuration
+variable "livekit_proxy_enable_efs" {
+  description = "Whether to mount EFS storage for LiveKit proxy"
+  type        = bool
+  default     = false
+}
+
+variable "livekit_proxy_efs_mount_path" {
+  description = "Path to mount EFS in the LiveKit proxy container"
   type        = string
   default     = "/app/storage"
 }

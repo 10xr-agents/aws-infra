@@ -305,6 +305,107 @@ module "voice_agent" {
   depends_on = [module.ecs, module.alb, module.storage]
 }
 
+# LiveKit Proxy Service
+module "livekit_proxy" {
+  source = "../../modules/livekit-proxy-ecs"
+
+  cluster_name = local.cluster_name
+  cluster_id   = module.ecs.cluster_id
+  environment  = var.environment
+
+  vpc_id                    = module.vpc.vpc_id
+  private_subnet_ids        = module.vpc.private_subnets
+  alb_security_group_id     = module.alb.alb_security_group_id
+  ecs_security_group_id     = module.ecs.ecs_security_group_id
+  task_execution_role_arn   = module.ecs.task_execution_role_arn
+  task_role_arn            = module.storage.task_role_arn
+
+  # Container Configuration
+  ecr_repository_url = var.livekit_proxy_ecr_repository_url
+  image_tag         = var.livekit_proxy_image_tag
+  container_port    = var.livekit_proxy_port
+  task_cpu         = var.livekit_proxy_cpu
+  task_memory      = var.livekit_proxy_memory
+  enable_fargate   = var.enable_fargate
+
+  # Service Configuration
+  desired_count = var.livekit_proxy_desired_count
+
+  # Application Configuration
+  log_level = var.livekit_proxy_log_level
+
+  # LiveKit Configuration
+  livekit_service_name         = var.livekit_proxy_livekit_service
+  service_discovery_namespace  = aws_service_discovery_private_dns_namespace.main.name
+  livekit_api_key             = var.livekit_proxy_livekit_api_key
+  livekit_api_secret          = var.livekit_proxy_livekit_api_secret
+
+  # Secrets Configuration (use these in production)
+  livekit_api_key_secret_arn      = var.livekit_proxy_livekit_api_key_secret_arn
+  livekit_api_secret_secret_arn   = var.livekit_proxy_livekit_api_secret_secret_arn
+
+  # Additional Environment Variables
+  additional_environment_variables = var.livekit_proxy_additional_environment_variables
+
+  # Health Check Configuration
+  enable_health_check              = var.livekit_proxy_enable_health_check
+  health_check_command            = var.livekit_proxy_health_check_command
+  health_check_path               = var.livekit_proxy_health_check_path
+  health_check_interval           = var.livekit_proxy_health_check_interval
+  health_check_timeout            = var.livekit_proxy_health_check_timeout
+  health_check_start_period       = var.livekit_proxy_health_check_start_period
+
+  # Auto Scaling Configuration
+  enable_auto_scaling        = var.livekit_proxy_enable_auto_scaling
+  auto_scaling_min_capacity  = var.livekit_proxy_min_capacity
+  auto_scaling_max_capacity  = var.livekit_proxy_max_capacity
+  auto_scaling_cpu_target    = var.livekit_proxy_cpu_target
+  auto_scaling_memory_target = var.livekit_proxy_memory_target
+
+  # Service Discovery
+  enable_service_discovery      = var.livekit_proxy_enable_service_discovery
+  service_discovery_namespace_id = aws_service_discovery_private_dns_namespace.main.id
+
+  # EFS Storage (if needed)
+  enable_efs           = var.livekit_proxy_enable_efs
+  efs_file_system_id   = module.storage.efs_id
+  efs_access_point_id  = module.storage.livekit_access_point_id
+  efs_mount_path      = var.livekit_proxy_efs_mount_path
+
+  # Capacity Provider Strategy
+  capacity_provider_strategy = var.enable_fargate_spot ? [
+    {
+      capacity_provider = "FARGATE_SPOT"
+      weight           = 1
+      base             = 0
+    },
+    {
+      capacity_provider = "FARGATE"
+      weight           = 1
+      base             = 1
+    }
+  ] : [
+    {
+      capacity_provider = "FARGATE"
+      weight           = 1
+      base             = 1
+    }
+  ]
+
+  tags = merge(
+    var.tags,
+    {
+      "Environment" = var.environment
+      "Project"     = "LiveKit"
+      "Platform"    = "ECS"
+      "Component"   = "LiveKitProxy"
+      "Terraform"   = "true"
+    }
+  )
+
+  depends_on = [module.ecs, module.alb, module.storage]
+}
+
 # ALB Listener Rule for Voice Agent
 resource "aws_lb_listener_rule" "voice_agent" {
   listener_arn = module.alb.http_listener_arn
@@ -326,6 +427,32 @@ resource "aws_lb_listener_rule" "voice_agent" {
     {
       "Environment" = var.environment
       "Service"     = "voice-agent"
+      "Terraform"   = "true"
+    }
+  )
+}
+
+# ALB Listener Rule for LiveKit Proxy
+resource "aws_lb_listener_rule" "livekit_proxy" {
+  listener_arn = module.alb.http_listener_arn
+  priority     = 200
+
+  action {
+    type             = "forward"
+    target_group_arn = module.livekit_proxy.target_group_arn
+  }
+
+  condition {
+    path_pattern {
+      values = ["/proxy/*", "/livekit/*"]
+    }
+  }
+
+  tags = merge(
+    var.tags,
+    {
+      "Environment" = var.environment
+      "Service"     = "livekit-proxy"
       "Terraform"   = "true"
     }
   )
@@ -354,6 +481,34 @@ resource "aws_lb_listener_rule" "voice_agent_https" {
     {
       "Environment" = var.environment
       "Service"     = "voice-agent"
+      "Terraform"   = "true"
+    }
+  )
+}
+
+# HTTPS Listener Rule for LiveKit Proxy (if certificate is provided)
+resource "aws_lb_listener_rule" "livekit_proxy_https" {
+  count = var.acm_certificate_arn != "" ? 1 : 0
+
+  listener_arn = module.alb.https_listener_arn
+  priority     = 200
+
+  action {
+    type             = "forward"
+    target_group_arn = module.livekit_proxy.target_group_arn
+  }
+
+  condition {
+    path_pattern {
+      values = ["/proxy/*", "/livekit/*"]
+    }
+  }
+
+  tags = merge(
+    var.tags,
+    {
+      "Environment" = var.environment
+      "Service"     = "livekit-proxy"
       "Terraform"   = "true"
     }
   )

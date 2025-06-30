@@ -44,14 +44,9 @@ efs_throughput_mode        = "bursting"
 create_recordings_bucket   = true
 recordings_expiration_days = 30
 
-
-# environments/qa/terraform.tfvars
-
-# Most existing configuration remains the same
-# Replace conversation_agent with voice_agent configuration
-
-voice_agent_ecr_repository_url = "761018882607.dkr.ecr.us-east-1.amazonaws.com/10xr-agents/voice-agent:v1.0.0"
-voice_agent_image_tag          = "latest"
+# Voice Agent Configuration
+voice_agent_ecr_repository_url = "761018882607.dkr.ecr.us-east-1.amazonaws.com/10xr-agents/voice-agent"
+voice_agent_image_tag          = "v1.0.0"
 voice_agent_port               = 9600
 voice_agent_cpu                = 2048
 voice_agent_memory             = 4096
@@ -68,19 +63,19 @@ voice_agent_livekit_service    = "livekit-server"
 voice_agent_livekit_api_key    = "APIoiCmJzAYqd5v"
 voice_agent_livekit_api_secret = "upXGZbqbwpeftLexnICK401jqQFfvrl1o42N84lsSWcC"
 
-# Secrets Configuration (use these ARNs for production deployment)
+# Voice Agent Secrets Configuration (use these ARNs for production deployment)
 # voice_agent_anthropic_api_key_secret_arn    = "arn:aws:secretsmanager:us-east-1:123456789012:secret:voice-agent/anthropic-api-key-AbCdEf"
 # voice_agent_deepgram_api_key_secret_arn     = "arn:aws:secretsmanager:us-east-1:123456789012:secret:voice-agent/deepgram-api-key-GhIjKl"
 # voice_agent_cartesia_api_key_secret_arn     = "arn:aws:secretsmanager:us-east-1:123456789012:secret:voice-agent/cartesia-api-key-MnOpQr"
 # voice_agent_livekit_api_key_secret_arn      = "arn:aws:secretsmanager:us-east-1:123456789012:secret:voice-agent/livekit-api-key-StUvWx"
 # voice_agent_livekit_api_secret_secret_arn   = "arn:aws:secretsmanager:us-east-1:123456789012:secret:voice-agent/livekit-api-secret-YzAbCd"
 
-# Additional Environment Variables (if needed)
+# Voice Agent Additional Environment Variables (if needed)
 voice_agent_additional_environment_variables = {
   # Add any additional environment variables specific to your deployment
 }
 
-# Health Check Configuration
+# Voice Agent Health Check Configuration
 voice_agent_enable_health_check    = true
 voice_agent_health_check_command   = "curl -f http://localhost:9600/health || exit 1"
 voice_agent_health_check_path      = "/health"
@@ -88,19 +83,64 @@ voice_agent_health_check_interval  = 30
 voice_agent_health_check_timeout   = 20
 voice_agent_health_check_start_period = 90
 
-# Auto Scaling Configuration
+# Voice Agent Auto Scaling Configuration
 voice_agent_enable_auto_scaling = true
 voice_agent_min_capacity        = 1
 voice_agent_max_capacity        = 10
 voice_agent_cpu_target          = 70
 voice_agent_memory_target       = 80
 
-# Service Discovery
+# Voice Agent Service Discovery
 voice_agent_enable_service_discovery = true
 
-# EFS Storage (enable if your voice agent needs persistent storage)
+# Voice Agent EFS Storage (enable if your voice agent needs persistent storage)
 voice_agent_enable_efs     = false
 voice_agent_efs_mount_path = "/app/storage"
+
+# LiveKit Proxy Configuration
+livekit_proxy_ecr_repository_url = "761018882607.dkr.ecr.us-east-1.amazonaws.com/10xr-agents/livekit-proxy-service"
+livekit_proxy_image_tag          = "0.1.0"
+livekit_proxy_port               = 8080
+livekit_proxy_cpu                = 1024
+livekit_proxy_memory             = 2048
+livekit_proxy_desired_count      = 2
+
+livekit_proxy_log_level = "INFO"
+
+livekit_proxy_livekit_service    = "livekit-server"
+livekit_proxy_livekit_api_key    = "APIoiCmJzAYqd5v"
+livekit_proxy_livekit_api_secret = "upXGZbqbwpeftLexnICK401jqQFfvrl1o42N84lsSWcC"
+
+# LiveKit Proxy Secrets Configuration (use these ARNs for production deployment)
+# livekit_proxy_livekit_api_key_secret_arn      = "arn:aws:secretsmanager:us-east-1:123456789012:secret:livekit-proxy/livekit-api-key-StUvWx"
+# livekit_proxy_livekit_api_secret_secret_arn   = "arn:aws:secretsmanager:us-east-1:123456789012:secret:livekit-proxy/livekit-api-secret-YzAbCd"
+
+# LiveKit Proxy Additional Environment Variables (if needed)
+livekit_proxy_additional_environment_variables = {
+  # Add any additional environment variables specific to your deployment
+}
+
+# LiveKit Proxy Health Check Configuration
+livekit_proxy_enable_health_check    = true
+livekit_proxy_health_check_command   = "curl -f http://localhost:8080/health || exit 1"
+livekit_proxy_health_check_path      = "/health"
+livekit_proxy_health_check_interval  = 30
+livekit_proxy_health_check_timeout   = 20
+livekit_proxy_health_check_start_period = 90
+
+# LiveKit Proxy Auto Scaling Configuration
+livekit_proxy_enable_auto_scaling = true
+livekit_proxy_min_capacity        = 1
+livekit_proxy_max_capacity        = 10
+livekit_proxy_cpu_target          = 70
+livekit_proxy_memory_target       = 80
+
+# LiveKit Proxy Service Discovery
+livekit_proxy_enable_service_discovery = true
+
+# LiveKit Proxy EFS Storage (enable if your proxy needs persistent storage)
+livekit_proxy_enable_efs     = false
+livekit_proxy_efs_mount_path = "/app/storage"
 
 # Tags
 tags = {
