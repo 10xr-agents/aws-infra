@@ -10,8 +10,8 @@ locals {
       "image" = "761018882607.dkr.ecr.us-east-1.amazonaws.com/10xr-agents/voice-agent"
       "image_tag" = "v1.0.0"
       "port" = 9600
-      "cpu" = 2048
-      "memory" = 4096
+      "cpu" = 4096
+      "memory" = 8192
       "desired_count" = 2
       "environment" = {
         "MONGODB_URI" = module.mongodb.connection_string
