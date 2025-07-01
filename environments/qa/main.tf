@@ -304,7 +304,10 @@ module "cloudflare" {
     "Terraform"   = "true"
   })
 
-  depends_on = var.create_global_accelerator ? [module.global_accelerator] : [module.ecs]
+  depends_on = [
+    module.ecs,
+    module.global_accelerator
+  ]
 }
 
 # Security Group Rule to allow ECS access to Redis
