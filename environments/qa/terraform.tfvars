@@ -35,8 +35,8 @@ ecs_services = {
     "image": "761018882607.dkr.ecr.us-east-1.amazonaws.com/10xr-agents/voice-agent",
     "image_tag": "v1.0.0",
     "port": 9600,
-    "cpu": 2048,
-    "memory": 4096,
+    "cpu": 4096,
+    "memory": 8192,
     "desired_count": 2,
     "environment": {
       "MONGODB_URI": "mongodb+srv://doadmin:by6n2k14L8g53dt7@db-mongodb-nyc3-70786-efaf17f9.mongo.ondigitalocean.com/ten_xr_temp_agents_local?tls=true&authSource=admin&replicaSet=db-mongodb-nyc3-70786",
