@@ -48,7 +48,6 @@ module "redis" {
   redis_node_type          = var.redis_node_type
   redis_engine_version     = var.redis_engine_version
   redis_num_cache_clusters = var.redis_num_cache_clusters
-  redis_cluster_mode       = var.redis_cluster_mode
 
   # High Availability
   redis_multi_az_enabled           = var.redis_multi_az_enabled
