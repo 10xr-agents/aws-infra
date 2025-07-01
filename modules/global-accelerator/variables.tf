@@ -219,44 +219,8 @@ variable "processed_bytes_in_threshold" {
   default     = 1000000000  # 1GB
 }
 
-################################################################################
-# Cloudflare Configuration Variables
-################################################################################
 
-variable "cloudflare_api_token" {
-  description = "Cloudflare API token"
-  type        = string
-  sensitive   = true
-}
 
-variable "cloudflare_zone_id" {
-  description = "Cloudflare Zone ID for the domain"
-  type        = string
-}
-
-variable "domain_name" {
-  description = "Base domain name"
-  type        = string
-  default     = "10xr.co"
-}
-
-variable "create_cloudflare_dns_records" {
-  description = "Whether to create Cloudflare DNS records"
-  type        = bool
-  default     = true
-}
-
-variable "dns_proxied" {
-  description = "Whether DNS records should be proxied through Cloudflare"
-  type        = bool
-  default     = false
-}
-
-variable "dns_ttl" {
-  description = "TTL for DNS records (ignored if proxied is true)"
-  type        = number
-  default     = 300
-}
 
 ################################################################################
 # Global Accelerator Configuration Variables
