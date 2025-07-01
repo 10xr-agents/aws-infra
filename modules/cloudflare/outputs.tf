@@ -40,40 +40,6 @@ output "proxy_dns_record_hostname" {
 }
 
 ################################################################################
-# LiveKit DNS Record Outputs
-################################################################################
-
-output "livekit_dns_record_id" {
-  description = "ID of the LiveKit DNS record"
-  value       = var.create_livekit_dns_records && var.livekit_target_dns_name != "" ? cloudflare_record.livekit_dns[0].id : null
-}
-
-output "livekit_dns_record_hostname" {
-  description = "Hostname of the LiveKit DNS record"
-  value       = var.create_livekit_dns_records && var.livekit_target_dns_name != "" ? cloudflare_record.livekit_dns[0].hostname : null
-}
-
-output "livekit_turn_dns_record_id" {
-  description = "ID of the LiveKit TURN DNS record"
-  value       = var.create_livekit_dns_records && var.livekit_target_dns_name != "" ? cloudflare_record.livekit_turn_dns[0].id : null
-}
-
-output "livekit_turn_dns_record_hostname" {
-  description = "Hostname of the LiveKit TURN DNS record"
-  value       = var.create_livekit_dns_records && var.livekit_target_dns_name != "" ? cloudflare_record.livekit_turn_dns[0].hostname : null
-}
-
-output "livekit_whip_dns_record_id" {
-  description = "ID of the LiveKit WHIP DNS record"
-  value       = var.create_livekit_dns_records && var.livekit_target_dns_name != "" ? cloudflare_record.livekit_whip_dns[0].id : null
-}
-
-output "livekit_whip_dns_record_hostname" {
-  description = "Hostname of the LiveKit WHIP DNS record"
-  value       = var.create_livekit_dns_records && var.livekit_target_dns_name != "" ? cloudflare_record.livekit_whip_dns[0].hostname : null
-}
-
-################################################################################
 # Custom DNS Records Outputs
 ################################################################################
 
@@ -121,24 +87,6 @@ output "page_rule_ids" {
 }
 
 ################################################################################
-# Firewall Rules Outputs
-################################################################################
-
-output "firewall_rule_ids" {
-  description = "Map of firewall rule IDs"
-  value = {
-    for name, rule in cloudflare_firewall_rule.custom_firewall_rules : name => rule.id
-  }
-}
-
-output "filter_ids" {
-  description = "Map of filter IDs"
-  value = {
-    for name, filter in cloudflare_filter.custom_filters : name => filter.id
-  }
-}
-
-################################################################################
 # Zone Settings Outputs
 ################################################################################
 
@@ -182,18 +130,18 @@ output "proxy_url_https" {
 }
 
 ################################################################################
-# LiveKit URLs
+# Custom DNS Record URLs
 ################################################################################
 
-output "livekit_urls" {
-  description = "LiveKit service URLs"
-  value = var.create_livekit_dns_records && var.livekit_target_dns_name != "" ? {
-    livekit_http  = "http://${cloudflare_record.livekit_dns[0].hostname}"
-    livekit_https = "https://${cloudflare_record.livekit_dns[0].hostname}"
-    turn_url      = "turn:${cloudflare_record.livekit_turn_dns[0].hostname}:3478"
-    whip_http     = "http://${cloudflare_record.livekit_whip_dns[0].hostname}"
-    whip_https    = "https://${cloudflare_record.livekit_whip_dns[0].hostname}"
-  } : {}
+output "custom_dns_record_urls" {
+  description = "Map of custom DNS record URLs"
+  value = {
+    for name, record in cloudflare_record.custom_records : name => {
+      http_url  = "http://${record.hostname}"
+      https_url = "https://${record.hostname}"
+      hostname  = record.hostname
+    }
+  }
 }
 
 ################################################################################
@@ -224,27 +172,6 @@ output "dns_records_summary" {
       proxied  = cloudflare_record.proxy_dns[0].proxied
     } : null
 
-    livekit_dns = var.create_livekit_dns_records && var.livekit_target_dns_name != "" ? {
-      livekit = {
-        hostname = cloudflare_record.livekit_dns[0].hostname
-        type     = cloudflare_record.livekit_dns[0].type
-        content  = cloudflare_record.livekit_dns[0].content
-        proxied  = cloudflare_record.livekit_dns[0].proxied
-      }
-      turn = {
-        hostname = cloudflare_record.livekit_turn_dns[0].hostname
-        type     = cloudflare_record.livekit_turn_dns[0].type
-        content  = cloudflare_record.livekit_turn_dns[0].content
-        proxied  = cloudflare_record.livekit_turn_dns[0].proxied
-      }
-      whip = {
-        hostname = cloudflare_record.livekit_whip_dns[0].hostname
-        type     = cloudflare_record.livekit_whip_dns[0].type
-        content  = cloudflare_record.livekit_whip_dns[0].content
-        proxied  = cloudflare_record.livekit_whip_dns[0].proxied
-      }
-    } : {}
-
     custom_records = {
       for name, record in cloudflare_record.custom_records : name => {
         hostname = record.hostname
@@ -265,9 +192,8 @@ output "cloudflare_configuration" {
   value = {
     zone_id              = var.cloudflare_zone_id
     environment          = var.environment
-    dns_records_created  = length(cloudflare_record.main_dns) + length(cloudflare_record.api_dns) + length(cloudflare_record.proxy_dns) + length(cloudflare_record.livekit_dns) + length(cloudflare_record.livekit_turn_dns) + length(cloudflare_record.livekit_whip_dns) + length(cloudflare_record.custom_records)
+    dns_records_created  = length(cloudflare_record.main_dns) + length(cloudflare_record.api_dns) + length(cloudflare_record.proxy_dns) + length(cloudflare_record.custom_records)
     page_rules_created   = length(cloudflare_page_rule.custom_rules)
-    firewall_rules_created = length(cloudflare_firewall_rule.custom_firewall_rules)
     zone_settings_managed = var.manage_zone_settings
     proxied_by_default   = var.proxied
     default_ttl          = var.ttl

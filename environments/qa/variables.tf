@@ -758,6 +758,20 @@ variable "cloudflare_security_level" {
   type        = string
   default     = "medium"
 }
+# Add these missing variables to your environments/qa/variables.tf
+
+variable "cloudflare_api_key" {
+  description = "Cloudflare API key (legacy - use api_token instead)"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "cloudflare_account_id" {
+  description = "Cloudflare Account ID"
+  type        = string
+  default     = ""
+}
 
 # Tags
 variable "tags" {

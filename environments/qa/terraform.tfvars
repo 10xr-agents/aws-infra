@@ -25,9 +25,14 @@ enable_container_insights = true
 enable_fargate           = true
 enable_fargate_spot      = true
 
+# SSL Configuration (add your certificate ARN here if you have one)
+acm_certificate_arn = ""  # Add your ACM certificate ARN here for HTTPS
+ssl_policy          = "ELBSecurityPolicy-TLS-1-2-2017-01"
+
+# ECS Services Configuration (keeping your existing services)
 ecs_services = {
   "voice-agent": {
-    "image": "",
+    "image": "761018882607.dkr.ecr.us-east-1.amazonaws.com/10xr-agents/voice-agent",
     "image_tag": "v1.0.0",
     "port": 9600,
     "cpu": 2048,
@@ -71,7 +76,7 @@ ecs_services = {
     "auto_scaling_cpu_target": 70,
     "auto_scaling_memory_target": 80,
     "enable_default_routing": false,
-    "alb_path_patterns": ["/voice/*"],
+    "alb_path_patterns": ["/voice/*", "/api/voice/*"],
     "enable_load_balancer": true,
     "enable_service_discovery": true,
     "deregistration_delay": 30,
@@ -118,7 +123,7 @@ ecs_services = {
     "auto_scaling_cpu_target": 70,
     "auto_scaling_memory_target": 80,
     "enable_default_routing": false,
-    "alb_path_patterns": ["/proxy/*", "/livekit/*"],
+    "alb_path_patterns": ["/proxy/*", "/livekit/*", "/api/livekit/*"],
     "enable_load_balancer": true,
     "enable_service_discovery": true,
     "deregistration_delay": 30
@@ -169,7 +174,7 @@ ecs_services = {
     "auto_scaling_cpu_target": 70,
     "auto_scaling_memory_target": 80,
     "enable_default_routing": false,
-    "alb_path_patterns": ["/analytics/*"],
+    "alb_path_patterns": ["/analytics/*", "/api/analytics/*"],
     "enable_load_balancer": true,
     "enable_service_discovery": true,
     "deregistration_delay": 30
@@ -183,7 +188,7 @@ ecs_services = {
     "desired_count": 2,
     "environment": {
       "LOG_LEVEL": "INFO",
-      "REACT_APP_API_URL": "https://api.qa.10xr.com",
+      "REACT_APP_API_URL": "https://qa.service.10xr.co",
       "SERVICE_PORT": "3000"
     },
     "secrets": [],
@@ -266,7 +271,7 @@ ecs_services = {
     "auto_scaling_cpu_target": 70,
     "auto_scaling_memory_target": 80,
     "enable_default_routing": false,
-    "alb_path_patterns": ["/framework/*", "/agents/*"],
+    "alb_path_patterns": ["/framework/*", "/agents/*", "/api/framework/*", "/api/agents/*"],
     "enable_load_balancer": true,
     "enable_service_discovery": true,
     "deregistration_delay": 30,
@@ -277,14 +282,9 @@ ecs_services = {
   }
 }
 
-# SSL Configuration (add your certificate ARN here if you have one)
-acm_certificate_arn = ""  # Add your ACM certificate ARN here for HTTPS
-ssl_policy          = "ELBSecurityPolicy-TLS-1-2-2017-01"
-
 # MongoDB Configuration
 mongodb_replica_count    = 3
 mongodb_instance_type    = "t3.large"
-# Removed mongodb_key_name - key pair will be created automatically
 
 mongodb_version          = "7.0"
 mongodb_admin_username   = "admin"
@@ -322,8 +322,6 @@ mongodb_store_connection_string_in_ssm = true
 mongodb_enable_encryption_at_rest      = true
 mongodb_enable_audit_logging          = false
 
-# Add these Redis configurations to your environments/qa/terraform.tfvars
-
 # Redis Configuration
 redis_node_type                    = "cache.t3.micro"
 redis_engine_version              = "7.0"
@@ -357,10 +355,80 @@ redis_store_connection_details_in_ssm = true
 redis_create_cloudwatch_log_group     = true
 redis_cloudwatch_log_retention_days   = 7
 
+# Global Accelerator Configuration
+create_global_accelerator = true
+global_accelerator_enabled = true
+global_accelerator_ip_address_type = "IPV4"
+global_accelerator_flow_logs_enabled = true
+global_accelerator_flow_logs_s3_prefix = "global-accelerator-flow-logs"
+global_accelerator_client_affinity = "NONE"
+global_accelerator_protocol = "TCP"
+global_accelerator_health_check_grace_period = 30
+global_accelerator_health_check_interval = 30
+global_accelerator_health_check_path = "/health"
+global_accelerator_health_check_port = 80
+global_accelerator_health_check_protocol = "HTTP"
+global_accelerator_threshold_count = 3
+global_accelerator_traffic_dial_percentage = 100
+
+# Cloudflare Configuration
 cloudflare_api_token  = "jTm01UhNhNDE-Md4jrQwBS0w3vHsqVikxC9cop9r"
 cloudflare_zone_id    = "3ae048b26df2c81c175c609f802feafb"
 cloudflare_account_id = "929c1d893cb7bb8455e151ae08f3b538"
 cloudflare_api_key    = "ef7027a662a457c814bfc30e81fcf49baa969"
+
+# Domain Configuration
+domain_name = "10xr.co"
+create_cloudflare_dns_records = true
+dns_proxied = true  # Enable Cloudflare proxy for CDN and protection
+dns_ttl = 300
+
+# Custom DNS Records for specific subdomain routing
+custom_dns_records = {
+  "qa-main" = {
+    name     = "qa"
+    content  = "" # Will be set by module to Global Accelerator DNS name
+    type     = "CNAME"
+    proxied  = true
+    ttl      = 300
+    comment  = "Main QA environment - routes to UI console"
+    tags     = ["qa", "ui", "main"]
+  },
+  "qa-ui" = {
+    name     = "qa.ui"
+    content  = "" # Will be set by module to Global Accelerator DNS name
+    type     = "CNAME"
+    proxied  = true
+    ttl      = 300
+    comment  = "QA UI environment - routes to UI console"
+    tags     = ["qa", "ui"]
+  },
+  "qa-service" = {
+    name     = "qa.service"
+    content  = "" # Will be set by module to Global Accelerator DNS name
+    type     = "CNAME"
+    proxied  = true
+    ttl      = 300
+    comment  = "QA Service environment - routes to backend services"
+    tags     = ["qa", "service", "api"]
+  },
+  "qa-livekit" = {
+    name     = "qa.livekit"
+    content  = "" # Will be set by module to Global Accelerator DNS name
+    type     = "CNAME"
+    proxied  = true
+    ttl      = 300
+    comment  = "QA LiveKit environment - routes to LiveKit proxy"
+    tags     = ["qa", "livekit", "proxy"]
+  }
+}
+
+# Zone Settings (optional)
+manage_cloudflare_zone_settings = false
+cloudflare_ssl_mode = "flexible"
+cloudflare_always_use_https = "off"
+cloudflare_min_tls_version = "1.2"
+cloudflare_security_level = "medium"
 
 # Tags
 tags = {

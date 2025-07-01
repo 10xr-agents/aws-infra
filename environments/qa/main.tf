@@ -270,21 +270,16 @@ module "cloudflare" {
   proxied         = var.dns_proxied
   ttl             = var.dns_ttl
 
-  # Main DNS Records
-  create_main_dns_record  = true
-  create_api_dns_record   = true
-  create_proxy_dns_record = true
-
-  # Subdomain Configuration
-  main_subdomain  = var.environment
-  api_subdomain   = "api.${var.environment}"
-  proxy_subdomain = "proxy.${var.environment}"
+  # Disable default DNS records since we're using custom ones
+  create_main_dns_record  = false
+  create_api_dns_record   = false
+  create_proxy_dns_record = false
 
   # LiveKit DNS (if needed in the future)
   create_livekit_dns_records = false  # Set to true when LiveKit is added
   livekit_target_dns_name    = ""     # Will be set when LiveKit Global Accelerator is created
 
-  # Custom DNS records
+  # Custom DNS records for our specific routing
   custom_dns_records = var.custom_dns_records
 
   # Zone Settings

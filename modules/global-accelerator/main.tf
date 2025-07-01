@@ -1,4 +1,4 @@
-# modules/global-accelerator/main.tf
+# modules/global-accelerator/main.tf - Fixed version
 
 locals {
   name_prefix = "${var.cluster_name}-${var.environment}"
@@ -157,8 +157,7 @@ resource "aws_globalaccelerator_endpoint_group" "main" {
 
   endpoint_group_region = var.endpoint_group_region != "" ? var.endpoint_group_region : data.aws_region.current.name
 
-  # Health check configuration
-  health_check_grace_period_seconds = var.health_check_grace_period_seconds
+  # Health check configuration - removed invalid arguments
   health_check_interval_seconds     = var.health_check_interval_seconds
   health_check_path                 = var.health_check_path
   health_check_port                 = var.health_check_port
@@ -215,8 +214,7 @@ resource "aws_globalaccelerator_endpoint_group" "additional" {
 
   endpoint_group_region = var.endpoint_group_region != "" ? var.endpoint_group_region : data.aws_region.current.name
 
-  # Health check configuration
-  health_check_grace_period_seconds = lookup(var.additional_listeners[count.index], "health_check_grace_period_seconds", var.health_check_grace_period_seconds)
+  # Health check configuration - removed invalid arguments
   health_check_interval_seconds     = lookup(var.additional_listeners[count.index], "health_check_interval_seconds", var.health_check_interval_seconds)
   health_check_path                 = lookup(var.additional_listeners[count.index], "health_check_path", var.health_check_path)
   health_check_port                 = lookup(var.additional_listeners[count.index], "health_check_port", var.health_check_port)

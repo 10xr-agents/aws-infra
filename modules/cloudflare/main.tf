@@ -11,6 +11,13 @@ locals {
       ManagedBy   = "terraform"
     }
   )
+
+  # Process custom DNS records and set content to target_dns_name if empty
+  processed_custom_dns_records = {
+    for name, record in var.custom_dns_records : name => merge(record, {
+      content = record.content != "" ? record.content : var.target_dns_name
+    })
+  }
 }
 
 ################################################################################
@@ -70,7 +77,7 @@ resource "cloudflare_record" "proxy_dns" {
 ################################################################################
 
 resource "cloudflare_record" "custom_records" {
-  for_each = var.custom_dns_records
+  for_each = local.processed_custom_dns_records
 
   zone_id = var.cloudflare_zone_id
   name    = each.value.name
@@ -142,43 +149,6 @@ resource "cloudflare_page_rule" "custom_rules" {
       content {
         url         = forwarding_url.value.url
         status_code = forwarding_url.value.status_code
-      }
-    }
-  }
-}
-
-################################################################################
-# Firewall Rules (Optional)
-################################################################################
-
-resource "cloudflare_filter" "custom_filters" {
-  for_each = var.firewall_rules
-
-  zone_id     = var.cloudflare_zone_id
-  description = each.value.description
-  expression  = each.value.expression
-}
-
-resource "cloudflare_firewall_rule" "custom_firewall_rules" {
-  for_each = var.firewall_rules
-
-  zone_id     = var.cloudflare_zone_id
-  description = each.value.description
-  filter_id   = cloudflare_filter.custom_filters[each.key].id
-  action      = each.value.action
-  priority    = lookup(each.value, "priority", null)
-  paused      = lookup(each.value, "paused", false)
-
-  dynamic "action_parameters" {
-    for_each = lookup(each.value, "action_parameters", null) != null ? [each.value.action_parameters] : []
-    content {
-      uri = lookup(action_parameters.value, "uri", null)
-      dynamic "overrides" {
-        for_each = lookup(action_parameters.value, "overrides", null) != null ? [action_parameters.value.overrides] : []
-        content {
-          action = lookup(overrides.value, "action", null)
-          sensitivity = lookup(overrides.value, "sensitivity", null)
-        }
       }
     }
   }
