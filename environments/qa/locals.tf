@@ -18,7 +18,6 @@ locals {
           CLUSTER_NAME = var.cluster_name
           # Add Redis connection details to all services
           REDIS_URL = module.redis.redis_connection_string
-          REDIS_ENDPOINT = module.redis.redis_endpoint
           REDIS_PORT = tostring(module.redis.redis_port)
           REDIS_USERNAME = module.redis.redis_username
         }
