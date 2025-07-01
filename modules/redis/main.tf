@@ -221,9 +221,10 @@ resource "aws_ssm_parameter" "redis_connection_string" {
 
   name  = "/${var.environment}/${var.cluster_name}/redis/connection_string"
   type  = "SecureString"
-  value = var.auth_token_enabled ?
+  value = (
+    var.auth_token_enabled ?
     "redis://default:${random_password.redis_auth_token[0].result}@${aws_elasticache_replication_group.redis.primary_endpoint_address}:${var.redis_port}" :
     "redis://${aws_elasticache_replication_group.redis.primary_endpoint_address}:${var.redis_port}"
-
+  )
   tags = local.common_tags
 }
