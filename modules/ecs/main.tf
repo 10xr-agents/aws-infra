@@ -76,7 +76,7 @@ locals {
         secrets = [
           for secret in lookup(config, "secrets", []) : {
             name      = secret.name
-            valueFrom = secret.valueFrom
+            valueFrom = secret.value_from
           }
         ]
 
