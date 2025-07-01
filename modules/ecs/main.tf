@@ -426,12 +426,58 @@ resource "aws_security_group" "ecs_service" {
     }
   }
 
+  # Ingress for service-to-service communication within VPC
+  ingress {
+    description = "Service to service communication"
+    from_port   = 0
+    to_port     = 65535
+    protocol    = "tcp"
+    cidr_blocks = [data.aws_vpc.main.cidr_block]
+  }
+
+  # Ingress from other ECS services (for service discovery)
+  dynamic "ingress" {
+    for_each = var.enable_service_discovery ? [1] : []
+    content {
+      description = "Service discovery communication"
+      from_port   = each.value.port
+      to_port     = each.value.port
+      protocol    = "tcp"
+      self        = true
+    }
+  }
+
   # Egress to internet
   egress {
+    description = "All outbound traffic"
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  # Egress to Redis (if Redis security group is provided)
+  dynamic "egress" {
+    for_each = var.redis_security_group_id != "" ? [1] : []
+    content {
+      description     = "To Redis cluster"
+      from_port       = 6379
+      to_port         = 6379
+      protocol        = "tcp"
+      security_groups = [var.redis_security_group_id]
+    }
+  }
+
+  # Egress to MongoDB (if MongoDB security group is provided)
+  dynamic "egress" {
+    for_each = var.mongodb_security_group_id != "" ? [1] : []
+    content {
+      description     = "To MongoDB cluster"
+      from_port       = 27017
+      to_port         = 27017
+      protocol        = "tcp"
+      security_groups = [var.mongodb_security_group_id]
+    }
   }
 
   tags = merge(local.common_tags, {

@@ -290,3 +290,29 @@ variable "services" {
     })), [])
   }))
 }
+
+# Add these variables to your modules/ecs/variables.tf
+
+variable "redis_security_group_id" {
+  description = "Security group ID of the Redis cluster for ECS services to access"
+  type        = string
+  default     = ""
+}
+
+variable "mongodb_security_group_id" {
+  description = "Security group ID of the MongoDB cluster for ECS services to access"
+  type        = string
+  default     = ""
+}
+
+variable "additional_security_group_ids" {
+  description = "Additional security group IDs to attach to ECS services"
+  type        = list(string)
+  default     = []
+}
+
+variable "enable_inter_service_communication" {
+  description = "Whether to enable communication between ECS services"
+  type        = bool
+  default     = true
+}

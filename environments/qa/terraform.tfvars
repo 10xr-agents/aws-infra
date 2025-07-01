@@ -322,10 +322,50 @@ mongodb_store_connection_string_in_ssm = true
 mongodb_enable_encryption_at_rest      = true
 mongodb_enable_audit_logging          = false
 
+# Add these Redis configurations to your environments/qa/terraform.tfvars
+
+# Redis Configuration
+redis_node_type                    = "cache.t3.micro"
+redis_engine_version              = "7.0"
+redis_num_cache_clusters          = 2
+redis_cluster_mode                = false
+redis_multi_az_enabled            = true
+redis_automatic_failover_enabled  = true
+redis_snapshot_retention_limit    = 7
+redis_snapshot_window             = "03:00-05:00"
+redis_maintenance_window          = "sun:05:00-sun:07:00"
+redis_auth_token_enabled          = true
+redis_transit_encryption_enabled  = true
+redis_at_rest_encryption_enabled  = true
+
+redis_parameters = [
+  {
+    name  = "maxmemory-policy"
+    value = "allkeys-lru"
+  },
+  {
+    name  = "timeout"
+    value = "300"
+  },
+  {
+    name  = "tcp-keepalive"
+    value = "300"
+  }
+]
+
+redis_store_connection_details_in_ssm = true
+redis_create_cloudwatch_log_group     = true
+redis_cloudwatch_log_retention_days   = 7
+
+cloudflare_api_token  = "jTm01UhNhNDE-Md4jrQwBS0w3vHsqVikxC9cop9r"
+cloudflare_zone_id    = "3ae048b26df2c81c175c609f802feafb"
+cloudflare_account_id = "929c1d893cb7bb8455e151ae08f3b538"
+cloudflare_api_key    = "ef7027a662a457c814bfc30e81fcf49baa969"
+
 # Tags
 tags = {
   Environment = "qa"
   Project     = "10xR Agents"
-  Platform    = "ECS"
+  Platform    = "Application"
   Terraform   = "true"
 }

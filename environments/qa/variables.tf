@@ -364,6 +364,117 @@ variable "mongodb_enable_audit_logging" {
   default     = false
 }
 
+# Add these Redis variables to your environments/qa/variables.tf
+
+# Redis Configuration Variables
+variable "redis_node_type" {
+  description = "Node type for Redis instances"
+  type        = string
+  default     = "cache.t3.micro"
+}
+
+variable "redis_engine_version" {
+  description = "Redis engine version"
+  type        = string
+  default     = "7.0"
+}
+
+variable "redis_num_cache_clusters" {
+  description = "Number of cache clusters (nodes) for replication group"
+  type        = number
+  default     = 2
+}
+
+variable "redis_cluster_mode" {
+  description = "Enable Redis cluster mode"
+  type        = bool
+  default     = false
+}
+
+variable "redis_multi_az_enabled" {
+  description = "Enable Multi-AZ for Redis"
+  type        = bool
+  default     = true
+}
+
+variable "redis_automatic_failover_enabled" {
+  description = "Enable automatic failover for Redis"
+  type        = bool
+  default     = true
+}
+
+variable "redis_snapshot_retention_limit" {
+  description = "Number of days to retain Redis snapshots"
+  type        = number
+  default     = 7
+}
+
+variable "redis_snapshot_window" {
+  description = "Daily time range for Redis snapshots (UTC)"
+  type        = string
+  default     = "03:00-05:00"
+}
+
+variable "redis_maintenance_window" {
+  description = "Weekly time range for Redis maintenance (UTC)"
+  type        = string
+  default     = "sun:05:00-sun:07:00"
+}
+
+variable "redis_auth_token_enabled" {
+  description = "Whether to enable Redis AUTH token (password)"
+  type        = bool
+  default     = true
+}
+
+variable "redis_transit_encryption_enabled" {
+  description = "Enable encryption in transit for Redis"
+  type        = bool
+  default     = true
+}
+
+variable "redis_at_rest_encryption_enabled" {
+  description = "Enable encryption at rest for Redis"
+  type        = bool
+  default     = true
+}
+
+variable "redis_parameters" {
+  description = "Redis parameters to apply"
+  type = list(object({
+    name  = string
+    value = string
+  }))
+  default = [
+    {
+      name  = "maxmemory-policy"
+      value = "allkeys-lru"
+    },
+    {
+      name  = "timeout"
+      value = "300"
+    }
+  ]
+}
+
+variable "redis_store_connection_details_in_ssm" {
+  description = "Whether to store Redis connection details in SSM Parameter Store"
+  type        = bool
+  default     = true
+}
+
+variable "redis_create_cloudwatch_log_group" {
+  description = "Whether to create CloudWatch log group for Redis"
+  type        = bool
+  default     = false
+}
+
+variable "redis_cloudwatch_log_retention_days" {
+  description = "Number of days to retain Redis CloudWatch logs"
+  type        = number
+  default     = 7
+}
+
 # environments/qa/variables-ecs.tf
 
 variable "ecs_services" {
@@ -442,6 +553,210 @@ variable "create_alb_rules" {
   description = "Whether to create ALB listener rules"
   type        = bool
   default     = true
+}
+
+# Add these variables to your environments/qa/variables.tf
+
+################################################################################
+# Cloudflare Configuration Variables
+################################################################################
+
+variable "cloudflare_api_token" {
+  description = "Cloudflare API token"
+  type        = string
+  sensitive   = true
+}
+
+variable "cloudflare_zone_id" {
+  description = "Cloudflare Zone ID for the domain"
+  type        = string
+}
+
+variable "domain_name" {
+  description = "Base domain name"
+  type        = string
+  default     = "10xr.co"
+}
+
+variable "create_cloudflare_dns_records" {
+  description = "Whether to create Cloudflare DNS records"
+  type        = bool
+  default     = true
+}
+
+variable "dns_proxied" {
+  description = "Whether DNS records should be proxied through Cloudflare"
+  type        = bool
+  default     = false
+}
+
+variable "dns_ttl" {
+  description = "TTL for DNS records (ignored if proxied is true)"
+  type        = number
+  default     = 300
+}
+
+################################################################################
+# Global Accelerator Configuration Variables
+################################################################################
+
+variable "create_global_accelerator" {
+  description = "Whether to create Global Accelerator"
+  type        = bool
+  default     = true
+}
+
+variable "global_accelerator_enabled" {
+  description = "Whether the Global Accelerator is enabled"
+  type        = bool
+  default     = true
+}
+
+variable "global_accelerator_ip_address_type" {
+  description = "IP address type for Global Accelerator (IPV4 or DUALSTACK)"
+  type        = string
+  default     = "IPV4"
+}
+
+variable "global_accelerator_flow_logs_enabled" {
+  description = "Whether to enable flow logs for Global Accelerator"
+  type        = bool
+  default     = true
+}
+
+variable "global_accelerator_flow_logs_s3_prefix" {
+  description = "S3 prefix for Global Accelerator flow logs"
+  type        = string
+  default     = "global-accelerator-flow-logs"
+}
+
+variable "global_accelerator_client_affinity" {
+  description = "Client affinity for Global Accelerator listener (NONE or SOURCE_IP)"
+  type        = string
+  default     = "NONE"
+}
+
+variable "global_accelerator_protocol" {
+  description = "Protocol for Global Accelerator listener (TCP or UDP)"
+  type        = string
+  default     = "TCP"
+}
+
+variable "global_accelerator_health_check_grace_period" {
+  description = "Grace period before health check failures cause endpoints to be removed"
+  type        = number
+  default     = 30
+}
+
+variable "global_accelerator_health_check_interval" {
+  description = "Interval between health checks"
+  type        = number
+  default     = 30
+}
+
+variable "global_accelerator_health_check_path" {
+  description = "Path for health checks"
+  type        = string
+  default     = "/"
+}
+
+variable "global_accelerator_health_check_port" {
+  description = "Port for health checks"
+  type        = number
+  default     = 80
+}
+
+variable "global_accelerator_health_check_protocol" {
+  description = "Protocol for health checks (TCP, HTTP, or HTTPS)"
+  type        = string
+  default     = "HTTP"
+}
+
+variable "global_accelerator_threshold_count" {
+  description = "Number of consecutive health checks before changing endpoint health status"
+  type        = number
+  default     = 3
+}
+
+variable "global_accelerator_traffic_dial_percentage" {
+  description = "Percentage of traffic to dial to the endpoint group"
+  type        = number
+  default     = 100
+}
+
+################################################################################
+# LiveKit Global Accelerator Variables (Optional)
+################################################################################
+
+variable "create_livekit_global_accelerator" {
+  description = "Whether to create a separate Global Accelerator for LiveKit"
+  type        = bool
+  default     = false
+}
+
+variable "livekit_global_accelerator_enabled" {
+  description = "Whether the LiveKit Global Accelerator is enabled"
+  type        = bool
+  default     = true
+}
+
+variable "livekit_global_accelerator_client_affinity" {
+  description = "Client affinity for LiveKit Global Accelerator (NONE or SOURCE_IP)"
+  type        = string
+  default     = "SOURCE_IP"
+}
+
+################################################################################
+# Custom DNS Records
+################################################################################
+
+variable "custom_dns_records" {
+  description = "Map of custom DNS records to create"
+  type = map(object({
+    name     = string
+    content  = string
+    type     = string
+    proxied  = optional(bool)
+    ttl      = optional(number)
+    priority = optional(number)
+    comment  = optional(string)
+    tags     = optional(list(string), [])
+  }))
+  default = {}
+}
+
+################################################################################
+# Zone Settings
+################################################################################
+
+variable "manage_cloudflare_zone_settings" {
+  description = "Whether to manage Cloudflare zone settings"
+  type        = bool
+  default     = false
+}
+
+variable "cloudflare_ssl_mode" {
+  description = "SSL mode for Cloudflare (off, flexible, full, strict)"
+  type        = string
+  default     = "flexible"
+}
+
+variable "cloudflare_always_use_https" {
+  description = "Whether to always use HTTPS"
+  type        = string
+  default     = "off"
+}
+
+variable "cloudflare_min_tls_version" {
+  description = "Minimum TLS version"
+  type        = string
+  default     = "1.2"
+}
+
+variable "cloudflare_security_level" {
+  description = "Cloudflare security level (off, essentially_off, low, medium, high, under_attack)"
+  type        = string
+  default     = "medium"
 }
 
 # Tags

@@ -145,3 +145,212 @@ output "mongodb_cluster_details" {
   description = "Detailed information about the MongoDB cluster"
   value       = module.mongodb.cluster_details
 }
+
+# Add these Redis outputs to your environments/qa/outputs.tf
+
+# Redis outputs
+output "redis_endpoint" {
+  description = "Redis endpoint address"
+  value       = module.redis.redis_endpoint
+}
+
+output "redis_port" {
+  description = "Redis port"
+  value       = module.redis.redis_port
+}
+
+output "redis_connection_string" {
+  description = "Redis connection string"
+  value       = module.redis.redis_connection_string
+  sensitive   = true
+}
+
+output "redis_auth_token" {
+  description = "Redis AUTH token"
+  value       = module.redis.redis_auth_token
+  sensitive   = true
+}
+
+output "redis_security_group_id" {
+  description = "ID of the Redis security group"
+  value       = module.redis.redis_security_group_id
+}
+
+output "redis_cluster_details" {
+  description = "Complete Redis cluster details"
+  value       = module.redis.redis_cluster_details
+}
+
+output "redis_ssm_parameters" {
+  description = "SSM parameter names for Redis connection details"
+  value = {
+    endpoint          = module.redis.ssm_parameter_redis_endpoint
+    port             = module.redis.ssm_parameter_redis_port
+    auth_token       = module.redis.ssm_parameter_redis_auth_token
+    connection_string = module.redis.ssm_parameter_redis_connection_string
+  }
+}
+
+# Add these outputs to your environments/qa/outputs.tf
+
+################################################################################
+# Global Accelerator Outputs
+################################################################################
+
+output "global_accelerator_dns_name" {
+  description = "DNS name of the Global Accelerator"
+  value       = var.create_global_accelerator ? module.global_accelerator[0].accelerator_dns_name : null
+}
+
+output "global_accelerator_static_ips" {
+  description = "Static IP addresses of the Global Accelerator"
+  value       = var.create_global_accelerator ? module.global_accelerator[0].static_ip_addresses_flat : []
+}
+
+output "global_accelerator_id" {
+  description = "ID of the Global Accelerator"
+  value       = var.create_global_accelerator ? module.global_accelerator[0].accelerator_id : null
+}
+
+output "global_accelerator_configuration" {
+  description = "Global Accelerator configuration summary"
+  value       = var.create_global_accelerator ? module.global_accelerator[0].accelerator_configuration : {}
+}
+
+output "global_accelerator_connection_info" {
+  description = "Global Accelerator connection information"
+  value       = var.create_global_accelerator ? module.global_accelerator[0].accelerator_connection_info : {}
+}
+
+output "global_accelerator_flow_logs_bucket" {
+  description = "S3 bucket for Global Accelerator flow logs"
+  value       = var.create_global_accelerator ? module.global_accelerator[0].flow_logs_bucket_id : null
+}
+
+################################################################################
+# Cloudflare Outputs
+################################################################################
+
+output "cloudflare_dns_records" {
+  description = "Summary of Cloudflare DNS records created"
+  value       = var.create_cloudflare_dns_records ? module.cloudflare[0].dns_records_summary : {}
+}
+
+output "cloudflare_main_hostname" {
+  description = "Main application hostname"
+  value       = var.create_cloudflare_dns_records ? module.cloudflare[0].main_dns_record_hostname : null
+}
+
+output "cloudflare_api_hostname" {
+  description = "API hostname"
+  value       = var.create_cloudflare_dns_records ? module.cloudflare[0].api_dns_record_hostname : null
+}
+
+output "cloudflare_proxy_hostname" {
+  description = "Proxy hostname"
+  value       = var.create_cloudflare_dns_records ? module.cloudflare[0].proxy_dns_record_hostname : null
+}
+
+output "cloudflare_urls" {
+  description = "Application URLs via Cloudflare"
+  value = var.create_cloudflare_dns_records ? {
+    main_http    = module.cloudflare[0].main_url_http
+    main_https   = module.cloudflare[0].main_url_https
+    api_http     = module.cloudflare[0].api_url_http
+    api_https    = module.cloudflare[0].api_url_https
+    proxy_http   = module.cloudflare[0].proxy_url_http
+    proxy_https  = module.cloudflare[0].proxy_url_https
+  } : {}
+}
+
+output "cloudflare_configuration" {
+  description = "Cloudflare configuration summary"
+  value       = var.create_cloudflare_dns_records ? module.cloudflare[0].cloudflare_configuration : {}
+}
+
+################################################################################
+# Application URLs Summary
+################################################################################
+
+output "application_urls" {
+  description = "Complete summary of application access URLs"
+  value = {
+    # Direct ALB access
+    alb_dns_name = module.ecs.alb_dns_name
+    alb_http_url = "http://${module.ecs.alb_dns_name}"
+    alb_https_url = var.acm_certificate_arn != "" ? "https://${module.ecs.alb_dns_name}" : null
+
+    # Global Accelerator access (if enabled)
+    global_accelerator_dns_name = var.create_global_accelerator ? module.global_accelerator[0].accelerator_dns_name : null
+    global_accelerator_http_url = var.create_global_accelerator ? "http://${module.global_accelerator[0].accelerator_dns_name}" : null
+    global_accelerator_https_url = var.create_global_accelerator ? "https://${module.global_accelerator[0].accelerator_dns_name}" : null
+    global_accelerator_static_ips = var.create_global_accelerator ? module.global_accelerator[0].static_ip_addresses_flat : []
+
+    # Cloudflare access (if enabled)
+    cloudflare_main_url_http  = var.create_cloudflare_dns_records ? module.cloudflare[0].main_url_http : null
+    cloudflare_main_url_https = var.create_cloudflare_dns_records ? module.cloudflare[0].main_url_https : null
+    cloudflare_api_url_http   = var.create_cloudflare_dns_records ? module.cloudflare[0].api_url_http : null
+    cloudflare_api_url_https  = var.create_cloudflare_dns_records ? module.cloudflare[0].api_url_https : null
+    cloudflare_proxy_url_http = var.create_cloudflare_dns_records ? module.cloudflare[0].proxy_url_http : null
+    cloudflare_proxy_url_https = var.create_cloudflare_dns_records ? module.cloudflare[0].proxy_url_https : null
+
+    # Primary URLs (recommended for users)
+    primary_app_url = var.create_cloudflare_dns_records ? module.cloudflare[0].main_url_https : (
+      var.create_global_accelerator ? "https://${module.global_accelerator[0].accelerator_dns_name}" : (
+      var.acm_certificate_arn != "" ? "https://${module.ecs.alb_dns_name}" : "http://${module.ecs.alb_dns_name}"
+    )
+    )
+    primary_api_url = var.create_cloudflare_dns_records ? module.cloudflare[0].api_url_https : (
+      var.create_global_accelerator ? "https://${module.global_accelerator[0].accelerator_dns_name}" : (
+      var.acm_certificate_arn != "" ? "https://${module.ecs.alb_dns_name}" : "http://${module.ecs.alb_dns_name}"
+    )
+    )
+  }
+}
+
+################################################################################
+# Infrastructure Summary
+################################################################################
+
+output "infrastructure_summary" {
+  description = "Complete infrastructure summary"
+  value = {
+    # Core Infrastructure
+    vpc_id                = module.vpc.vpc_id
+    vpc_cidr             = module.vpc.vpc_cidr_block
+    private_subnets      = module.vpc.private_subnets
+    public_subnets       = module.vpc.public_subnets
+    database_subnets     = module.vpc.database_subnets
+
+    # ECS Infrastructure
+    ecs_cluster_name     = module.ecs.cluster_name
+    ecs_cluster_arn      = module.ecs.cluster_arn
+    alb_dns_name         = module.ecs.alb_dns_name
+    alb_arn              = module.ecs.alb_arn
+
+    # Database Infrastructure
+    mongodb_endpoints    = module.mongodb.endpoints
+    mongodb_primary      = module.mongodb.primary_endpoint
+    redis_endpoint       = module.redis.redis_endpoint
+    redis_port           = module.redis.redis_port
+
+    # Global Infrastructure
+    global_accelerator_enabled = var.create_global_accelerator
+    global_accelerator_dns_name = var.create_global_accelerator ? module.global_accelerator[0].accelerator_dns_name : null
+    global_accelerator_static_ips = var.create_global_accelerator ? module.global_accelerator[0].static_ip_addresses_flat : []
+
+    # DNS Management
+    cloudflare_enabled   = var.create_cloudflare_dns_records
+    cloudflare_zone_id   = var.cloudflare_zone_id
+    domain_name          = var.domain_name
+
+    # Service Count
+    ecs_services_count   = length(local.ecs_services_with_overrides)
+    mongodb_instances    = var.mongodb_replica_count
+    redis_cluster_mode   = var.redis_cluster_mode
+
+    # Environment
+    environment          = var.environment
+    region               = var.region
+  }
+}
