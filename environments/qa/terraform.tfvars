@@ -76,7 +76,7 @@ ecs_services = {
     "auto_scaling_cpu_target": 70,
     "auto_scaling_memory_target": 80,
     "enable_default_routing": false,
-    "alb_path_patterns": ["/voice/*", "/api/voice/*"],
+    "alb_path_patterns": ["/agents/*"],
     "enable_load_balancer": true,
     "enable_service_discovery": true,
     "deregistration_delay": 30,
@@ -123,7 +123,7 @@ ecs_services = {
     "auto_scaling_cpu_target": 70,
     "auto_scaling_memory_target": 80,
     "enable_default_routing": false,
-    "alb_path_patterns": ["/proxy/*", "/livekit/*", "/api/livekit/*"],
+    "alb_path_patterns": ["/livekit/*"],
     "enable_load_balancer": true,
     "enable_service_discovery": true,
     "deregistration_delay": 30
@@ -174,7 +174,7 @@ ecs_services = {
     "auto_scaling_cpu_target": 70,
     "auto_scaling_memory_target": 80,
     "enable_default_routing": false,
-    "alb_path_patterns": ["/analytics/*", "/api/analytics/*"],
+    "alb_path_patterns": ["/analytics/*"],
     "enable_load_balancer": true,
     "enable_service_discovery": true,
     "deregistration_delay": 30
@@ -188,7 +188,7 @@ ecs_services = {
     "desired_count": 2,
     "environment": {
       "LOG_LEVEL": "INFO",
-      "REACT_APP_API_URL": "https://qa.service.10xr.co",
+      "REACT_APP_API_URL": "https://services.qa.10xr.co",
       "SERVICE_PORT": "3000"
     },
     "secrets": [],
@@ -220,12 +220,12 @@ ecs_services = {
     "auto_scaling_cpu_target": 70,
     "auto_scaling_memory_target": 80,
     "enable_default_routing": true,
-    "alb_path_patterns": ["/console/*", "/ui/*", "/"],
+    "alb_path_patterns": ["/ui/*", "/"],
     "enable_load_balancer": true,
     "enable_service_discovery": true,
     "deregistration_delay": 30
   },
-  "agentic-framework": {
+  "agentic-services": {
     "image": "761018882607.dkr.ecr.us-east-1.amazonaws.com/10xr-agents/agentic-framework-service",
     "image_tag": "latest",
     "port": 8080,
@@ -271,7 +271,7 @@ ecs_services = {
     "auto_scaling_cpu_target": 70,
     "auto_scaling_memory_target": 80,
     "enable_default_routing": false,
-    "alb_path_patterns": ["/framework/*", "/agents/*", "/api/framework/*", "/api/agents/*"],
+    "alb_path_patterns": ["/services/*"],
     "enable_load_balancer": true,
     "enable_service_discovery": true,
     "deregistration_delay": 30,
@@ -404,7 +404,7 @@ custom_dns_records = {
     tags     = ["qa", "ui"]
   },
   "qa-service" = {
-    name     = "qa.service"
+    name     = "qa.services"
     content  = "" # Will be set by module to Global Accelerator DNS name
     type     = "CNAME"
     proxied  = true
