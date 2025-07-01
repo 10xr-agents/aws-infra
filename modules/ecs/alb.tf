@@ -1,5 +1,22 @@
 # modules/ecs/alb.tf
 
+locals {
+  # Find the service with enable_default_routing = true
+  default_routing_service = try([
+    for name, config in local.services_config : name
+    if lookup(config, "enable_default_routing", false) == true && lookup(config, "enable_load_balancer", true) == true
+  ][0], null)
+
+  # Determine the default target group ARN based on enable_default_routing
+  default_target_group_arn = var.default_target_group_arn != "" ? var.default_target_group_arn : (
+    local.default_routing_service != null ? aws_lb_target_group.service[local.default_routing_service].arn : (
+    var.create_default_target_group ? aws_lb_target_group.alb_default[0].arn : (
+    length(aws_lb_target_group.service) > 0 ? values(aws_lb_target_group.service)[0].arn : null
+  )
+  )
+  )
+}
+
 ################################################################################
 # Application Load Balancer
 ################################################################################
@@ -137,8 +154,8 @@ resource "aws_lb_target_group" "alb_default" {
     enabled             = true
     healthy_threshold   = 2
     interval            = 30
-    matcher             = "200"
-    path                = "/health"
+    matcher             = "200,404"
+    path                = "/"
     port                = "traffic-port"
     protocol            = "HTTP"
     timeout             = 5
@@ -181,10 +198,7 @@ resource "aws_lb_listener" "http" {
       for_each = var.acm_certificate_arn == "" ? [1] : []
       content {
         target_group {
-          arn = var.default_target_group_arn != "" ? var.default_target_group_arn : (
-            var.create_default_target_group ? aws_lb_target_group.alb_default[0].arn :
-              length(aws_lb_target_group.service) > 0 ? values(aws_lb_target_group.service)[0].arn : null
-          )
+          arn = local.default_target_group_arn
         }
       }
     }
@@ -214,10 +228,7 @@ resource "aws_lb_listener" "https" {
     type = "forward"
     forward {
       target_group {
-        arn = var.default_target_group_arn != "" ? var.default_target_group_arn : (
-          var.create_default_target_group ? aws_lb_target_group.alb_default[0].arn :
-            length(aws_lb_target_group.service) > 0 ? values(aws_lb_target_group.service)[0].arn : null
-        )
+        arn = local.default_target_group_arn
       }
     }
   }

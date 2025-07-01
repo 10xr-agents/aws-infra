@@ -138,7 +138,7 @@ variable "default_target_group_arn" {
 variable "create_default_target_group" {
   description = "Whether to create a default target group"
   type        = bool
-  default     = false
+  default     = true
 }
 
 # ALB Access Logs
@@ -264,6 +264,7 @@ variable "services" {
     deregistration_delay = optional(number, 30)
 
     # ALB routing configuration
+    enable_default_routing = optional(bool, false),
     alb_path_patterns = optional(list(string))
     alb_host_headers  = optional(list(string))
     alb_priority      = optional(number)

@@ -5,7 +5,7 @@ region = "us-east-1"
 environment = "qa"
 
 # Cluster Configuration
-cluster_name = "ten-xr-livekit"
+cluster_name = "ten-xr-agents"
 
 # VPC Configuration
 vpc_cidr = "10.0.0.0/16"
@@ -70,6 +70,7 @@ ecs_services = {
     "auto_scaling_max_capacity": 10,
     "auto_scaling_cpu_target": 70,
     "auto_scaling_memory_target": 80,
+    "enable_default_routing": false,
     "alb_path_patterns": ["/voice/*"],
     "enable_load_balancer": true,
     "enable_service_discovery": true,
@@ -116,6 +117,7 @@ ecs_services = {
     "auto_scaling_max_capacity": 8,
     "auto_scaling_cpu_target": 70,
     "auto_scaling_memory_target": 80,
+    "enable_default_routing": false,
     "alb_path_patterns": ["/proxy/*", "/livekit/*"],
     "enable_load_balancer": true,
     "enable_service_discovery": true,
@@ -166,6 +168,7 @@ ecs_services = {
     "auto_scaling_max_capacity": 8,
     "auto_scaling_cpu_target": 70,
     "auto_scaling_memory_target": 80,
+    "enable_default_routing": false,
     "alb_path_patterns": ["/analytics/*"],
     "enable_load_balancer": true,
     "enable_service_discovery": true,
@@ -211,6 +214,7 @@ ecs_services = {
     "auto_scaling_max_capacity": 6,
     "auto_scaling_cpu_target": 70,
     "auto_scaling_memory_target": 80,
+    "enable_default_routing": true,
     "alb_path_patterns": ["/console/*", "/ui/*", "/"],
     "enable_load_balancer": true,
     "enable_service_discovery": true,
@@ -261,6 +265,7 @@ ecs_services = {
     "auto_scaling_max_capacity": 8,
     "auto_scaling_cpu_target": 70,
     "auto_scaling_memory_target": 80,
+    "enable_default_routing": false,
     "alb_path_patterns": ["/framework/*", "/agents/*"],
     "enable_load_balancer": true,
     "enable_service_discovery": true,
@@ -286,7 +291,7 @@ mongodb_admin_username   = "admin"
 mongodb_admin_password   = "TenXR-MongoDB-QA-2024!"  # Please change this to a secure password
 mongodb_keyfile_content  = ""  # Generate a secure keyfile content for replica set authentication
 
-mongodb_default_database = "ten_xr_livekit_qa"
+mongodb_default_database = "ten_xr_agents_qa"
 
 # Storage Configuration
 mongodb_root_volume_size       = 30
@@ -320,7 +325,7 @@ mongodb_enable_audit_logging          = false
 # Tags
 tags = {
   Environment = "qa"
-  Project     = "LiveKit"
+  Project     = "10xR Agents"
   Platform    = "ECS"
   Terraform   = "true"
 }

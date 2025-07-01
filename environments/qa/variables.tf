@@ -424,6 +424,7 @@ variable "ecs_services" {
     # ALB routing
     alb_priority      = optional(number)
     alb_path_patterns = optional(list(string))
+    enable_default_routing = optional(bool, false),
 
     # Additional configuration
     efs_config = optional(object({
