@@ -15,7 +15,7 @@ variable "environment" {
 variable "cluster_name" {
   description = "Name of the ECS cluster"
   type        = string
-  default     = "livekit"
+  default     = "ten_xr_app_qa"
 }
 
 variable "domain" {

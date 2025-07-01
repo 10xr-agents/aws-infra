@@ -1,4 +1,4 @@
-# modules/mongodb/versions.tf
+# environments/qa/versions.tf
 
 terraform {
   required_version = ">= 1.7.0"
@@ -20,9 +20,10 @@ terraform {
       source  = "hashicorp/tls"
       version = ">= 4.1.0"
     }
-    cloudflare = {
-      source  = "cloudflare/cloudflare"
-      version = "~> 4.40.0"
-    }
+    # # Cloudflare provider - COMMENTED OUT
+    # cloudflare = {
+    #   source  = "cloudflare/cloudflare"
+    #   version = "~> 4.40.0"
+    # }
   }
 }
