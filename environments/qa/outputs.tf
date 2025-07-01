@@ -219,7 +219,7 @@ output "global_accelerator_configuration" {
 
 output "global_accelerator_connection_info" {
   description = "Global Accelerator connection information"
-  value       = var.create_global_accelerator ? module.global_accelerator[0].accelerator_connection_info : {}
+  value = var.create_global_accelerator ? module.global_accelerator[0].accelerator_connection_info : null
 }
 
 output "global_accelerator_flow_logs_bucket" {
@@ -233,7 +233,7 @@ output "global_accelerator_flow_logs_bucket" {
 
 output "cloudflare_dns_records" {
   description = "Summary of Cloudflare DNS records created"
-  value       = var.create_cloudflare_dns_records ? module.cloudflare[0].dns_records_summary : {}
+  value = var.create_cloudflare_dns_records ? module.cloudflare[0].dns_records_summary : null
 }
 
 output "cloudflare_main_hostname" {
