@@ -3,6 +3,63 @@
 locals {
   cluster_name = "${var.cluster_name}-${var.environment}"
   vpc_name     = "${var.cluster_name}-${var.environment}-${var.region}"
+
+  # Only voice-agent service configuration
+  ecs_services_with_overrides = {
+    "voice-agent" = {
+      "image" = "761018882607.dkr.ecr.us-east-1.amazonaws.com/10xr-agents/voice-agent"
+      "image_tag" = "v1.0.0"
+      "port" = 9600
+      "cpu" = 4096
+      "memory" = 8192
+      "desired_count" = 2
+      "environment" = {
+        "MONGODB_URI" = module.mongodb.connection_string
+        "SERVICE_PORT" = "9600"
+      }
+      "secrets" = []
+      "capacity_provider_strategy" = [
+        {
+          "capacity_provider" = "FARGATE"
+          "weight" = 1
+          "base" = 1
+        },
+        {
+          "capacity_provider" = "FARGATE_SPOT"
+          "weight" = 3
+          "base" = 0
+        }
+      ]
+      "container_health_check" = {
+        "command" = "curl -f http://localhost:9600/health || exit 1"
+        "interval" = 30
+        "timeout" = 20
+        "start_period" = 90
+        "retries" = 3
+      }
+      "health_check" = {
+        "path" = "/health"
+        "interval" = 30
+        "timeout" = 20
+        "healthy_threshold" = 2
+        "unhealthy_threshold" = 3
+        "matcher" = "200"
+      }
+      "enable_auto_scaling" = true
+      "auto_scaling_min_capacity" = 1
+      "auto_scaling_max_capacity" = 10
+      "auto_scaling_cpu_target" = 70
+      "auto_scaling_memory_target" = 80
+      "enable_default_routing" = true
+      "alb_path_patterns" = ["/voice/*", "/"]
+      "enable_load_balancer" = true
+      "enable_service_discovery" = true
+      "deregistration_delay" = 30
+      "additional_task_policies" = {
+        "S3Access" = "arn:aws:iam::aws:policy/AmazonS3FullAccess"
+      }
+    }
+  }
 }
 
 # VPC Module - Reuse existing VPC module
