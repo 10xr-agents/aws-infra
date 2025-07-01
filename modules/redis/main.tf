@@ -113,7 +113,6 @@ resource "aws_security_group" "redis" {
 resource "aws_elasticache_replication_group" "redis" {
   replication_group_id = "${local.name_prefix}-redis"
   description          = "Redis replication group for ${local.name_prefix}"
-  replication_group_description = "Redis replication group for ${local.name_prefix}"
 
   # Redis configuration
   node_type            = var.redis_node_type
