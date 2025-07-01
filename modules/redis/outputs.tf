@@ -1,46 +1,36 @@
 # modules/redis/outputs.tf
 
 ################################################################################
-# Redis Cluster Outputs
+# Redis Replication Group Outputs
 ################################################################################
 
 output "redis_replication_group_arn" {
   description = "ARN of the Redis replication group"
-  value       = var.redis_cluster_mode ? try(aws_elasticache_replication_group.redis_cluster[0].arn, null) : try(aws_elasticache_replication_group.redis[0].arn, null)
+  value       = aws_elasticache_replication_group.redis.arn
 }
 
 output "redis_replication_group_id" {
   description = "ID of the Redis replication group"
-  value       = var.redis_cluster_mode ? try(aws_elasticache_replication_group.redis_cluster[0].id, null) : try(aws_elasticache_replication_group.redis[0].id, null)
+  value       = aws_elasticache_replication_group.redis.id
 }
 
 ################################################################################
 # Connection Information
 ################################################################################
 
-output "redis_endpoint" {
-  description = "Redis endpoint address"
-  value       = var.redis_cluster_mode ? try(aws_elasticache_replication_group.redis_cluster[0].configuration_endpoint_address, null) : try(aws_elasticache_replication_group.redis[0].configuration_endpoint_address, null)
-}
-
 output "redis_primary_endpoint" {
   description = "Redis primary endpoint address"
-  value       = var.redis_cluster_mode ? null : try(aws_elasticache_replication_group.redis[0].primary_endpoint_address, null)
+  value       = aws_elasticache_replication_group.redis.primary_endpoint_address
 }
 
 output "redis_reader_endpoint" {
   description = "Redis reader endpoint address"
-  value       = var.redis_cluster_mode ? null : try(aws_elasticache_replication_group.redis[0].reader_endpoint_address, null)
+  value       = aws_elasticache_replication_group.redis.reader_endpoint_address
 }
 
 output "redis_port" {
   description = "Redis port"
   value       = var.redis_port
-}
-
-output "redis_configuration_endpoint" {
-  description = "Redis configuration endpoint (for cluster mode)"
-  value       = var.redis_cluster_mode ? try(aws_elasticache_replication_group.redis_cluster[0].configuration_endpoint_address, null) : null
 }
 
 ################################################################################
@@ -49,14 +39,18 @@ output "redis_configuration_endpoint" {
 
 output "redis_connection_string" {
   description = "Redis connection string"
-  value       = var.auth_token_enabled ? "redis://default:${try(random_password.redis_auth_token[0].result, "")}@${var.redis_cluster_mode ? try(aws_elasticache_replication_group.redis_cluster[0].configuration_endpoint_address, "") : try(aws_elasticache_replication_group.redis[0].configuration_endpoint_address, "")}:${var.redis_port}" : "redis://${var.redis_cluster_mode ? try(aws_elasticache_replication_group.redis_cluster[0].configuration_endpoint_address, "") : try(aws_elasticache_replication_group.redis[0].configuration_endpoint_address, "")}:${var.redis_port}"
-  sensitive   = true
+  value = var.auth_token_enabled ?
+    "redis://default:${random_password.redis_auth_token[0].result}@${aws_elasticache_replication_group.redis.primary_endpoint_address}:${var.redis_port}" :
+    "redis://${aws_elasticache_replication_group.redis.primary_endpoint_address}:${var.redis_port}"
+  sensitive = true
 }
 
 output "redis_url" {
   description = "Redis URL for applications"
-  value       = var.auth_token_enabled ? "redis://default:${try(random_password.redis_auth_token[0].result, "")}@${var.redis_cluster_mode ? try(aws_elasticache_replication_group.redis_cluster[0].configuration_endpoint_address, "") : try(aws_elasticache_replication_group.redis[0].configuration_endpoint_address, "")}:${var.redis_port}" : "redis://${var.redis_cluster_mode ? try(aws_elasticache_replication_group.redis_cluster[0].configuration_endpoint_address, "") : try(aws_elasticache_replication_group.redis[0].configuration_endpoint_address, "")}:${var.redis_port}"
-  sensitive   = true
+  value = var.auth_token_enabled ?
+    "redis://default:${random_password.redis_auth_token[0].result}@${aws_elasticache_replication_group.redis.primary_endpoint_address}:${var.redis_port}" :
+    "redis://${aws_elasticache_replication_group.redis.primary_endpoint_address}:${var.redis_port}"
+  sensitive = true
 }
 
 ################################################################################
@@ -65,7 +59,7 @@ output "redis_url" {
 
 output "redis_auth_token" {
   description = "Redis AUTH token (password)"
-  value       = var.auth_token_enabled ? try(random_password.redis_auth_token[0].result, null) : null
+  value       = var.auth_token_enabled ? random_password.redis_auth_token[0].result : null
   sensitive   = true
 }
 
@@ -90,7 +84,7 @@ output "redis_parameter_group_name" {
 
 output "redis_security_group_id" {
   description = "ID of the Redis security group"
-  value       = var.create_security_group ? try(aws_security_group.redis[0].id, null) : null
+  value       = var.create_security_group ? aws_security_group.redis[0].id : null
 }
 
 output "redis_security_group_ids" {
@@ -114,31 +108,12 @@ output "redis_engine_version" {
 
 output "redis_num_cache_clusters" {
   description = "Number of cache clusters"
-  value       = var.redis_cluster_mode ? null : var.redis_num_cache_clusters
+  value       = var.redis_num_cache_clusters
 }
-
-output "redis_cluster_mode_enabled" {
-  description = "Whether Redis cluster mode is enabled"
-  value       = var.redis_cluster_mode
-}
-
-output "redis_num_node_groups" {
-  description = "Number of node groups (shards) in cluster mode"
-  value       = var.redis_cluster_mode ? var.redis_num_node_groups : null
-}
-
-output "redis_replicas_per_node_group" {
-  description = "Number of replicas per node group in cluster mode"
-  value       = var.redis_cluster_mode ? var.redis_replicas_per_node_group : null
-}
-
-################################################################################
-# Member Clusters (for non-cluster mode)
-################################################################################
 
 output "redis_member_clusters" {
   description = "List of member cluster IDs"
-  value       = var.redis_cluster_mode ? null : try(aws_elasticache_replication_group.redis[0].member_clusters, [])
+  value       = aws_elasticache_replication_group.redis.member_clusters
 }
 
 ################################################################################
@@ -195,32 +170,30 @@ output "ssm_parameter_redis_connection_string" {
 
 output "cloudwatch_log_group_name" {
   description = "Name of the CloudWatch log group for Redis"
-  value       = var.create_cloudwatch_log_group ? try(aws_cloudwatch_log_group.redis[0].name, null) : null
+  value       = var.create_cloudwatch_log_group ? aws_cloudwatch_log_group.redis[0].name : null
 }
 
 output "cloudwatch_log_group_arn" {
   description = "ARN of the CloudWatch log group for Redis"
-  value       = var.create_cloudwatch_log_group ? try(aws_cloudwatch_log_group.redis[0].arn, null) : null
+  value       = var.create_cloudwatch_log_group ? aws_cloudwatch_log_group.redis[0].arn : null
 }
 
 ################################################################################
 # Summary Output for Easy Reference
 ################################################################################
 
-output "redis_cluster_details" {
-  description = "Complete Redis cluster details"
+output "redis_details" {
+  description = "Complete Redis details"
   value = {
-    endpoint                    = var.redis_cluster_mode ? try(aws_elasticache_replication_group.redis_cluster[0].configuration_endpoint_address, null) : try(aws_elasticache_replication_group.redis[0].configuration_endpoint_address, null)
-    primary_endpoint           = var.redis_cluster_mode ? null : try(aws_elasticache_replication_group.redis[0].primary_endpoint_address, null)
-    reader_endpoint            = var.redis_cluster_mode ? null : try(aws_elasticache_replication_group.redis[0].reader_endpoint_address, null)
+    primary_endpoint           = aws_elasticache_replication_group.redis.primary_endpoint_address
+    reader_endpoint            = aws_elasticache_replication_group.redis.reader_endpoint_address
     port                       = var.redis_port
-    cluster_mode_enabled       = var.redis_cluster_mode
     auth_token_enabled         = var.auth_token_enabled
     transit_encryption_enabled = var.redis_transit_encryption_enabled
     at_rest_encryption_enabled = var.redis_at_rest_encryption_enabled
     multi_az_enabled           = var.redis_multi_az_enabled
     node_type                  = var.redis_node_type
     engine_version             = var.redis_engine_version
-    replication_group_id       = var.redis_cluster_mode ? try(aws_elasticache_replication_group.redis_cluster[0].id, null) : try(aws_elasticache_replication_group.redis[0].id, null)
+    replication_group_id       = aws_elasticache_replication_group.redis.id
   }
 }

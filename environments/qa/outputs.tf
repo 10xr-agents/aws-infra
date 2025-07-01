@@ -149,11 +149,6 @@ output "mongodb_cluster_details" {
 # Add these Redis outputs to your environments/qa/outputs.tf
 
 # Redis outputs
-output "redis_endpoint" {
-  description = "Redis endpoint address"
-  value       = module.redis.redis_endpoint
-}
-
 output "redis_port" {
   description = "Redis port"
   value       = module.redis.redis_port
@@ -174,11 +169,6 @@ output "redis_auth_token" {
 output "redis_security_group_id" {
   description = "ID of the Redis security group"
   value       = module.redis.redis_security_group_id
-}
-
-output "redis_cluster_details" {
-  description = "Complete Redis cluster details"
-  value       = module.redis.redis_cluster_details
 }
 
 output "redis_ssm_parameters" {
@@ -331,7 +321,7 @@ output "infrastructure_summary" {
     # Database Infrastructure
     mongodb_endpoints    = module.mongodb.endpoints
     mongodb_primary      = module.mongodb.primary_endpoint
-    redis_endpoint       = module.redis.redis_endpoint
+    redis_connection_string       = module.redis.redis_connection_string
     redis_port           = module.redis.redis_port
 
     # Global Infrastructure

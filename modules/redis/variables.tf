@@ -54,24 +54,6 @@ variable "redis_num_cache_clusters" {
   default     = 2
 }
 
-variable "redis_cluster_mode" {
-  description = "Enable Redis cluster mode"
-  type        = bool
-  default     = false
-}
-
-variable "redis_num_node_groups" {
-  description = "Number of node groups (shards) for cluster mode"
-  type        = number
-  default     = 1
-}
-
-variable "redis_replicas_per_node_group" {
-  description = "Number of replica nodes per node group for cluster mode"
-  type        = number
-  default     = 1
-}
-
 ################################################################################
 # High Availability & Backup
 ################################################################################
@@ -89,9 +71,9 @@ variable "redis_automatic_failover_enabled" {
 }
 
 variable "redis_snapshot_retention_limit" {
-  description = "Number of days to retain snapshots"
+  description = "Number of days to retain snapshots (0 for no snapshots)"
   type        = number
-  default     = 7
+  default     = 1
 }
 
 variable "redis_snapshot_window" {
@@ -184,7 +166,7 @@ variable "redis_kms_key_id" {
 }
 
 ################################################################################
-# Parameters
+# Parameters - Optimized for temporary data/caching
 ################################################################################
 
 variable "redis_parameters" {
@@ -200,6 +182,10 @@ variable "redis_parameters" {
     },
     {
       name  = "timeout"
+      value = "300"
+    },
+    {
+      name  = "tcp-keepalive"
       value = "300"
     }
   ]
