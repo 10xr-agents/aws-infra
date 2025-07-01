@@ -170,7 +170,7 @@ resource "aws_elasticache_replication_group" "redis" {
   tags = merge(local.common_tags, {
     Name = "${local.name_prefix}-redis"
   })
-  replication_group_description = ""
+
 }
 
 ################################################################################
@@ -234,7 +234,7 @@ resource "aws_elasticache_replication_group" "redis_cluster" {
   tags = merge(local.common_tags, {
     Name = "${local.name_prefix}-redis-cluster"
   })
-  replication_group_description = ""
+
 }
 
 ################################################################################

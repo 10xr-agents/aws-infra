@@ -27,7 +27,7 @@ enable_fargate_spot      = true
 
 ecs_services = {
   "voice-agent": {
-    "image": "761018882607.dkr.ecr.us-east-1.amazonaws.com/10xr-agents/voice-agent",
+    "image": "",
     "image_tag": "v1.0.0",
     "port": 9600,
     "cpu": 2048,
