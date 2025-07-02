@@ -32,6 +32,37 @@ locals {
           }
         ]
       )
+
+      # ADD IAM permissions for Redis/ElastiCache
+      additional_task_policies = merge(
+        lookup(config, "additional_task_policies", {}),
+        {
+          "ElastiCacheAccess" = aws_iam_policy.ecs_elasticache_policy.arn
+        }
+      )
     }
   )}
+}
+
+# IAM Policy for ElastiCache access
+resource "aws_iam_policy" "ecs_elasticache_policy" {
+  name        = "${local.cluster_name}-ecs-elasticache-policy"
+  description = "IAM policy for ECS tasks to access ElastiCache"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "elasticache:DescribeCacheClusters",
+          "elasticache:DescribeReplicationGroups",
+          "elasticache:DescribeCacheSubnetGroups"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+
+  tags = var.tags
 }

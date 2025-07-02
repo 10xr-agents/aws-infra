@@ -3,6 +3,8 @@
 locals {
   cluster_name = "${var.cluster_name}-${var.environment}"
   vpc_name     = "${var.cluster_name}-${var.environment}-${var.region}"
+  # Get all ECS security group IDs
+  ecs_security_group_ids = [for sg_id in module.ecs.security_group_ids : sg_id]
 }
 
 # VPC Module - Reuse existing VPC module
@@ -72,6 +74,9 @@ module "redis" {
   store_connection_details_in_ssm = var.redis_store_connection_details_in_ssm
   create_cloudwatch_log_group     = var.redis_create_cloudwatch_log_group
   cloudwatch_log_retention_days   = var.redis_cloudwatch_log_retention_days
+
+  # ADD THIS: Allow access from ECS security groups
+  allowed_security_group_ids = []
 
   tags = merge(
     var.tags,
@@ -173,6 +178,10 @@ module "ecs" {
   enable_execute_command    = var.enable_execute_command
   enable_service_discovery  = true
   create_alb = true
+
+  # ADD THESE LINES for Redis connectivity
+  redis_security_group_id   = module.redis.redis_security_group_id
+  mongodb_security_group_id = module.mongodb.security_group_id
 
   # Pass the entire services configuration from variables
   services = local.ecs_services_with_overrides
@@ -295,16 +304,32 @@ module "cloudflare" {
   ]
 }
 
-# Security Group Rule to allow ECS access to Redis
-resource "aws_security_group_rule" "redis_from_ecs" {
-  for_each = module.ecs.security_group_ids
+# Allow ECS to connect to Redis (INGRESS to Redis)
+resource "aws_security_group_rule" "redis_from_ecs_ingress" {
+  for_each = toset(local.ecs_security_group_ids)
 
   type                     = "ingress"
-  from_port                = 6379
-  to_port                  = 6379
+  from_port                = module.redis.redis_port
+  to_port                  = module.redis.redis_port
   protocol                 = "tcp"
   source_security_group_id = each.value
   security_group_id        = module.redis.redis_security_group_id
+  description              = "Allow ECS services to access Redis"
+
+  depends_on = [module.ecs, module.redis]
+}
+
+# Allow ECS to connect to Redis (EGRESS from ECS)
+resource "aws_security_group_rule" "ecs_to_redis_egress" {
+  for_each = module.ecs.security_group_ids
+
+  type                     = "egress"
+  from_port                = module.redis.redis_port
+  to_port                  = module.redis.redis_port
+  protocol                 = "tcp"
+  source_security_group_id = module.redis.redis_security_group_id
+  security_group_id        = each.value
+  description              = "Allow ECS services to connect to Redis"
 
   depends_on = [module.ecs, module.redis]
 }
