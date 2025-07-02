@@ -239,7 +239,7 @@ output "cloudflare_dns_records" {
 
 output "cloudflare_urls" {
   description = "Application URLs via Cloudflare"
-  value = var.create_cloudflare_dns_records ? module.cloudflare.custom_dns_record_urls : {}
+  value = var.create_cloudflare_dns_records ? module.cloudflare.custom_dns_record_urls : []
 }
 
 output "cloudflare_configuration" {
