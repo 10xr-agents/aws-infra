@@ -341,89 +341,89 @@ resource "aws_security_group_rule" "mongodb_from_ecs" {
   depends_on = [module.ecs, module.mongodb]
 }
 
-resource "aws_ecs_task_definition" "redis_debug" {
-  family                   = "${local.cluster_name}-redis-debug"
-  network_mode             = "awsvpc"
-  requires_compatibilities = ["FARGATE"]
-  cpu                      = 256
-  memory                   = 512
-  execution_role_arn       = module.ecs.task_execution_role_arns["voice-agent"]
-  task_role_arn            = module.ecs.task_role_arns["voice-agent"]
-
-  container_definitions = jsonencode([
-    {
-      name  = "redis-debug"
-      image = "redis:alpine"  # includes redis-cli :contentReference[oaicite:1]{index=1}
-      essential = true
-
-      environment = [
-        { name = "REDIS_ENDPOINT", value = module.redis.redis_primary_endpoint },
-        { name = "REDIS_PORT",     value = tostring(module.redis.redis_port) },
-        { name = "VPC_CIDR",       value = module.vpc.vpc_cidr_block }
-      ]
-
-      secrets = var.redis_auth_token_enabled ? [
-        {
-          name      = "REDIS_PASSWORD"
-          valueFrom = module.redis.ssm_parameter_redis_auth_token
-        }
-      ] : []
-
-      command = [
-        "sh", "-c",
-        <<-EOF
-        echo "=== Redis Connectivity Debug ==="
-        echo "Endpoint: $REDIS_ENDPOINT"
-        echo "Port: $REDIS_PORT"
-        echo "VPC CIDR: $VPC_CIDR"
-
-        apk update && apk add --no-cache bind-tools netcat-openbsd curl
-
-        echo "=== Testing DNS Resolution ==="
-        nslookup $REDIS_ENDPOINT
-        dig $REDIS_ENDPOINT || echo "dig not found"
-
-        echo "=== Testing Network Connectivity ==="
-        nc -zv $REDIS_ENDPOINT $REDIS_PORT || echo "Netcat failed"
-
-        echo "=== Testing Redis Ping (no auth) ==="
-        timeout 10s redis-cli -h $REDIS_ENDPOINT -p $REDIS_PORT ping || echo "Ping without auth failed"
-
-        if [ -n "$REDIS_PASSWORD" ]; then
-          echo "=== Testing Redis Ping (with auth) ==="
-          timeout 10s redis-cli -h $REDIS_ENDPOINT -p $REDIS_PORT -a "$REDIS_PASSWORD" ping || echo "Ping with auth failed"
-        fi
-
-        echo "=== Testing Persistent Connection ==="
-        if [ -n "$REDIS_PASSWORD" ]; then
-          timeout 30s redis-cli -h $REDIS_ENDPOINT -p $REDIS_PORT -a "$REDIS_PASSWORD" -i 1 ping || echo "Persistent connection failed"
-        else
-          timeout 30s redis-cli -h $REDIS_ENDPOINT -p $REDIS_PORT -i 1 ping || echo "Persistent connection failed"
-        fi
-
-        echo "=== Debug Complete ==="
-        sleep 3600
-        EOF
-      ]
-
-      logConfiguration = {
-        logDriver = "awslogs"
-        options = {
-          "awslogs-group"         = "/ecs/${local.cluster_name}/redis-debug"
-          "awslogs-region"        = data.aws_region.current.name
-          "awslogs-stream-prefix" = "ecs"
-        }
-      }
-    }
-  ])
-
-  tags = var.tags
-}
-
-
-# Log group for debug task
-resource "aws_cloudwatch_log_group" "redis_debug" {
-  name              = "/ecs/${local.cluster_name}/redis-debug"
-  retention_in_days = 7
-  tags              = var.tags
-}
+# resource "aws_ecs_task_definition" "redis_debug" {
+#   family                   = "${local.cluster_name}-redis-debug"
+#   network_mode             = "awsvpc"
+#   requires_compatibilities = ["FARGATE"]
+#   cpu                      = 256
+#   memory                   = 512
+#   execution_role_arn       = module.ecs.task_execution_role_arns["voice-agent"]
+#   task_role_arn            = module.ecs.task_role_arns["voice-agent"]
+#
+#   container_definitions = jsonencode([
+#     {
+#       name  = "redis-debug"
+#       image = "redis:alpine"  # includes redis-cli :contentReference[oaicite:1]{index=1}
+#       essential = true
+#
+#       environment = [
+#         { name = "REDIS_ENDPOINT", value = module.redis.redis_primary_endpoint },
+#         { name = "REDIS_PORT",     value = tostring(module.redis.redis_port) },
+#         { name = "VPC_CIDR",       value = module.vpc.vpc_cidr_block }
+#       ]
+#
+#       secrets = var.redis_auth_token_enabled ? [
+#         {
+#           name      = "REDIS_PASSWORD"
+#           valueFrom = module.redis.ssm_parameter_redis_auth_token
+#         }
+#       ] : []
+#
+#       command = [
+#         "sh", "-c",
+#         <<-EOF
+#         echo "=== Redis Connectivity Debug ==="
+#         echo "Endpoint: $REDIS_ENDPOINT"
+#         echo "Port: $REDIS_PORT"
+#         echo "VPC CIDR: $VPC_CIDR"
+#
+#         apk update && apk add --no-cache bind-tools netcat-openbsd curl
+#
+#         echo "=== Testing DNS Resolution ==="
+#         nslookup $REDIS_ENDPOINT
+#         dig $REDIS_ENDPOINT || echo "dig not found"
+#
+#         echo "=== Testing Network Connectivity ==="
+#         nc -zv $REDIS_ENDPOINT $REDIS_PORT || echo "Netcat failed"
+#
+#         echo "=== Testing Redis Ping (no auth) ==="
+#         timeout 10s redis-cli -h $REDIS_ENDPOINT -p $REDIS_PORT ping || echo "Ping without auth failed"
+#
+#         if [ -n "$REDIS_PASSWORD" ]; then
+#           echo "=== Testing Redis Ping (with auth) ==="
+#           timeout 10s redis-cli -h $REDIS_ENDPOINT -p $REDIS_PORT -a "$REDIS_PASSWORD" ping || echo "Ping with auth failed"
+#         fi
+#
+#         echo "=== Testing Persistent Connection ==="
+#         if [ -n "$REDIS_PASSWORD" ]; then
+#           timeout 30s redis-cli -h $REDIS_ENDPOINT -p $REDIS_PORT -a "$REDIS_PASSWORD" -i 1 ping || echo "Persistent connection failed"
+#         else
+#           timeout 30s redis-cli -h $REDIS_ENDPOINT -p $REDIS_PORT -i 1 ping || echo "Persistent connection failed"
+#         fi
+#
+#         echo "=== Debug Complete ==="
+#         sleep 3600
+#         EOF
+#       ]
+#
+#       logConfiguration = {
+#         logDriver = "awslogs"
+#         options = {
+#           "awslogs-group"         = "/ecs/${local.cluster_name}/redis-debug"
+#           "awslogs-region"        = data.aws_region.current.name
+#           "awslogs-stream-prefix" = "ecs"
+#         }
+#       }
+#     }
+#   ])
+#
+#   tags = var.tags
+# }
+#
+#
+# # Log group for debug task
+# resource "aws_cloudwatch_log_group" "redis_debug" {
+#   name              = "/ecs/${local.cluster_name}/redis-debug"
+#   retention_in_days = 7
+#   tags              = var.tags
+# }
