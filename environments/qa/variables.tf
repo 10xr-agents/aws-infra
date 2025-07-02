@@ -685,28 +685,6 @@ variable "global_accelerator_traffic_dial_percentage" {
 }
 
 ################################################################################
-# LiveKit Global Accelerator Variables (Optional)
-################################################################################
-
-variable "create_livekit_global_accelerator" {
-  description = "Whether to create a separate Global Accelerator for LiveKit"
-  type        = bool
-  default     = false
-}
-
-variable "livekit_global_accelerator_enabled" {
-  description = "Whether the LiveKit Global Accelerator is enabled"
-  type        = bool
-  default     = true
-}
-
-variable "livekit_global_accelerator_client_affinity" {
-  description = "Client affinity for LiveKit Global Accelerator (NONE or SOURCE_IP)"
-  type        = string
-  default     = "SOURCE_IP"
-}
-
-################################################################################
 # Custom DNS Records
 ################################################################################
 

@@ -83,40 +83,6 @@ variable "proxy_subdomain" {
 }
 
 ################################################################################
-# LiveKit DNS Configuration
-################################################################################
-
-variable "create_livekit_dns_records" {
-  description = "Whether to create LiveKit DNS records"
-  type        = bool
-  default     = false
-}
-
-variable "livekit_target_dns_name" {
-  description = "Target DNS name for LiveKit (LiveKit Global Accelerator DNS name)"
-  type        = string
-  default     = ""
-}
-
-variable "livekit_subdomain" {
-  description = "LiveKit subdomain (defaults to 'livekit.{environment}' if empty)"
-  type        = string
-  default     = ""
-}
-
-variable "livekit_turn_subdomain" {
-  description = "LiveKit TURN subdomain (defaults to 'livekit-turn.{environment}' if empty)"
-  type        = string
-  default     = ""
-}
-
-variable "livekit_whip_subdomain" {
-  description = "LiveKit WHIP subdomain (defaults to 'livekit-whip.{environment}' if empty)"
-  type        = string
-  default     = ""
-}
-
-################################################################################
 # Custom DNS Records
 ################################################################################
 
