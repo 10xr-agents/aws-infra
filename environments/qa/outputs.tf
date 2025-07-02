@@ -204,9 +204,20 @@ output "global_accelerator_id" {
 
 output "global_accelerator_configuration" {
   description = "Global Accelerator configuration summary"
-  value       = var.create_global_accelerator ? module.global_accelerator[0].accelerator_configuration : {}
+  value = var.create_global_accelerator ? module.global_accelerator[0].accelerator_configuration : {
+    dns_name                = null
+    ip_address_type         = null
+    enabled                 = false
+    static_ips              = []
+    flow_logs_enabled       = false
+    flow_logs_bucket        = null
+    listener_protocol       = null
+    listener_client_affinity = null
+    endpoint_count          = 0
+    health_check_protocol   = null
+    health_check_path       = null
+  }
 }
-
 output "global_accelerator_connection_info" {
   description = "Global Accelerator connection information"
   value = var.create_global_accelerator ? module.global_accelerator[0].accelerator_connection_info : null
