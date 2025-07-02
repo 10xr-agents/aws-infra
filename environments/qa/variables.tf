@@ -385,12 +385,6 @@ variable "redis_num_cache_clusters" {
   default     = 2
 }
 
-variable "redis_cluster_mode" {
-  description = "Enable Redis cluster mode"
-  type        = bool
-  default     = false
-}
-
 variable "redis_multi_az_enabled" {
   description = "Enable Multi-AZ for Redis"
   type        = bool

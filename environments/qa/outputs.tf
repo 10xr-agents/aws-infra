@@ -278,3 +278,24 @@ output "application_urls" {
     )
   }
 }
+
+# 4. OUTPUTS for debugging
+output "debug_redis_info" {
+  description = "Complete Redis debug information"
+  value = {
+    redis_endpoint = module.redis.redis_primary_endpoint
+    redis_port = module.redis.redis_port
+    redis_security_group_id = module.redis.redis_security_group_id
+    ecs_security_group_ids = local.ecs_security_group_ids
+    vpc_cidr = module.vpc.vpc_cidr_block
+    auth_enabled = var.redis_auth_token_enabled
+    encryption_in_transit = var.redis_transit_encryption_enabled
+    redis_parameter_group = module.redis.redis_parameter_group_name
+  }
+}
+
+# 5. ENHANCED: Check Redis parameters that might cause connection issues
+output "redis_parameters_check" {
+  description = "Redis parameters that might affect connectivity"
+  value = var.redis_parameters
+}

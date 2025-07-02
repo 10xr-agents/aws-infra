@@ -319,22 +319,6 @@ resource "aws_security_group_rule" "redis_from_ecs_ingress" {
   depends_on = [module.ecs, module.redis]
 }
 
-# ADDED: Egress rule from ECS to Redis (for completeness)
-resource "aws_security_group_rule" "ecs_to_redis_egress" {
-  for_each = toset(local.ecs_security_group_ids)
-
-  type                     = "egress"
-  from_port                = module.redis.redis_port
-  to_port                  = module.redis.redis_port
-  protocol                 = "tcp"
-  source_security_group_id = module.redis.redis_security_group_id
-  security_group_id        = each.value
-  description              = "Allow ECS services to reach Redis"
-
-  depends_on = [module.ecs, module.redis]
-}
-
-
 # Security Group Rule to allow ECS access to MongoDB
 resource "aws_security_group_rule" "mongodb_from_ecs" {
   for_each = module.ecs.security_group_ids
@@ -349,17 +333,107 @@ resource "aws_security_group_rule" "mongodb_from_ecs" {
   depends_on = [module.ecs, module.mongodb]
 }
 
-# ADDED: Egress rule from ECS to MongoDB
-resource "aws_security_group_rule" "ecs_to_mongodb_egress" {
-  for_each = toset(local.ecs_security_group_ids)
+# 3. DEBUGGING: Create a debug ECS task to test Redis connectivity
+resource "aws_ecs_task_definition" "redis_debug" {
+  family                   = "${local.cluster_name}-redis-debug"
+  network_mode             = "awsvpc"
+  requires_compatibilities = ["FARGATE"]
+  cpu                      = 256
+  memory                   = 512
+  execution_role_arn       = module.ecs.task_execution_role_arns["voice-agent"]
+  task_role_arn           = module.ecs.task_role_arns["voice-agent"]
 
-  type                     = "egress"
-  from_port                = 27017
-  to_port                  = 27017
-  protocol                 = "tcp"
-  source_security_group_id = module.mongodb.security_group_id
-  security_group_id        = each.value
-  description              = "Allow ECS services to reach MongoDB"
+  container_definitions = jsonencode([
+    {
+      name  = "redis-debug"
+      image = "alpine:latest"
 
-  depends_on = [module.ecs, module.mongodb]
+      essential = true
+
+      environment = [
+        {
+          name  = "REDIS_ENDPOINT"
+          value = module.redis.redis_primary_endpoint
+        },
+        {
+          name  = "REDIS_PORT"
+          value = tostring(module.redis.redis_port)
+        },
+        {
+          name  = "VPC_CIDR"
+          value = module.vpc.vpc_cidr_block
+        }
+      ]
+
+      secrets = var.redis_auth_token_enabled ? [
+        {
+          name      = "REDIS_PASSWORD"
+          valueFrom = module.redis.ssm_parameter_redis_auth_token
+        }
+      ] : []
+
+      # Debug script to test connectivity step by step
+      command = [
+        "sh", "-c",
+        <<-EOF
+        echo "=== Redis Connectivity Debug ==="
+        echo "Redis Endpoint: $REDIS_ENDPOINT"
+        echo "Redis Port: $REDIS_PORT"
+        echo "VPC CIDR: $VPC_CIDR"
+
+        # Install tools
+        apk add --no-cache redis curl telnet bind-tools netcat-openbsd
+
+        # Test 1: DNS Resolution
+        echo "=== Testing DNS Resolution ==="
+        nslookup $REDIS_ENDPOINT
+        dig $REDIS_ENDPOINT
+
+        # Test 2: Network connectivity
+        echo "=== Testing Network Connectivity ==="
+        telnet $REDIS_ENDPOINT $REDIS_PORT || echo "Telnet failed"
+        nc -zv $REDIS_ENDPOINT $REDIS_PORT || echo "Netcat failed"
+
+        # Test 3: Redis ping without auth
+        echo "=== Testing Redis Ping (no auth) ==="
+        timeout 10s redis-cli -h $REDIS_ENDPOINT -p $REDIS_PORT ping || echo "Ping without auth failed"
+
+        # Test 4: Redis ping with auth (if enabled)
+        if [ ! -z "$REDIS_PASSWORD" ]; then
+          echo "=== Testing Redis Ping (with auth) ==="
+          timeout 10s redis-cli -h $REDIS_ENDPOINT -p $REDIS_PORT -a $REDIS_PASSWORD ping || echo "Ping with auth failed"
+        fi
+
+        # Test 5: Try to connect and stay connected
+        echo "=== Testing Persistent Connection ==="
+        if [ ! -z "$REDIS_PASSWORD" ]; then
+          timeout 30s redis-cli -h $REDIS_ENDPOINT -p $REDIS_PORT -a $REDIS_PASSWORD -i 1 ping || echo "Persistent connection failed"
+        else
+          timeout 30s redis-cli -h $REDIS_ENDPOINT -p $REDIS_PORT -i 1 ping || echo "Persistent connection failed"
+        fi
+
+        echo "=== Debug Complete ==="
+        sleep 3600
+        EOF
+      ]
+
+      logConfiguration = {
+        logDriver = "awslogs"
+        options = {
+          "awslogs-group"         = "/ecs/${local.cluster_name}/redis-debug"
+          "awslogs-region"        = data.aws_region.current.name
+          "awslogs-stream-prefix" = "ecs"
+        }
+      }
+    }
+  ])
+
+  tags = var.tags
+}
+
+# Log group for debug task
+resource "aws_cloudwatch_log_group" "redis_debug" {
+  name              = "/ecs/${local.cluster_name}/redis-debug"
+  retention_in_days = 7
+  tags              = var.tags
 }

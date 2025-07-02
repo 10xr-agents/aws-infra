@@ -323,13 +323,12 @@ mongodb_backup_retention_days = 7
 # Additional Features
 mongodb_store_connection_string_in_ssm = true
 mongodb_enable_encryption_at_rest      = true
-mongodb_enable_audit_logging          = false
+mongodb_enable_audit_logging          = true
 
 # Redis Configuration
 redis_node_type                    = "cache.t3.micro"
 redis_engine_version              = "7.0"
 redis_num_cache_clusters          = 2
-redis_cluster_mode                = false
 redis_multi_az_enabled            = true
 redis_automatic_failover_enabled  = true
 redis_snapshot_retention_limit    = 7
