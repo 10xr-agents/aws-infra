@@ -198,7 +198,7 @@ variable "redis_parameters" {
 variable "create_cloudwatch_log_group" {
   description = "Whether to create CloudWatch log group for Redis"
   type        = bool
-  default     = false
+  default     = true
 }
 
 variable "cloudwatch_log_retention_days" {

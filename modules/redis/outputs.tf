@@ -161,23 +161,44 @@ output "ssm_parameter_redis_connection_string" {
 }
 
 ################################################################################
-# CloudWatch Log Group
+# CloudWatch Log Groups
 ################################################################################
 
 output "cloudwatch_log_group_name" {
-  description = "Name of the CloudWatch log group for Redis"
-  value       = var.create_cloudwatch_log_group ? aws_cloudwatch_log_group.redis[0].name : null
+  description = "Name of the CloudWatch log group for Redis (general)"
+  value       = var.create_cloudwatch_log_group && length(var.redis_log_delivery_configuration) == 0 ? aws_cloudwatch_log_group.redis[0].name : null
 }
 
 output "cloudwatch_log_group_arn" {
-  description = "ARN of the CloudWatch log group for Redis"
-  value       = var.create_cloudwatch_log_group ? aws_cloudwatch_log_group.redis[0].arn : null
+  description = "ARN of the CloudWatch log group for Redis (general)"
+  value       = var.create_cloudwatch_log_group && length(var.redis_log_delivery_configuration) == 0 ? aws_cloudwatch_log_group.redis[0].arn : null
+}
+
+output "cloudwatch_slow_log_group_name" {
+  description = "Name of the CloudWatch log group for Redis slow logs"
+  value       = aws_cloudwatch_log_group.redis_slow_log.name
+}
+
+output "cloudwatch_slow_log_group_arn" {
+  description = "ARN of the CloudWatch log group for Redis slow logs"
+  value       = aws_cloudwatch_log_group.redis_slow_log.arn
+}
+
+output "cloudwatch_error_log_group_name" {
+  description = "Name of the CloudWatch log group for Redis error logs"
+  value       = aws_cloudwatch_log_group.redis_error_log.name
+}
+
+output "cloudwatch_error_log_group_arn" {
+  description = "ARN of the CloudWatch log group for Redis error logs"
+  value       = aws_cloudwatch_log_group.redis_error_log.arn
 }
 
 ################################################################################
 # Summary Output for Easy Reference
 ################################################################################
 
+# Update the redis_details output to include logging info
 output "redis_details" {
   description = "Complete Redis details"
   value = {
@@ -191,5 +212,8 @@ output "redis_details" {
     node_type                  = var.redis_node_type
     engine_version             = var.redis_engine_version
     replication_group_id       = aws_elasticache_replication_group.redis.id
+    logging_enabled            = true
+    slow_log_group             = aws_cloudwatch_log_group.redis_slow_log.name
+    error_log_group            = aws_cloudwatch_log_group.redis_error_log.name
   }
 }

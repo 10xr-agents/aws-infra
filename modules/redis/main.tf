@@ -147,9 +147,22 @@ resource "aws_elasticache_replication_group" "redis" {
   # KMS key for encryption
   kms_key_id = var.redis_kms_key_id
 
-  # Logging
+  # Default logging configuration - enable slow and error logs
   dynamic "log_delivery_configuration" {
-    for_each = var.redis_log_delivery_configuration
+    for_each = length(var.redis_log_delivery_configuration) > 0 ? var.redis_log_delivery_configuration : [
+      {
+        destination      = aws_cloudwatch_log_group.redis_slow_log.name
+        destination_type = "cloudwatch-logs"
+        log_format       = "text"
+        log_type         = "slow-log"
+      },
+      {
+        destination      = aws_cloudwatch_log_group.redis_error_log.name
+        destination_type = "cloudwatch-logs"
+        log_format       = "text"
+        log_type         = "engine-log"
+      }
+    ]
     content {
       destination      = log_delivery_configuration.value.destination
       destination_type = log_delivery_configuration.value.destination_type
@@ -167,11 +180,32 @@ resource "aws_elasticache_replication_group" "redis" {
 }
 
 ################################################################################
-# CloudWatch Log Group for Redis (if logging to CloudWatch)
+# CloudWatch Log Groups for Redis Logs
 ################################################################################
 
+# Slow log group
+resource "aws_cloudwatch_log_group" "redis_slow_log" {
+  name              = "/aws/elasticache/${local.name_prefix}/redis/slow-log"
+  retention_in_days = var.cloudwatch_log_retention_days
+
+  tags = merge(local.common_tags, {
+    Name = "/aws/elasticache/${local.name_prefix}/redis/slow-log"
+  })
+}
+
+# Error log group
+resource "aws_cloudwatch_log_group" "redis_error_log" {
+  name              = "/aws/elasticache/${local.name_prefix}/redis/error-log"
+  retention_in_days = var.cloudwatch_log_retention_days
+
+  tags = merge(local.common_tags, {
+    Name = "/aws/elasticache/${local.name_prefix}/redis/error-log"
+  })
+}
+
+# Keep the existing general log group but make it conditional
 resource "aws_cloudwatch_log_group" "redis" {
-  count = var.create_cloudwatch_log_group ? 1 : 0
+  count = var.create_cloudwatch_log_group && length(var.redis_log_delivery_configuration) == 0 ? 1 : 0
 
   name              = "/aws/elasticache/${local.name_prefix}/redis"
   retention_in_days = var.cloudwatch_log_retention_days
