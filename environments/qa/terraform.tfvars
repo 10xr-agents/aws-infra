@@ -124,6 +124,7 @@ ecs_services = {
     "auto_scaling_memory_target": 80,
     "enable_default_routing": false,
     "alb_path_patterns": ["/livekit/*"],
+    "alb_host_headers": ["proxy.qa.10xr.co"],
     "enable_load_balancer": true,
     "enable_service_discovery": true,
     "deregistration_delay": 30
@@ -220,6 +221,7 @@ ecs_services = {
     "auto_scaling_cpu_target": 70,
     "auto_scaling_memory_target": 80,
     "enable_default_routing": true,
+    "alb_host_headers": ["qa.10xr.co"],
     "alb_path_patterns": ["/ui/*", "/"],
     "enable_load_balancer": true,
     "enable_service_discovery": true,
@@ -271,6 +273,7 @@ ecs_services = {
     "auto_scaling_cpu_target": 70,
     "auto_scaling_memory_target": 80,
     "enable_default_routing": false,
+    "alb_host_headers": ["api.qa.10xr.co"],
     "alb_path_patterns": ["/services/*"],
     "enable_load_balancer": true,
     "enable_service_discovery": true,
