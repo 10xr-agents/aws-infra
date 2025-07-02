@@ -147,6 +147,8 @@ resource "aws_elasticache_replication_group" "redis" {
   # KMS key for encryption
   kms_key_id = var.redis_kms_key_id
 
+  apply_immediately = true
+
   # Default logging configuration - enable slow and error logs
   dynamic "log_delivery_configuration" {
     for_each = length(var.redis_log_delivery_configuration) > 0 ? var.redis_log_delivery_configuration : [
