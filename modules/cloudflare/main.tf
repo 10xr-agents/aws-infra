@@ -1,4 +1,4 @@
-# modules/cloudflare/main.tf
+# modules/cloudflare/main.tf - Fixed version
 
 locals {
   name_prefix = "${var.cluster_name}-${var.environment}"
@@ -37,7 +37,7 @@ resource "cloudflare_record" "main_dns" {
 
   comment = "Main DNS record for ${var.environment} environment"
 
-  tags = ["terraform", "environment:${var.environment}"]
+  # Removed tags - Cloudflare has a quota of 0 tags for DNS records
 }
 
 # API subdomain DNS record
@@ -53,7 +53,7 @@ resource "cloudflare_record" "api_dns" {
 
   comment = "API DNS record for ${var.environment} environment"
 
-  tags = ["terraform", "environment:${var.environment}", "api"]
+  # Removed tags - Cloudflare has a quota of 0 tags for DNS records
 }
 
 # Proxy subdomain DNS record (for LiveKit proxy)
@@ -69,7 +69,7 @@ resource "cloudflare_record" "proxy_dns" {
 
   comment = "Proxy DNS record for ${var.environment} environment"
 
-  tags = ["terraform", "environment:${var.environment}", "proxy"]
+  # Removed tags - Cloudflare has a quota of 0 tags for DNS records
 }
 
 ################################################################################
@@ -89,10 +89,7 @@ resource "cloudflare_record" "custom_records" {
 
   comment = lookup(each.value, "comment", "Custom DNS record for ${var.environment} environment")
 
-  tags = concat(
-    ["terraform", "environment:${var.environment}", "custom"],
-    lookup(each.value, "tags", [])
-  )
+  # Removed tags - Cloudflare has a quota of 0 tags for DNS records
 }
 
 ################################################################################
@@ -111,7 +108,7 @@ resource "cloudflare_record" "cert_validation" {
 
   comment = "ACM certificate validation record"
 
-  tags = ["terraform", "environment:${var.environment}", "cert-validation"]
+  # Removed tags - Cloudflare has a quota of 0 tags for DNS records
 }
 
 ################################################################################
