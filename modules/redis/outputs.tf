@@ -39,17 +39,13 @@ output "redis_port" {
 
 output "redis_connection_string" {
   description = "Redis connection string"
-  value       = var.redis_transit_encryption_enabled
-    ? "rediss://${aws_elasticache_replication_group.redis.primary_endpoint_address}:${var.redis_port}"
-    : "redis://${aws_elasticache_replication_group.redis.primary_endpoint_address}:${var.redis_port}"
+  value       = var.redis_transit_encryption_enabled ? "rediss://${aws_elasticache_replication_group.redis.primary_endpoint_address}:${var.redis_port}" : "redis://${aws_elasticache_replication_group.redis.primary_endpoint_address}:${var.redis_port}"
   sensitive = true
 }
 
 output "redis_url" {
   description = "Redis URL for applications"
-  value       = var.redis_transit_encryption_enabled
-    ? "rediss://${aws_elasticache_replication_group.redis.primary_endpoint_address}:${var.redis_port}"
-    : "redis://${aws_elasticache_replication_group.redis.primary_endpoint_address}:${var.redis_port}"
+  value       = var.redis_transit_encryption_enabled ? "rediss://${aws_elasticache_replication_group.redis.primary_endpoint_address}:${var.redis_port}" : "redis://${aws_elasticache_replication_group.redis.primary_endpoint_address}:${var.redis_port}"
   sensitive = true
 }
 
