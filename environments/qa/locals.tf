@@ -18,8 +18,10 @@ locals {
           CLUSTER_NAME = var.cluster_name
           # Add Redis connection details to all services
           REDIS_URL = module.redis.redis_connection_string
+          REDIS_HOST = module.redis.redis_primary_endpoint
           REDIS_PORT = tostring(module.redis.redis_port)
           REDIS_USERNAME = module.redis.redis_username
+          REDIS_TLS_ENABLED = tostring(var.redis_transit_encryption_enabled)
         }
       )
       # Add Redis auth token as a secret for all services that need it
