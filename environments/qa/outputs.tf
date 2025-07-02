@@ -266,12 +266,12 @@ output "application_urls" {
     global_accelerator_static_ips = var.create_global_accelerator ? module.global_accelerator[0].static_ip_addresses_flat : []
 
     # Primary URLs (recommended for users)
-    primary_app_url = var.create_cloudflare_dns_records ? module.cloudflare[0].custom_dns_record_urls[0] : (
+    primary_app_url = var.create_cloudflare_dns_records ? module.cloudflare[0].custom_dns_record_urls[0].https_url : (
       var.create_global_accelerator ? "https://${module.global_accelerator[0].accelerator_dns_name}" : (
       var.acm_certificate_arn != "" ? "https://${module.ecs.alb_dns_name}" : "http://${module.ecs.alb_dns_name}"
     )
     )
-    primary_api_url = var.create_cloudflare_dns_records ? module.cloudflare[0].custom_dns_record_urls[1] : (
+    primary_api_url = var.create_cloudflare_dns_records ? module.cloudflare[0].custom_dns_record_urls[1].https_url : (
       var.create_global_accelerator ? "https://${module.global_accelerator[0].accelerator_dns_name}" : (
       var.acm_certificate_arn != "" ? "https://${module.ecs.alb_dns_name}" : "http://${module.ecs.alb_dns_name}"
     )
