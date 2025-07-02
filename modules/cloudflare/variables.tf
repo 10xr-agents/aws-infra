@@ -43,50 +43,10 @@ variable "ttl" {
 }
 
 ################################################################################
-# Main Application DNS Records
+# Application DNS Records
 ################################################################################
 
-variable "create_main_dns_record" {
-  description = "Whether to create the main DNS record"
-  type        = bool
-  default     = true
-}
-
-variable "main_subdomain" {
-  description = "Main subdomain (defaults to environment name if empty)"
-  type        = string
-  default     = ""
-}
-
-variable "create_api_dns_record" {
-  description = "Whether to create the API DNS record"
-  type        = bool
-  default     = true
-}
-
-variable "api_subdomain" {
-  description = "API subdomain (defaults to 'api.{environment}' if empty)"
-  type        = string
-  default     = ""
-}
-
-variable "create_proxy_dns_record" {
-  description = "Whether to create the proxy DNS record"
-  type        = bool
-  default     = true
-}
-
-variable "proxy_subdomain" {
-  description = "Proxy subdomain (defaults to 'proxy.{environment}' if empty)"
-  type        = string
-  default     = ""
-}
-
-################################################################################
-# Custom DNS Records
-################################################################################
-
-variable "custom_dns_records" {
+variable "app_dns_records" {
   description = "Map of custom DNS records to create"
   type = map(object({
     name     = string

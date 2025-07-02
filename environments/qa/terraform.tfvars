@@ -384,7 +384,7 @@ dns_proxied = true  # Enable Cloudflare proxy for CDN and protection
 dns_ttl = 300
 
 # Custom DNS Records for specific subdomain routing
-custom_dns_records = {
+app_dns_records = {
   "qa-main" = {
     name     = "qa"
     content  = "" # Will be set by module to Global Accelerator DNS name
@@ -394,17 +394,8 @@ custom_dns_records = {
     comment  = "Main QA environment - routes to UI console"
     tags     = ["qa", "ui", "main"]
   },
-  "qa-ui" = {
-    name     = "qa.ui"
-    content  = "" # Will be set by module to Global Accelerator DNS name
-    type     = "CNAME"
-    proxied  = true
-    ttl      = 300
-    comment  = "QA UI environment - routes to UI console"
-    tags     = ["qa", "ui"]
-  },
   "qa-service" = {
-    name     = "qa.services"
+    name     = "api.qa"
     content  = "" # Will be set by module to Global Accelerator DNS name
     type     = "CNAME"
     proxied  = true
@@ -413,7 +404,7 @@ custom_dns_records = {
     tags     = ["qa", "service", "api"]
   },
   "qa-livekit" = {
-    name     = "qa.livekit"
+    name     = "proxy.qa"
     content  = "" # Will be set by module to Global Accelerator DNS name
     type     = "CNAME"
     proxied  = true

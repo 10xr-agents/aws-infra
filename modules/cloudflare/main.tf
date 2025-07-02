@@ -14,7 +14,7 @@ locals {
 
   # Process custom DNS records and set content to target_dns_name if empty
   processed_custom_dns_records = {
-    for name, record in var.custom_dns_records : name => merge(record, {
+    for name, record in var.app_dns_records : name => merge(record, {
       content = record.content != "" ? record.content : var.target_dns_name
     })
   }
@@ -24,59 +24,7 @@ locals {
 # DNS Records for ALB/Global Accelerator
 ################################################################################
 
-# Main application DNS record
-resource "cloudflare_record" "main_dns" {
-  count = var.create_main_dns_record ? 1 : 0
-
-  zone_id = var.cloudflare_zone_id
-  name    = var.main_subdomain != "" ? var.main_subdomain : var.environment
-  content = var.target_dns_name
-  type    = var.dns_record_type
-  proxied = var.proxied
-  ttl     = var.proxied ? null : var.ttl
-
-  comment = "Main DNS record for ${var.environment} environment"
-
-  # Removed tags - Cloudflare has a quota of 0 tags for DNS records
-}
-
-# API subdomain DNS record
-resource "cloudflare_record" "api_dns" {
-  count = var.create_api_dns_record ? 1 : 0
-
-  zone_id = var.cloudflare_zone_id
-  name    = var.api_subdomain != "" ? var.api_subdomain : "api.${var.environment}"
-  content = var.target_dns_name
-  type    = var.dns_record_type
-  proxied = var.proxied
-  ttl     = var.proxied ? null : var.ttl
-
-  comment = "API DNS record for ${var.environment} environment"
-
-  # Removed tags - Cloudflare has a quota of 0 tags for DNS records
-}
-
-# Proxy subdomain DNS record (for LiveKit proxy)
-resource "cloudflare_record" "proxy_dns" {
-  count = var.create_proxy_dns_record ? 1 : 0
-
-  zone_id = var.cloudflare_zone_id
-  name    = var.proxy_subdomain != "" ? var.proxy_subdomain : "proxy.${var.environment}"
-  content = var.target_dns_name
-  type    = var.dns_record_type
-  proxied = var.proxied
-  ttl     = var.proxied ? null : var.ttl
-
-  comment = "Proxy DNS record for ${var.environment} environment"
-
-  # Removed tags - Cloudflare has a quota of 0 tags for DNS records
-}
-
-################################################################################
-# Custom DNS Records
-################################################################################
-
-resource "cloudflare_record" "custom_records" {
+resource "cloudflare_record" "app_dns_records" {
   for_each = local.processed_custom_dns_records
 
   zone_id = var.cloudflare_zone_id
@@ -87,7 +35,7 @@ resource "cloudflare_record" "custom_records" {
   ttl     = lookup(each.value, "proxied", var.proxied) ? null : lookup(each.value, "ttl", var.ttl)
   priority = lookup(each.value, "priority", null)
 
-  comment = lookup(each.value, "comment", "Custom DNS record for ${var.environment} environment")
+  comment = lookup(each.value, "comment", "Application DNS record for ${var.environment} environment")
 
   # Removed tags - Cloudflare has a quota of 0 tags for DNS records
 }
