@@ -7,6 +7,14 @@ locals {
   ecs_security_group_ids = values(module.ecs.security_group_ids)
 }
 
+# Add this data source to the top of environments/qa/main.tf after the locals block
+
+data "aws_region" "current" {}
+
+data "aws_caller_identity" "current" {}
+
+
+
 # VPC Module - Reuse existing VPC module
 module "vpc" {
   source = "../../modules/vpc"
