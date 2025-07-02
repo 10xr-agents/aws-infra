@@ -4,7 +4,7 @@ locals {
   cluster_name = "${var.cluster_name}-${var.environment}"
   vpc_name     = "${var.cluster_name}-${var.environment}-${var.region}"
   # Get all ECS security group IDs
-  ecs_security_group_ids = [for sg_id in module.ecs.security_group_ids : sg_id]
+  ecs_security_group_ids = values(module.ecs.security_group_ids)
 }
 
 # VPC Module - Reuse existing VPC module

@@ -55,9 +55,20 @@ resource "aws_iam_policy" "ecs_elasticache_policy" {
       {
         Effect = "Allow"
         Action = [
+          # ElastiCache permissions
           "elasticache:DescribeCacheClusters",
           "elasticache:DescribeReplicationGroups",
-          "elasticache:DescribeCacheSubnetGroups"
+          "elasticache:DescribeCacheSubnetGroups",
+          "elasticache:ListTagsForResource",
+          # SSM permissions for connection details
+          "ssm:GetParameter",
+          "ssm:GetParameters",
+          "ssm:GetParametersByPath",
+          # Secrets Manager permissions
+          "secretsmanager:GetSecretValue",
+          # KMS permissions for decryption
+          "kms:Decrypt",
+          "kms:DescribeKey"
         ]
         Resource = "*"
       }
