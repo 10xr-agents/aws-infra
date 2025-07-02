@@ -237,31 +237,9 @@ output "cloudflare_dns_records" {
   value = var.create_cloudflare_dns_records ? module.cloudflare[0].dns_records_summary : null
 }
 
-output "cloudflare_main_hostname" {
-  description = "Main application hostname"
-  value       = var.create_cloudflare_dns_records ? module.cloudflare[0].main_dns_record_hostname : null
-}
-
-output "cloudflare_api_hostname" {
-  description = "API hostname"
-  value       = var.create_cloudflare_dns_records ? module.cloudflare[0].api_dns_record_hostname : null
-}
-
-output "cloudflare_proxy_hostname" {
-  description = "Proxy hostname"
-  value       = var.create_cloudflare_dns_records ? module.cloudflare[0].proxy_dns_record_hostname : null
-}
-
 output "cloudflare_urls" {
   description = "Application URLs via Cloudflare"
-  value = var.create_cloudflare_dns_records ? {
-    main_http    = module.cloudflare[0].main_url_http
-    main_https   = module.cloudflare[0].main_url_https
-    api_http     = module.cloudflare[0].api_url_http
-    api_https    = module.cloudflare[0].api_url_https
-    proxy_http   = module.cloudflare[0].proxy_url_http
-    proxy_https  = module.cloudflare[0].proxy_url_https
-  } : {}
+  value = var.create_cloudflare_dns_records ? module.cloudflare.custom_dns_record_urls : {}
 }
 
 output "cloudflare_configuration" {
@@ -287,21 +265,13 @@ output "application_urls" {
     global_accelerator_https_url = var.create_global_accelerator ? "https://${module.global_accelerator[0].accelerator_dns_name}" : null
     global_accelerator_static_ips = var.create_global_accelerator ? module.global_accelerator[0].static_ip_addresses_flat : []
 
-    # Cloudflare access (if enabled)
-    cloudflare_main_url_http  = var.create_cloudflare_dns_records ? module.cloudflare[0].main_url_http : null
-    cloudflare_main_url_https = var.create_cloudflare_dns_records ? module.cloudflare[0].main_url_https : null
-    cloudflare_api_url_http   = var.create_cloudflare_dns_records ? module.cloudflare[0].api_url_http : null
-    cloudflare_api_url_https  = var.create_cloudflare_dns_records ? module.cloudflare[0].api_url_https : null
-    cloudflare_proxy_url_http = var.create_cloudflare_dns_records ? module.cloudflare[0].proxy_url_http : null
-    cloudflare_proxy_url_https = var.create_cloudflare_dns_records ? module.cloudflare[0].proxy_url_https : null
-
     # Primary URLs (recommended for users)
-    primary_app_url = var.create_cloudflare_dns_records ? module.cloudflare[0].main_url_https : (
+    primary_app_url = var.create_cloudflare_dns_records ? module.cloudflare[0].custom_dns_record_urls[0] : (
       var.create_global_accelerator ? "https://${module.global_accelerator[0].accelerator_dns_name}" : (
       var.acm_certificate_arn != "" ? "https://${module.ecs.alb_dns_name}" : "http://${module.ecs.alb_dns_name}"
     )
     )
-    primary_api_url = var.create_cloudflare_dns_records ? module.cloudflare[0].api_url_https : (
+    primary_api_url = var.create_cloudflare_dns_records ? module.cloudflare[0].custom_dns_record_urls[1] : (
       var.create_global_accelerator ? "https://${module.global_accelerator[0].accelerator_dns_name}" : (
       var.acm_certificate_arn != "" ? "https://${module.ecs.alb_dns_name}" : "http://${module.ecs.alb_dns_name}"
     )
