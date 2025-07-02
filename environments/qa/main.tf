@@ -319,6 +319,22 @@ resource "aws_security_group_rule" "redis_from_ecs_ingress" {
   depends_on = [module.ecs, module.redis]
 }
 
+# ADDED: Egress rule from ECS to Redis (for completeness)
+resource "aws_security_group_rule" "ecs_to_redis_egress" {
+  for_each = toset(local.ecs_security_group_ids)
+
+  type                     = "egress"
+  from_port                = module.redis.redis_port
+  to_port                  = module.redis.redis_port
+  protocol                 = "tcp"
+  source_security_group_id = module.redis.redis_security_group_id
+  security_group_id        = each.value
+  description              = "Allow ECS services to reach Redis"
+
+  depends_on = [module.ecs, module.redis]
+}
+
+
 # Security Group Rule to allow ECS access to MongoDB
 resource "aws_security_group_rule" "mongodb_from_ecs" {
   for_each = module.ecs.security_group_ids
@@ -329,6 +345,21 @@ resource "aws_security_group_rule" "mongodb_from_ecs" {
   protocol                 = "tcp"
   source_security_group_id = each.value
   security_group_id        = module.mongodb.security_group_id
+
+  depends_on = [module.ecs, module.mongodb]
+}
+
+# ADDED: Egress rule from ECS to MongoDB
+resource "aws_security_group_rule" "ecs_to_mongodb_egress" {
+  for_each = toset(local.ecs_security_group_ids)
+
+  type                     = "egress"
+  from_port                = 27017
+  to_port                  = 27017
+  protocol                 = "tcp"
+  source_security_group_id = module.mongodb.security_group_id
+  security_group_id        = each.value
+  description              = "Allow ECS services to reach MongoDB"
 
   depends_on = [module.ecs, module.mongodb]
 }
