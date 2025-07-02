@@ -20,7 +20,6 @@ locals {
           REDIS_URL = module.redis.redis_connection_string
           REDIS_PORT = tostring(module.redis.redis_port)
           REDIS_USERNAME = module.redis.redis_username
-          REDIS_PASSWORD = module.redis.redis_auth_token
         }
       )
       # Add Redis auth token as a secret for all services that need it
@@ -36,6 +35,3 @@ locals {
     }
   )}
 }
-
-# Then in your terraform.tfvars or when calling the module:
-# ecs_services = local.ecs_services_with_overrides
