@@ -341,7 +341,6 @@ resource "aws_security_group_rule" "mongodb_from_ecs" {
   depends_on = [module.ecs, module.mongodb]
 }
 
-# 3. DEBUGGING: Create a debug ECS task to test Redis connectivity
 resource "aws_ecs_task_definition" "redis_debug" {
   family                   = "${local.cluster_name}-redis-debug"
   network_mode             = "awsvpc"
@@ -349,28 +348,18 @@ resource "aws_ecs_task_definition" "redis_debug" {
   cpu                      = 256
   memory                   = 512
   execution_role_arn       = module.ecs.task_execution_role_arns["voice-agent"]
-  task_role_arn           = module.ecs.task_role_arns["voice-agent"]
+  task_role_arn            = module.ecs.task_role_arns["voice-agent"]
 
   container_definitions = jsonencode([
     {
       name  = "redis-debug"
-      image = "alpine:latest"
-
+      image = "redis:alpine"  # includes redis-cli :contentReference[oaicite:1]{index=1}
       essential = true
 
       environment = [
-        {
-          name  = "REDIS_ENDPOINT"
-          value = module.redis.redis_primary_endpoint
-        },
-        {
-          name  = "REDIS_PORT"
-          value = tostring(module.redis.redis_port)
-        },
-        {
-          name  = "VPC_CIDR"
-          value = module.vpc.vpc_cidr_block
-        }
+        { name = "REDIS_ENDPOINT", value = module.redis.redis_primary_endpoint },
+        { name = "REDIS_PORT",     value = tostring(module.redis.redis_port) },
+        { name = "VPC_CIDR",       value = module.vpc.vpc_cidr_block }
       ]
 
       secrets = var.redis_auth_token_enabled ? [
@@ -380,42 +369,34 @@ resource "aws_ecs_task_definition" "redis_debug" {
         }
       ] : []
 
-      # Debug script to test connectivity step by step
       command = [
         "sh", "-c",
         <<-EOF
         echo "=== Redis Connectivity Debug ==="
-        echo "Redis Endpoint: $REDIS_ENDPOINT"
-        echo "Redis Port: $REDIS_PORT"
+        echo "Endpoint: $REDIS_ENDPOINT"
+        echo "Port: $REDIS_PORT"
         echo "VPC CIDR: $VPC_CIDR"
 
-        # Install tools
-        apk add --no-cache redis curl telnet bind-tools netcat-openbsd
+        apk update && apk add --no-cache bind-tools netcat-openbsd curl
 
-        # Test 1: DNS Resolution
         echo "=== Testing DNS Resolution ==="
         nslookup $REDIS_ENDPOINT
-        dig $REDIS_ENDPOINT
+        dig $REDIS_ENDPOINT || echo "dig not found"
 
-        # Test 2: Network connectivity
         echo "=== Testing Network Connectivity ==="
-        telnet $REDIS_ENDPOINT $REDIS_PORT || echo "Telnet failed"
         nc -zv $REDIS_ENDPOINT $REDIS_PORT || echo "Netcat failed"
 
-        # Test 3: Redis ping without auth
         echo "=== Testing Redis Ping (no auth) ==="
         timeout 10s redis-cli -h $REDIS_ENDPOINT -p $REDIS_PORT ping || echo "Ping without auth failed"
 
-        # Test 4: Redis ping with auth (if enabled)
-        if [ ! -z "$REDIS_PASSWORD" ]; then
+        if [ -n "$REDIS_PASSWORD" ]; then
           echo "=== Testing Redis Ping (with auth) ==="
-          timeout 10s redis-cli -h $REDIS_ENDPOINT -p $REDIS_PORT -a $REDIS_PASSWORD ping || echo "Ping with auth failed"
+          timeout 10s redis-cli -h $REDIS_ENDPOINT -p $REDIS_PORT -a "$REDIS_PASSWORD" ping || echo "Ping with auth failed"
         fi
 
-        # Test 5: Try to connect and stay connected
         echo "=== Testing Persistent Connection ==="
-        if [ ! -z "$REDIS_PASSWORD" ]; then
-          timeout 30s redis-cli -h $REDIS_ENDPOINT -p $REDIS_PORT -a $REDIS_PASSWORD -i 1 ping || echo "Persistent connection failed"
+        if [ -n "$REDIS_PASSWORD" ]; then
+          timeout 30s redis-cli -h $REDIS_ENDPOINT -p $REDIS_PORT -a "$REDIS_PASSWORD" -i 1 ping || echo "Persistent connection failed"
         else
           timeout 30s redis-cli -h $REDIS_ENDPOINT -p $REDIS_PORT -i 1 ping || echo "Persistent connection failed"
         fi
@@ -438,6 +419,7 @@ resource "aws_ecs_task_definition" "redis_debug" {
 
   tags = var.tags
 }
+
 
 # Log group for debug task
 resource "aws_cloudwatch_log_group" "redis_debug" {
