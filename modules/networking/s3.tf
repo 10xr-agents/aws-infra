@@ -15,7 +15,7 @@ resource "random_string" "bucket_suffix" {
 resource "aws_s3_bucket" "nlb_access_logs" {
   count = var.nlb_access_logs_enabled ? 1 : 0
 
-  bucket        = "${local.name_prefix}-nlb-access-logs-${random_string.bucket_suffix[0].result}"
+  bucket        = "${local.name_prefix}-nlb-access-logs"
   force_destroy = true
 
   tags = merge(local.common_tags, {
@@ -28,7 +28,7 @@ resource "aws_s3_bucket" "nlb_access_logs" {
 resource "aws_s3_bucket" "nlb_connection_logs" {
   count = var.nlb_connection_logs_enabled ? 1 : 0
 
-  bucket        = "${local.name_prefix}-nlb-connection-logs-${random_string.bucket_suffix[0].result}"
+  bucket        = "${local.name_prefix}-nlb-connection-logs"
   force_destroy = true
 
   tags = merge(local.common_tags, {
