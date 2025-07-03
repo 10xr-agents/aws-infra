@@ -356,90 +356,90 @@ resource "aws_lb" "public_nlb" {
   })
 }
 
-# # Target group pointing to internal ALB - HTTP (port 80)
-# resource "aws_lb_target_group" "alb_targets_http" {
-#   name        = "${local.cluster_name}-alb-tg-http"
-#   port        = 80
-#   protocol    = "TCP"
-#   vpc_id      = module.vpc.vpc_id
-#   target_type = "alb"
-#
-#   health_check {
-#     enabled             = true
-#     healthy_threshold   = 2
-#     interval            = 30
-#     port                = "traffic-port"
-#     protocol            = "TCP"
-#     timeout             = 6
-#     unhealthy_threshold = 2
-#   }
-#
-#   tags = merge(var.tags, {
-#     Name = "${local.cluster_name}-alb-tg-http"
-#   })
-# }
-#
-# # Target group pointing to internal ALB - HTTPS (port 443)
-# resource "aws_lb_target_group" "alb_targets_https" {
-#   name        = "${local.cluster_name}-alb-tg-https"
-#   port        = 443
-#   protocol    = "TCP"
-#   vpc_id      = module.vpc.vpc_id
-#   target_type = "alb"
-#
-#   health_check {
-#     enabled             = true
-#     healthy_threshold   = 2
-#     interval            = 30
-#     port                = "traffic-port"
-#     protocol            = "TCP"
-#     timeout             = 6
-#     unhealthy_threshold = 2
-#   }
-#
-#   tags = merge(var.tags, {
-#     Name = "${local.cluster_name}-alb-tg-https"
-#   })
-# }
-#
-# # Attach internal ALB to NLB target group - HTTP
-# resource "aws_lb_target_group_attachment" "alb_target_http" {
-#   target_group_arn = aws_lb_target_group.alb_targets_http.arn
-#   target_id        = module.ecs.alb_arn
-#   port             = 80
-#
-#   depends_on = [module.ecs]
-# }
-#
-# # Attach internal ALB to NLB target group - HTTPS
-# resource "aws_lb_target_group_attachment" "alb_target_https" {
-#   target_group_arn = aws_lb_target_group.alb_targets_https.arn
-#   target_id        = module.ecs.alb_arn
-#   port             = 443
-#
-#   depends_on = [module.ecs]
-# }
+# Target group pointing to internal ALB - HTTP (port 80)
+resource "aws_lb_target_group" "alb_targets_http" {
+  name        = "${local.cluster_name}-alb-tg-http"
+  port        = 80
+  protocol    = "TCP"
+  vpc_id      = module.vpc.vpc_id
+  target_type = "alb"
 
-# # NLB Listener - HTTP
-# resource "aws_lb_listener" "public_nlb_http" {
-#   load_balancer_arn = aws_lb.public_nlb.arn
-#   port              = "80"
-#   protocol          = "TCP"
-#
-#   default_action {
-#     type             = "forward"
-#     target_group_arn = aws_lb_target_group.alb_targets_http.arn
-#   }
-# }
-#
-# # NLB Listener - HTTPS
-# resource "aws_lb_listener" "public_nlb_https" {
-#   load_balancer_arn = aws_lb.public_nlb.arn
-#   port              = "443"
-#   protocol          = "TCP"
-#
-#   default_action {
-#     type             = "forward"
-#     target_group_arn = aws_lb_target_group.alb_targets_https.arn
-#   }
-# }
+  health_check {
+    enabled             = true
+    healthy_threshold   = 2
+    interval            = 30
+    port                = "traffic-port"
+    protocol            = "TCP"
+    timeout             = 6
+    unhealthy_threshold = 2
+  }
+
+  tags = merge(var.tags, {
+    Name = "${local.cluster_name}-alb-tg-http"
+  })
+}
+
+# Target group pointing to internal ALB - HTTPS (port 443)
+resource "aws_lb_target_group" "alb_targets_https" {
+  name        = "${local.cluster_name}-alb-tg-https"
+  port        = 443
+  protocol    = "TCP"
+  vpc_id      = module.vpc.vpc_id
+  target_type = "alb"
+
+  health_check {
+    enabled             = true
+    healthy_threshold   = 2
+    interval            = 30
+    port                = "traffic-port"
+    protocol            = "TCP"
+    timeout             = 6
+    unhealthy_threshold = 2
+  }
+
+  tags = merge(var.tags, {
+    Name = "${local.cluster_name}-alb-tg-https"
+  })
+}
+
+# Attach internal ALB to NLB target group - HTTP
+resource "aws_lb_target_group_attachment" "alb_target_http" {
+  target_group_arn = aws_lb_target_group.alb_targets_http.arn
+  target_id        = module.ecs.alb_arn
+  port             = 80
+
+  depends_on = [module.ecs]
+}
+
+# Attach internal ALB to NLB target group - HTTPS
+resource "aws_lb_target_group_attachment" "alb_target_https" {
+  target_group_arn = aws_lb_target_group.alb_targets_https.arn
+  target_id        = module.ecs.alb_arn
+  port             = 443
+
+  depends_on = [module.ecs]
+}
+
+# NLB Listener - HTTP
+resource "aws_lb_listener" "public_nlb_http" {
+  load_balancer_arn = aws_lb.public_nlb.arn
+  port              = "80"
+  protocol          = "TCP"
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.alb_targets_http.arn
+  }
+}
+
+# NLB Listener - HTTPS
+resource "aws_lb_listener" "public_nlb_https" {
+  load_balancer_arn = aws_lb.public_nlb.arn
+  port              = "443"
+  protocol          = "TCP"
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.alb_targets_https.arn
+  }
+}
