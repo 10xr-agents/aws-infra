@@ -244,142 +244,142 @@ resource "aws_lb_listener" "https" {
 # Listener Rules for Service Routing
 ################################################################################
 
-# Host-based routing rules for HTTP
-resource "aws_lb_listener_rule" "http_host_rules" {
-  for_each = var.create_alb ? {
-    for name, config in local.services_config : name => config
-    if lookup(config, "enable_load_balancer", true) &&
-    lookup(config, "alb_host_headers", null) != null
-  } : {}
-
-  listener_arn = aws_lb_listener.http[0].arn
-  priority     = 100 + index(keys(local.services_config), each.key)
-
-  action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.service[each.key].arn
-  }
-
-  condition {
-    host_header {
-      values = each.value.alb_host_headers
-    }
-  }
-
-  tags = merge(local.common_tags, {
-    Name      = "${local.name_prefix}-${each.key}-host-rule"
-    Version    = "Latest"
-    Service   = each.key
-    Component = "ListenerRule"
-  })
-
-  depends_on = [
-    aws_lb_listener.http,
-    aws_lb_target_group.service
-  ]
-}
-
-# Host-based routing rules for HTTPS
-resource "aws_lb_listener_rule" "https_host_rules" {
-  for_each = var.create_alb && var.acm_certificate_arn != "" ? {
-    for name, config in local.services_config : name => config
-    if lookup(config, "enable_load_balancer", true) &&
-    lookup(config, "alb_host_headers", null) != null
-  } : {}
-
-  listener_arn = aws_lb_listener.https[0].arn
-  priority     = 100 + index(keys(local.services_config), each.key)
-
-  action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.service[each.key].arn
-  }
-
-  condition {
-    host_header {
-      values = each.value.alb_host_headers
-    }
-  }
-
-  tags = merge(local.common_tags, {
-    Name      = "${local.name_prefix}-${each.key}-host-rule"
-    Service   = each.key
-    Component = "ListenerRule"
-  })
-
-  depends_on = [
-    aws_lb_listener.https,
-    aws_lb_target_group.service
-  ]
-}
-
-# Path-based routing rules for HTTP (if not redirecting to HTTPS)
-resource "aws_lb_listener_rule" "http_path_rules" {
-  for_each = var.create_alb ? {
-    for name, config in local.services_config : name => config
-    if lookup(config, "enable_load_balancer", true) &&
-    lookup(config, "alb_path_patterns", null) != null
-  } : {}
-
-  listener_arn = aws_lb_listener.http[0].arn
-  priority     = 200 + index(keys(local.services_config), each.key)
-
-  action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.service[each.key].arn
-  }
-
-  condition {
-    path_pattern {
-      values = each.value.alb_path_patterns
-    }
-  }
-
-  tags = merge(local.common_tags, {
-    Name      = "${local.name_prefix}-${each.key}-path-rule"
-    Service   = each.key
-    Component = "ListenerRule"
-  })
-
-  depends_on = [
-    aws_lb_listener.http,
-    aws_lb_target_group.service
-  ]
-}
-
-# Path-based routing rules for HTTPS
-resource "aws_lb_listener_rule" "https_path_rules" {
-  for_each = var.create_alb && var.acm_certificate_arn != "" ? {
-    for name, config in local.services_config : name => config
-    if lookup(config, "enable_load_balancer", true) &&
-    lookup(config, "alb_path_patterns", null) != null
-  } : {}
-
-  listener_arn = aws_lb_listener.https[0].arn
-  priority     = 200 + index(keys(local.services_config), each.key)
-
-  action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.service[each.key].arn
-  }
-
-  condition {
-    path_pattern {
-      values = each.value.alb_path_patterns
-    }
-  }
-
-  tags = merge(local.common_tags, {
-    Name      = "${local.name_prefix}-${each.key}-path-rule"
-    Service   = each.key
-    Component = "ListenerRule"
-  })
-
-  depends_on = [
-    aws_lb_listener.https,
-    aws_lb_target_group.service
-  ]
-}
+# # Host-based routing rules for HTTP
+# resource "aws_lb_listener_rule" "http_host_rules" {
+#   for_each = var.create_alb ? {
+#     for name, config in local.services_config : name => config
+#     if lookup(config, "enable_load_balancer", true) &&
+#     lookup(config, "alb_host_headers", null) != null
+#   } : {}
+#
+#   listener_arn = aws_lb_listener.http[0].arn
+#   priority     = 100 + index(keys(local.services_config), each.key)
+#
+#   action {
+#     type             = "forward"
+#     target_group_arn = aws_lb_target_group.service[each.key].arn
+#   }
+#
+#   condition {
+#     host_header {
+#       values = each.value.alb_host_headers
+#     }
+#   }
+#
+#   tags = merge(local.common_tags, {
+#     Name      = "${local.name_prefix}-${each.key}-host-rule"
+#     Version    = "Latest"
+#     Service   = each.key
+#     Component = "ListenerRule"
+#   })
+#
+#   depends_on = [
+#     aws_lb_listener.http,
+#     aws_lb_target_group.service
+#   ]
+# }
+#
+# # Host-based routing rules for HTTPS
+# resource "aws_lb_listener_rule" "https_host_rules" {
+#   for_each = var.create_alb && var.acm_certificate_arn != "" ? {
+#     for name, config in local.services_config : name => config
+#     if lookup(config, "enable_load_balancer", true) &&
+#     lookup(config, "alb_host_headers", null) != null
+#   } : {}
+#
+#   listener_arn = aws_lb_listener.https[0].arn
+#   priority     = 100 + index(keys(local.services_config), each.key)
+#
+#   action {
+#     type             = "forward"
+#     target_group_arn = aws_lb_target_group.service[each.key].arn
+#   }
+#
+#   condition {
+#     host_header {
+#       values = each.value.alb_host_headers
+#     }
+#   }
+#
+#   tags = merge(local.common_tags, {
+#     Name      = "${local.name_prefix}-${each.key}-host-rule"
+#     Service   = each.key
+#     Component = "ListenerRule"
+#   })
+#
+#   depends_on = [
+#     aws_lb_listener.https,
+#     aws_lb_target_group.service
+#   ]
+# }
+#
+# # Path-based routing rules for HTTP (if not redirecting to HTTPS)
+# resource "aws_lb_listener_rule" "http_path_rules" {
+#   for_each = var.create_alb ? {
+#     for name, config in local.services_config : name => config
+#     if lookup(config, "enable_load_balancer", true) &&
+#     lookup(config, "alb_path_patterns", null) != null
+#   } : {}
+#
+#   listener_arn = aws_lb_listener.http[0].arn
+#   priority     = 200 + index(keys(local.services_config), each.key)
+#
+#   action {
+#     type             = "forward"
+#     target_group_arn = aws_lb_target_group.service[each.key].arn
+#   }
+#
+#   condition {
+#     path_pattern {
+#       values = each.value.alb_path_patterns
+#     }
+#   }
+#
+#   tags = merge(local.common_tags, {
+#     Name      = "${local.name_prefix}-${each.key}-path-rule"
+#     Service   = each.key
+#     Component = "ListenerRule"
+#   })
+#
+#   depends_on = [
+#     aws_lb_listener.http,
+#     aws_lb_target_group.service
+#   ]
+# }
+#
+# # Path-based routing rules for HTTPS
+# resource "aws_lb_listener_rule" "https_path_rules" {
+#   for_each = var.create_alb && var.acm_certificate_arn != "" ? {
+#     for name, config in local.services_config : name => config
+#     if lookup(config, "enable_load_balancer", true) &&
+#     lookup(config, "alb_path_patterns", null) != null
+#   } : {}
+#
+#   listener_arn = aws_lb_listener.https[0].arn
+#   priority     = 200 + index(keys(local.services_config), each.key)
+#
+#   action {
+#     type             = "forward"
+#     target_group_arn = aws_lb_target_group.service[each.key].arn
+#   }
+#
+#   condition {
+#     path_pattern {
+#       values = each.value.alb_path_patterns
+#     }
+#   }
+#
+#   tags = merge(local.common_tags, {
+#     Name      = "${local.name_prefix}-${each.key}-path-rule"
+#     Service   = each.key
+#     Component = "ListenerRule"
+#   })
+#
+#   depends_on = [
+#     aws_lb_listener.https,
+#     aws_lb_target_group.service
+#   ]
+# }
 
 ################################################################################
 # Data Sources
