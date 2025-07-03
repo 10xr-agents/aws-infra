@@ -254,30 +254,9 @@ module "networking" {
 
   # Access Logs
   nlb_access_logs_enabled = var.nlb_access_logs_enabled
-  nlb_access_logs_bucket  = var.nlb_access_logs_bucket
-  nlb_access_logs_prefix  = var.nlb_access_logs_prefix
 
   # Connection Logs
   nlb_connection_logs_enabled = var.nlb_connection_logs_enabled
-  nlb_connection_logs_bucket  = var.nlb_connection_logs_bucket
-  nlb_connection_logs_prefix  = var.nlb_connection_logs_prefix
-
-  # Security Groups (optional for NLB)
-  create_security_groups = var.create_security_groups
-  allowed_cidr_blocks    = var.allowed_cidr_blocks
-  additional_ports       = var.additional_ports
-
-  # Route 53 Configuration (optional)
-  create_route53_record          = var.create_route53_record
-  route53_zone_id               = var.route53_zone_id
-  route53_record_name           = var.route53_record_name
-  route53_evaluate_target_health = var.route53_evaluate_target_health
-
-  # CloudWatch Alarms (optional)
-  create_cloudwatch_alarms         = var.create_cloudwatch_alarms
-  alarm_actions                    = var.alarm_actions
-  healthy_host_count_threshold     = var.healthy_host_count_threshold
-  unhealthy_host_count_threshold   = var.unhealthy_host_count_threshold
 
   tags = merge(
     var.tags,

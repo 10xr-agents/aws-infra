@@ -233,6 +233,22 @@ output "nlb_security_group_id" {
   value       = module.networking.security_group_id
 }
 
+output "nlb_s3_buckets" {
+  description = "Information about NLB S3 buckets for logs"
+  value       = module.networking.s3_buckets
+}
+
+output "nlb_access_logs_bucket" {
+  description = "S3 bucket for NLB access logs"
+  value       = module.networking.access_logs_bucket_id
+}
+
+output "nlb_connection_logs_bucket" {
+  description = "S3 bucket for NLB connection logs"
+  value       = module.networking.connection_logs_bucket_id
+}
+
+
 ################################################################################
 # Network Architecture Summary
 ################################################################################

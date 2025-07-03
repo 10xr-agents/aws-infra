@@ -63,18 +63,6 @@ variable "nlb_access_logs_enabled" {
   default     = false
 }
 
-variable "nlb_access_logs_bucket" {
-  description = "S3 bucket for NLB access logs"
-  type        = string
-  default     = ""
-}
-
-variable "nlb_access_logs_prefix" {
-  description = "S3 prefix for NLB access logs"
-  type        = string
-  default     = "nlb-access-logs"
-}
-
 ################################################################################
 # NLB Connection Logs
 ################################################################################
@@ -83,18 +71,6 @@ variable "nlb_connection_logs_enabled" {
   description = "Whether to enable NLB connection logs"
   type        = bool
   default     = false
-}
-
-variable "nlb_connection_logs_bucket" {
-  description = "S3 bucket for NLB connection logs"
-  type        = string
-  default     = ""
-}
-
-variable "nlb_connection_logs_prefix" {
-  description = "S3 prefix for NLB connection logs"
-  type        = string
-  default     = "nlb-connection-logs"
 }
 
 ################################################################################

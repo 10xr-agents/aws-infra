@@ -50,6 +50,46 @@ output "nlb_internal" {
 }
 
 ################################################################################
+# S3 Bucket Outputs
+################################################################################
+
+output "access_logs_bucket_id" {
+  description = "ID of the S3 bucket for access logs"
+  value       = var.nlb_access_logs_enabled ? aws_s3_bucket.nlb_access_logs[0].id : null
+}
+
+output "access_logs_bucket_arn" {
+  description = "ARN of the S3 bucket for access logs"
+  value       = var.nlb_access_logs_enabled ? aws_s3_bucket.nlb_access_logs[0].arn : null
+}
+
+output "connection_logs_bucket_id" {
+  description = "ID of the S3 bucket for connection logs"
+  value       = var.nlb_connection_logs_enabled ? aws_s3_bucket.nlb_connection_logs[0].id : null
+}
+
+output "connection_logs_bucket_arn" {
+  description = "ARN of the S3 bucket for connection logs"
+  value       = var.nlb_connection_logs_enabled ? aws_s3_bucket.nlb_connection_logs[0].arn : null
+}
+
+output "s3_buckets" {
+  description = "Information about created S3 buckets"
+  value = {
+    access_logs = var.nlb_access_logs_enabled ? {
+      id     = aws_s3_bucket.nlb_access_logs[0].id
+      arn    = aws_s3_bucket.nlb_access_logs[0].arn
+      domain = aws_s3_bucket.nlb_access_logs[0].bucket_domain_name
+    } : null
+    connection_logs = var.nlb_connection_logs_enabled ? {
+      id     = aws_s3_bucket.nlb_connection_logs[0].id
+      arn    = aws_s3_bucket.nlb_connection_logs[0].arn
+      domain = aws_s3_bucket.nlb_connection_logs[0].bucket_domain_name
+    } : null
+  }
+}
+
+################################################################################
 # Target Group Outputs
 ################################################################################
 

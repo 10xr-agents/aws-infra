@@ -21,6 +21,12 @@ data "aws_vpc" "main" {
   id = var.vpc_id
 }
 
+data "aws_caller_identity" "current" {}
+
+data "aws_region" "current" {}
+
+data "aws_elb_service_account" "main" {}
+
 ################################################################################
 # Network Load Balancer
 ################################################################################
@@ -42,8 +48,8 @@ resource "aws_lb" "public_nlb" {
   dynamic "access_logs" {
     for_each = var.nlb_access_logs_enabled ? [1] : []
     content {
-      bucket  = var.nlb_access_logs_bucket
-      prefix  = var.nlb_access_logs_prefix
+      bucket  = "${local.name_prefix}-nlb-access-logs"
+      prefix  = random_string.bucket_suffix[0].result
       enabled = true
     }
   }
@@ -52,8 +58,8 @@ resource "aws_lb" "public_nlb" {
   dynamic "connection_logs" {
     for_each = var.nlb_connection_logs_enabled ? [1] : []
     content {
-      bucket  = var.nlb_connection_logs_bucket
-      prefix  = var.nlb_connection_logs_prefix
+      bucket  = "${local.name_prefix}-nlb-connection-logs"
+      prefix  = random_string.bucket_suffix[0].result
       enabled = true
     }
   }

@@ -389,8 +389,7 @@ create_http_listener = true
 
 # Access Logs (optional - set to true if you want to enable)
 nlb_access_logs_enabled = true
-nlb_access_logs_bucket = "ten-xr-nlb-logs"
-nlb_access_logs_prefix = "nlb-access-logs"
+nlb_connection_logs_enabled = true
 
 # Global Accelerator Configuration
 create_global_accelerator = true
