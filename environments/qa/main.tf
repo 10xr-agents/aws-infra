@@ -176,7 +176,7 @@ module "ecs" {
 
   vpc_id                = module.vpc.vpc_id
   private_subnet_ids    = module.vpc.private_subnets
-  public_subnet_ids     = module.vpc.public_subnets  # Add this line
+  public_subnet_ids     = module.vpc.public_subnets
 
   acm_certificate_arn = ""
   create_alb_rules    = true
@@ -369,9 +369,11 @@ resource "aws_lb_target_group" "alb_targets_http" {
     healthy_threshold   = 2
     interval            = 30
     port                = "traffic-port"
-    protocol            = "TCP"
+    protocol            = "HTTP"
     timeout             = 6
     unhealthy_threshold = 2
+    path                = "/"
+    matcher             = "200"
   }
 
   tags = merge(var.tags, {
@@ -392,9 +394,11 @@ resource "aws_lb_target_group" "alb_targets_https" {
     healthy_threshold   = 2
     interval            = 30
     port                = "traffic-port"
-    protocol            = "TCP"
+    protocol            = "HTTPS"
     timeout             = 6
     unhealthy_threshold = 2
+    path                = "/"
+    matcher             = "200"
   }
 
   tags = merge(var.tags, {
