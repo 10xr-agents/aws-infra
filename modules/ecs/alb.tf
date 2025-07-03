@@ -4,16 +4,24 @@ locals {
 
   # Create lists of services that need host-based routing
   services_with_host_headers = [
-    local.services_config["voice-agent"]
+    for name, config in local.services_config : (
+    {
+      name = name
+      config = config
+    }
+    )
+    if lookup(config, "enable_load_balancer", true) &&
+    lookup(config, "alb_host_headers", null) != null
   ]
 
   # Create lists of services that need path-based routing
   services_with_path_patterns = [
-    for name, config in local.services_config : {
-      name = name
+    for name, config in local.services_config : (
+    {
+      name   = name
       config = config
     }
-    if lookup(config, "enable_load_balancer", true) &&
+    ) if lookup(config, "enable_load_balancer", true) &&
     lookup(config, "alb_path_patterns", null) != null
   ]
 
