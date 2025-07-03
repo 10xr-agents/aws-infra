@@ -235,3 +235,11 @@ output "alb_urls" {
     https = var.acm_certificate_arn != "" ? "https://${aws_lb.main[0].dns_name}" : null
   } : {}
 }
+
+output "listener_rule_services" {
+  value = {
+    for name, config in var.services : name => config
+    if lookup(config, "enable_load_balancer", true) &&
+    lookup(config, "alb_path_patterns", null) != null
+  }
+}
