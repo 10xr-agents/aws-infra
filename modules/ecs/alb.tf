@@ -1,29 +1,75 @@
-# modules/ecs/alb.tf
+# modules/ecs/alb.tf - FIXED VERSION
 
 locals {
+  # Services with host headers
+  voice_agent_host_service = lookup(local.services_config, "voice-agent", null) != null && lookup(local.services_config["voice-agent"], "alb_host_headers", null) != null ? [{
+    name = "voice-agent"
+    config = local.services_config["voice-agent"]
+  }] : []
 
-  # Create lists of services that need host-based routing
-  services_with_host_headers = [
-    for name, config in local.services_config : (
-    {
-      name = name
-      config = config
-    }
-    )
-    if lookup(config, "enable_load_balancer", true) &&
-    lookup(config, "alb_host_headers", null) != null
-  ]
+  livekit_proxy_host_service = lookup(local.services_config, "livekit-proxy", null) != null && lookup(local.services_config["livekit-proxy"], "alb_host_headers", null) != null ? [{
+    name = "livekit-proxy"
+    config = local.services_config["livekit-proxy"]
+  }] : []
 
-  # Create lists of services that need path-based routing
-  services_with_path_patterns = [
-    for name, config in local.services_config : (
-    {
-      name   = name
-      config = config
-    }
-    ) if lookup(config, "enable_load_balancer", true) &&
-    lookup(config, "alb_path_patterns", null) != null
-  ]
+  agent_analytics_host_service = lookup(local.services_config, "agent-analytics", null) != null && lookup(local.services_config["agent-analytics"], "alb_host_headers", null) != null ? [{
+    name = "agent-analytics"
+    config = local.services_config["agent-analytics"]
+  }] : []
+
+  agentic_services_host_service = lookup(local.services_config, "agentic-services", null) != null && lookup(local.services_config["agentic-services"], "alb_host_headers", null) != null ? [{
+    name = "agentic-services"
+    config = local.services_config["agentic-services"]
+  }] : []
+
+  ui_console_host_service = lookup(local.services_config, "ui-console", null) != null && lookup(local.services_config["ui-console"], "alb_host_headers", null) != null ? [{
+    name = "ui-console"
+    config = local.services_config["ui-console"]
+  }] : []
+
+  # Combine all services with host headers
+  services_with_host_headers = concat(
+    local.voice_agent_host_service,
+    local.livekit_proxy_host_service,
+    local.agent_analytics_host_service,
+    local.agentic_services_host_service,
+    local.ui_console_host_service
+  )
+
+  # Services with path patterns
+  voice_agent_path_service = lookup(local.services_config, "voice-agent", null) != null && lookup(local.services_config["voice-agent"], "alb_path_patterns", null) != null ? [{
+    name = "voice-agent"
+    config = local.services_config["voice-agent"]
+  }] : []
+
+  livekit_proxy_path_service = lookup(local.services_config, "livekit-proxy", null) != null && lookup(local.services_config["livekit-proxy"], "alb_path_patterns", null) != null ? [{
+    name = "livekit-proxy"
+    config = local.services_config["livekit-proxy"]
+  }] : []
+
+  agent_analytics_path_service = lookup(local.services_config, "agent-analytics", null) != null && lookup(local.services_config["agent-analytics"], "alb_path_patterns", null) != null ? [{
+    name = "agent-analytics"
+    config = local.services_config["agent-analytics"]
+  }] : []
+
+  agentic_services_path_service = lookup(local.services_config, "agentic-services", null) != null && lookup(local.services_config["agentic-services"], "alb_path_patterns", null) != null ? [{
+    name = "agentic-services"
+    config = local.services_config["agentic-services"]
+  }] : []
+
+  ui_console_path_service = lookup(local.services_config, "ui-console", null) != null && lookup(local.services_config["ui-console"], "alb_path_patterns", null) != null ? [{
+    name = "ui-console"
+    config = local.services_config["ui-console"]
+  }] : []
+
+  # Combine all services with path patterns
+  services_with_path_patterns = concat(
+    local.voice_agent_path_service,
+    local.livekit_proxy_path_service,
+    local.agent_analytics_path_service,
+    local.agentic_services_path_service,
+    local.ui_console_path_service
+  )
 
   # Find the service with enable_default_routing = true
   default_routing_service = try([
@@ -273,7 +319,7 @@ resource "aws_lb_listener" "https" {
 ################################################################################
 
 resource "aws_lb_listener_rule" "http_host_rules" {
-  count = length(local.services_with_host_headers)
+  count = var.create_alb ? length(local.services_with_host_headers) : 0
 
   listener_arn = aws_lb_listener.http[0].arn
   priority     = 100 + count.index
