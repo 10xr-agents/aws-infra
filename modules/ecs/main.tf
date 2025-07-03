@@ -751,11 +751,3 @@ resource "aws_service_discovery_service" "services" {
 
   tags = merge(local.common_tags, { Service = each.key })
 }
-
-################################################################################
-# Data Sources
-################################################################################
-
-data "aws_vpc" "main" {
-  id = var.vpc_id
-}
