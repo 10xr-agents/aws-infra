@@ -15,6 +15,12 @@ variable "vpc_id" {
   type        = string
 }
 
+variable "public_subnet_ids" {
+  description = "List of public subnet IDs for ALB (required if create_alb is true and alb_internal is false)"
+  type        = list(string)
+  default     = []
+}
+
 variable "private_subnet_ids" {
   description = "List of private subnet IDs for ECS tasks"
   type        = list(string)
@@ -66,12 +72,6 @@ variable "target_group_arns" {
   description = "Map of service names to external target group ARNs (if not creating new ones)"
   type        = map(string)
   default     = {}
-}
-
-variable "public_subnet_ids" {
-  description = "List of public subnet IDs for ALB (required if create_alb is true and alb_internal is false)"
-  type        = list(string)
-  default     = []
 }
 
 # ALB Configuration Variables

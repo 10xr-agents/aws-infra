@@ -186,6 +186,7 @@ module "ecs" {
   enable_execute_command    = var.enable_execute_command
   enable_service_discovery  = true
   create_alb = true
+  alb_internal = true
 
   # ADD THESE LINES for Redis connectivity
   redis_security_group_id   = module.redis.redis_security_group_id
@@ -242,7 +243,7 @@ module "global_accelerator" {
   # Endpoints (ALB)
   endpoints = [
     {
-      endpoint_id                    = module.ecs.alb_arn
+      endpoint_id                    = aws_lb.public_nlb.arn
       weight                         = 100
       client_ip_preservation_enabled = false
     }
@@ -265,7 +266,7 @@ module "global_accelerator" {
     "Terraform"   = "true"
   })
 
-  depends_on = [module.ecs]
+  depends_on = [aws_lb.public_nlb]
 }
 
 # Cloudflare Module
@@ -341,89 +342,102 @@ resource "aws_security_group_rule" "mongodb_from_ecs" {
   depends_on = [module.ecs, module.mongodb]
 }
 
-resource "aws_ecs_task_definition" "redis_debug" {
-  family                   = "${local.cluster_name}-redis-debug"
-  network_mode             = "awsvpc"
-  requires_compatibilities = ["FARGATE"]
-  cpu                      = 256
-  memory                   = 512
-  execution_role_arn       = module.ecs.task_execution_role_arns["voice-agent"]
-  task_role_arn            = module.ecs.task_role_arns["voice-agent"]
+# Public Network Load Balancer
+resource "aws_lb" "public_nlb" {
+  name               = "${local.cluster_name}-public-nlb"
+  internal           = false
+  load_balancer_type = "network"
+  subnets            = module.vpc.public_subnets
 
-  container_definitions = jsonencode([
-    {
-      name  = "redis-debug"
-      image = "redis:alpine"  # includes redis-cli :contentReference[oaicite:1]{index=1}
-      essential = true
+  enable_deletion_protection = false
 
-      environment = [
-        { name = "REDIS_ENDPOINT", value = module.redis.redis_primary_endpoint },
-        { name = "REDIS_PORT",     value = tostring(module.redis.redis_port) },
-        { name = "VPC_CIDR",       value = module.vpc.vpc_cidr_block }
-      ]
-
-      secrets = var.redis_auth_token_enabled ? [
-        {
-          name      = "REDIS_PASSWORD"
-          valueFrom = module.redis.ssm_parameter_redis_auth_token
-        }
-      ] : []
-
-      command = [
-        "sh", "-c",
-        <<-EOF
-        echo "=== Redis Connectivity Debug ==="
-        echo "Endpoint: $REDIS_ENDPOINT"
-        echo "Port: $REDIS_PORT"
-        echo "VPC CIDR: $VPC_CIDR"
-
-        apk update && apk add --no-cache bind-tools netcat-openbsd curl
-
-        echo "=== Testing DNS Resolution ==="
-        nslookup $REDIS_ENDPOINT
-        dig $REDIS_ENDPOINT || echo "dig not found"
-
-        echo "=== Testing Network Connectivity ==="
-        nc -zv $REDIS_ENDPOINT $REDIS_PORT || echo "Netcat failed"
-
-        echo "=== Testing Redis Ping (no auth) ==="
-        timeout 10s redis-cli -h $REDIS_ENDPOINT -p $REDIS_PORT ping || echo "Ping without auth failed"
-
-        if [ -n "$REDIS_PASSWORD" ]; then
-          echo "=== Testing Redis Ping (with auth) ==="
-          timeout 10s redis-cli -h $REDIS_ENDPOINT -p $REDIS_PORT -a "$REDIS_PASSWORD" ping || echo "Ping with auth failed"
-        fi
-
-        echo "=== Testing Persistent Connection ==="
-        if [ -n "$REDIS_PASSWORD" ]; then
-          timeout 30s redis-cli -h $REDIS_ENDPOINT -p $REDIS_PORT -a "$REDIS_PASSWORD" -i 1 ping || echo "Persistent connection failed"
-        else
-          timeout 30s redis-cli -h $REDIS_ENDPOINT -p $REDIS_PORT -i 1 ping || echo "Persistent connection failed"
-        fi
-
-        echo "=== Debug Complete ==="
-        sleep 3600
-        EOF
-      ]
-
-      logConfiguration = {
-        logDriver = "awslogs"
-        options = {
-          "awslogs-group"         = "/ecs/${local.cluster_name}/redis-debug"
-          "awslogs-region"        = data.aws_region.current.name
-          "awslogs-stream-prefix" = "ecs"
-        }
-      }
-    }
-  ])
-
-  tags = var.tags
+  tags = merge(var.tags, {
+    Name = "${local.cluster_name}-public-nlb"
+    Component = "PublicNLB"
+  })
 }
 
+# Target group pointing to internal ALB
+resource "aws_lb_target_group" "alb_targets_http" {
+  name        = "${local.cluster_name}-alb-tg-http"
+  port        = 80
+  protocol    = "TCP"
+  vpc_id      = module.vpc.vpc_id
+  target_type = "alb"
 
-# Log group for debug task
-resource "aws_cloudwatch_log_group" "redis_debug" {
-  name              = "/ecs/${local.cluster_name}/redis-debug"
-  retention_in_days = 7
-  tags              = var.tags
+  health_check {
+    enabled             = true
+    healthy_threshold   = 2
+    interval            = 30
+    matcher             = "200"
+    path                = "/"
+    port                = "traffic-port"
+    protocol            = "HTTP"
+    timeout             = 6
+    unhealthy_threshold = 2
+  }
+
+  tags = merge(var.tags, {
+    Name = "${local.cluster_name}-alb-tg"
+  })
+}
+
+resource "aws_lb_target_group" "alb_targets_https" {
+  name        = "${local.cluster_name}-alb-tg-https"
+  port        = 443
+  protocol    = "TCP"
+  vpc_id      = module.vpc.vpc_id
+  target_type = "alb"
+
+  health_check {
+    enabled             = true
+    healthy_threshold   = 2
+    interval            = 30
+    matcher             = "200"
+    path                = "/"
+    port                = "traffic-port"
+    protocol            = "HTTPS"
+    timeout             = 6
+    unhealthy_threshold = 2
+  }
+
+  tags = merge(var.tags, {
+    Name = "${local.cluster_name}-alb-tg"
+  })
+}
+
+# Attach internal ALB to NLB target group
+resource "aws_lb_target_group_attachment" "alb_target_http" {
+  target_group_arn = aws_lb_target_group.alb_targets_http.arn
+  target_id        = module.ecs.alb_arn
+  port             = 80
+}
+
+resource "aws_lb_target_group_attachment" "alb_target_https" {
+  target_group_arn = aws_lb_target_group.alb_targets_https.arn
+  target_id        = module.ecs.alb_arn
+  port             = 443
+}
+
+# NLB Listener
+resource "aws_lb_listener" "public_nlb_http" {
+  load_balancer_arn = aws_lb.public_nlb.arn
+  port              = "80"
+  protocol          = "TCP"
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.alb_targets_http.arn
+  }
+}
+
+resource "aws_lb_listener" "public_nlb_https" {
+  load_balancer_arn = aws_lb.public_nlb.arn
+  port              = "443"
+  protocol          = "TCP"
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.alb_targets_https.arn
+  }
 }
