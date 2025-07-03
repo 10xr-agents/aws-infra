@@ -271,6 +271,11 @@ resource "aws_lb_listener_rule" "http_host_rules" {
     Service   = each.key
     Component = "ListenerRule"
   })
+
+  depends_on = [
+    aws_lb_listener.http,
+    aws_lb_target_group.service
+  ]
 }
 
 # Host-based routing rules for HTTPS
@@ -300,6 +305,11 @@ resource "aws_lb_listener_rule" "https_host_rules" {
     Service   = each.key
     Component = "ListenerRule"
   })
+
+  depends_on = [
+    aws_lb_listener.https,
+    aws_lb_target_group.service
+  ]
 }
 
 # Path-based routing rules for HTTP (if not redirecting to HTTPS)
@@ -329,6 +339,11 @@ resource "aws_lb_listener_rule" "http_path_rules" {
     Service   = each.key
     Component = "ListenerRule"
   })
+
+  depends_on = [
+    aws_lb_listener.http,
+    aws_lb_target_group.service
+  ]
 }
 
 # Path-based routing rules for HTTPS
@@ -358,6 +373,11 @@ resource "aws_lb_listener_rule" "https_path_rules" {
     Service   = each.key
     Component = "ListenerRule"
   })
+
+  depends_on = [
+    aws_lb_listener.https,
+    aws_lb_target_group.service
+  ]
 }
 
 ################################################################################
