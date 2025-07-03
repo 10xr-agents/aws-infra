@@ -582,12 +582,6 @@ variable "create_http_target_group" {
   default     = true
 }
 
-variable "create_https_target_group" {
-  description = "Whether to create HTTPS target group"
-  type        = bool
-  default     = true
-}
-
 variable "http_port" {
   description = "HTTP port for target group"
   type        = number
