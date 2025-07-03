@@ -13,8 +13,6 @@ data "aws_region" "current" {}
 
 data "aws_caller_identity" "current" {}
 
-
-
 # VPC Module - Reuse existing VPC module
 module "vpc" {
   source = "../../modules/vpc"
@@ -178,6 +176,7 @@ module "ecs" {
 
   vpc_id                = module.vpc.vpc_id
   private_subnet_ids    = module.vpc.private_subnets
+  public_subnet_ids     = module.vpc.public_subnets  # Add this line
 
   acm_certificate_arn = ""
   create_alb_rules    = true
@@ -240,7 +239,7 @@ module "global_accelerator" {
     }
   ]
 
-  # Endpoints (ALB)
+  # Endpoints (NLB instead of ALB)
   endpoints = [
     {
       endpoint_id                    = aws_lb.public_nlb.arn
@@ -282,7 +281,7 @@ module "cloudflare" {
   cloudflare_zone_id = var.cloudflare_zone_id
 
   # DNS Configuration
-  target_dns_name = var.create_global_accelerator ? module.global_accelerator[0].accelerator_dns_name : module.ecs.alb_dns_name
+  target_dns_name = var.create_global_accelerator ? module.global_accelerator[0].accelerator_dns_name : aws_lb.public_nlb.dns_name
   dns_record_type = "CNAME"
   proxied         = var.dns_proxied
   ttl             = var.dns_ttl
@@ -357,7 +356,7 @@ resource "aws_lb" "public_nlb" {
   })
 }
 
-# Target group pointing to internal ALB
+# Target group pointing to internal ALB - HTTP (port 80)
 resource "aws_lb_target_group" "alb_targets_http" {
   name        = "${local.cluster_name}-alb-tg-http"
   port        = 80
@@ -369,19 +368,18 @@ resource "aws_lb_target_group" "alb_targets_http" {
     enabled             = true
     healthy_threshold   = 2
     interval            = 30
-    matcher             = "200"
-    path                = "/"
     port                = "traffic-port"
-    protocol            = "HTTP"
+    protocol            = "TCP"  # Changed from HTTP to TCP for ALB targets
     timeout             = 6
     unhealthy_threshold = 2
   }
 
   tags = merge(var.tags, {
-    Name = "${local.cluster_name}-alb-tg"
+    Name = "${local.cluster_name}-alb-tg-http"
   })
 }
 
+# Target group pointing to internal ALB - HTTPS (port 443)
 resource "aws_lb_target_group" "alb_targets_https" {
   name        = "${local.cluster_name}-alb-tg-https"
   port        = 443
@@ -393,33 +391,36 @@ resource "aws_lb_target_group" "alb_targets_https" {
     enabled             = true
     healthy_threshold   = 2
     interval            = 30
-    matcher             = "200"
-    path                = "/"
     port                = "traffic-port"
-    protocol            = "HTTPS"
+    protocol            = "TCP"  # Changed from HTTPS to TCP for ALB targets
     timeout             = 6
     unhealthy_threshold = 2
   }
 
   tags = merge(var.tags, {
-    Name = "${local.cluster_name}-alb-tg"
+    Name = "${local.cluster_name}-alb-tg-https"
   })
 }
 
-# Attach internal ALB to NLB target group
+# Attach internal ALB to NLB target group - HTTP
 resource "aws_lb_target_group_attachment" "alb_target_http" {
   target_group_arn = aws_lb_target_group.alb_targets_http.arn
   target_id        = module.ecs.alb_arn
   port             = 80
+
+  depends_on = [module.ecs]
 }
 
+# Attach internal ALB to NLB target group - HTTPS
 resource "aws_lb_target_group_attachment" "alb_target_https" {
   target_group_arn = aws_lb_target_group.alb_targets_https.arn
   target_id        = module.ecs.alb_arn
   port             = 443
+
+  depends_on = [module.ecs]
 }
 
-# NLB Listener
+# NLB Listener - HTTP
 resource "aws_lb_listener" "public_nlb_http" {
   load_balancer_arn = aws_lb.public_nlb.arn
   port              = "80"
@@ -431,6 +432,7 @@ resource "aws_lb_listener" "public_nlb_http" {
   }
 }
 
+# NLB Listener - HTTPS
 resource "aws_lb_listener" "public_nlb_https" {
   load_balancer_arn = aws_lb.public_nlb.arn
   port              = "443"
