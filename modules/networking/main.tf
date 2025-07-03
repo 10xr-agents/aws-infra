@@ -362,10 +362,6 @@ resource "aws_route53_record" "nlb" {
     zone_id                = aws_lb.public_nlb[0].zone_id
     evaluate_target_health = var.route53_evaluate_target_health
   }
-
-  tags = merge(local.common_tags, {
-    Name = "${local.name_prefix}-nlb-dns"
-  })
 }
 
 ################################################################################
