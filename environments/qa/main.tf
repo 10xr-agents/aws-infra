@@ -420,26 +420,26 @@ resource "aws_lb" "public_nlb" {
 #   depends_on = [module.ecs]
 # }
 
-# NLB Listener - HTTP
-resource "aws_lb_listener" "public_nlb_http" {
-  load_balancer_arn = aws_lb.public_nlb.arn
-  port              = "80"
-  protocol          = "TCP"
-
-  default_action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.alb_targets_http.arn
-  }
-}
-
-# NLB Listener - HTTPS
-resource "aws_lb_listener" "public_nlb_https" {
-  load_balancer_arn = aws_lb.public_nlb.arn
-  port              = "443"
-  protocol          = "TCP"
-
-  default_action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.alb_targets_https.arn
-  }
-}
+# # NLB Listener - HTTP
+# resource "aws_lb_listener" "public_nlb_http" {
+#   load_balancer_arn = aws_lb.public_nlb.arn
+#   port              = "80"
+#   protocol          = "TCP"
+#
+#   default_action {
+#     type             = "forward"
+#     target_group_arn = aws_lb_target_group.alb_targets_http.arn
+#   }
+# }
+#
+# # NLB Listener - HTTPS
+# resource "aws_lb_listener" "public_nlb_https" {
+#   load_balancer_arn = aws_lb.public_nlb.arn
+#   port              = "443"
+#   protocol          = "TCP"
+#
+#   default_action {
+#     type             = "forward"
+#     target_group_arn = aws_lb_target_group.alb_targets_https.arn
+#   }
+# }
