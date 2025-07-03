@@ -246,7 +246,7 @@ resource "aws_lb_listener" "https" {
 
 # Host-based routing rules for HTTP
 resource "aws_lb_listener_rule" "http_host_rules" {
-  for_each = var.create_alb && var.acm_certificate_arn == "" ? {
+  for_each = var.create_alb ? {
     for name, config in local.services_config : name => config
     if lookup(config, "enable_load_balancer", true) &&
     lookup(config, "alb_host_headers", null) != null
@@ -304,7 +304,7 @@ resource "aws_lb_listener_rule" "https_host_rules" {
 
 # Path-based routing rules for HTTP (if not redirecting to HTTPS)
 resource "aws_lb_listener_rule" "http_path_rules" {
-  for_each = var.create_alb && var.acm_certificate_arn == "" ? {
+  for_each = var.create_alb ? {
     for name, config in local.services_config : name => config
     if lookup(config, "enable_load_balancer", true) &&
     lookup(config, "alb_path_patterns", null) != null
