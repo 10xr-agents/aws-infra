@@ -1,75 +1,36 @@
-# modules/ecs/alb.tf - FIXED VERSION
+# modules/ecs/alb.tf
 
 locals {
-  # Services with host headers
-  voice_agent_host_service = lookup(local.services_config, "voice-agent", null) != null && lookup(local.services_config["voice-agent"], "alb_host_headers", null) != null ? [{
-    name = "voice-agent"
-    config = local.services_config["voice-agent"]
-  }] : []
 
-  livekit_proxy_host_service = lookup(local.services_config, "livekit-proxy", null) != null && lookup(local.services_config["livekit-proxy"], "alb_host_headers", null) != null ? [{
-    name = "livekit-proxy"
-    config = local.services_config["livekit-proxy"]
-  }] : []
+  # Step 1: Filter var.services to only include services with host-based routing
+  services_with_host_headers_raw = {
+    for name, config in var.services : name => config
+    if lookup(config, "enable_load_balancer", true) &&
+    lookup(config, "alb_host_headers", null) != null
+  }
 
-  agent_analytics_host_service = lookup(local.services_config, "agent-analytics", null) != null && lookup(local.services_config["agent-analytics"], "alb_host_headers", null) != null ? [{
-    name = "agent-analytics"
-    config = local.services_config["agent-analytics"]
-  }] : []
+  # Step 2: Create list from filtered services for listener rules
+  services_with_host_headers = [
+    for name, config in local.services_with_host_headers_raw : {
+      name = name
+      config = config
+    }
+  ]
 
-  agentic_services_host_service = lookup(local.services_config, "agentic-services", null) != null && lookup(local.services_config["agentic-services"], "alb_host_headers", null) != null ? [{
-    name = "agentic-services"
-    config = local.services_config["agentic-services"]
-  }] : []
+  # Step 3: Filter var.services to only include services with path-based routing
+  services_with_path_patterns_raw = {
+    for name, config in var.services : name => config
+    if lookup(config, "enable_load_balancer", true) &&
+    lookup(config, "alb_path_patterns", null) != null
+  }
 
-  ui_console_host_service = lookup(local.services_config, "ui-console", null) != null && lookup(local.services_config["ui-console"], "alb_host_headers", null) != null ? [{
-    name = "ui-console"
-    config = local.services_config["ui-console"]
-  }] : []
-
-  # Combine all services with host headers
-  services_with_host_headers = concat(
-    local.voice_agent_host_service,
-    local.livekit_proxy_host_service,
-    local.agent_analytics_host_service,
-    local.agentic_services_host_service,
-    local.ui_console_host_service
-  )
-
-  # Services with path patterns
-  voice_agent_path_service = lookup(local.services_config, "voice-agent", null) != null && lookup(local.services_config["voice-agent"], "alb_path_patterns", null) != null ? [{
-    name = "voice-agent"
-    config = local.services_config["voice-agent"]
-  }] : []
-
-  livekit_proxy_path_service = lookup(local.services_config, "livekit-proxy", null) != null && lookup(local.services_config["livekit-proxy"], "alb_path_patterns", null) != null ? [{
-    name = "livekit-proxy"
-    config = local.services_config["livekit-proxy"]
-  }] : []
-
-  agent_analytics_path_service = lookup(local.services_config, "agent-analytics", null) != null && lookup(local.services_config["agent-analytics"], "alb_path_patterns", null) != null ? [{
-    name = "agent-analytics"
-    config = local.services_config["agent-analytics"]
-  }] : []
-
-  agentic_services_path_service = lookup(local.services_config, "agentic-services", null) != null && lookup(local.services_config["agentic-services"], "alb_path_patterns", null) != null ? [{
-    name = "agentic-services"
-    config = local.services_config["agentic-services"]
-  }] : []
-
-  ui_console_path_service = lookup(local.services_config, "ui-console", null) != null && lookup(local.services_config["ui-console"], "alb_path_patterns", null) != null ? [{
-    name = "ui-console"
-    config = local.services_config["ui-console"]
-  }] : []
-
-  # Combine all services with path patterns
-  services_with_path_patterns = concat(
-    local.voice_agent_path_service,
-    local.livekit_proxy_path_service,
-    local.agent_analytics_path_service,
-    local.agentic_services_path_service,
-    local.ui_console_path_service
-  )
+  # Step 4: Create list from filtered services for listener rules
+  services_with_path_patterns = [
+    for name, config in local.services_with_path_patterns_raw : {
+      name = name
+      config = config
+    }
+  ]
 
   # Find the service with enable_default_routing = true
   default_routing_service = try([
