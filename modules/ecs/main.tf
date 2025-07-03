@@ -90,7 +90,6 @@ locals {
           }
         }
 
-        # Health check configuration
         # Health check configuration - FIXED
         healthCheck = lookup(config, "container_health_check", null) != null ? {
           command = [
@@ -537,7 +536,7 @@ resource "aws_ecs_task_definition" "service" {
 }
 
 ################################################################################
-# ALB Target Groups
+# ALB Target Groups - ONLY CREATE IF ALB IS ENABLED
 ################################################################################
 
 resource "aws_lb_target_group" "service" {
@@ -570,10 +569,15 @@ resource "aws_lb_target_group" "service" {
     Name    = each.value.target_group_name
     Service = each.key
   })
+
+  # CRITICAL: Wait for ALB to be created before creating target groups
+  depends_on = [
+    aws_lb.main
+  ]
 }
 
 ################################################################################
-# ECS Services
+# ECS Services - UPDATED WITH PROPER DEPENDENCIES
 ################################################################################
 
 resource "aws_ecs_service" "service" {
@@ -583,7 +587,6 @@ resource "aws_ecs_service" "service" {
   cluster         = aws_ecs_cluster.main.id
   task_definition = aws_ecs_task_definition.service[each.key].arn
   desired_count   = each.value.desired_count
-  # launch_type     = "FARGATE"
 
   # Enable ECS Exec if specified
   enable_execute_command = var.enable_execute_command
@@ -605,11 +608,11 @@ resource "aws_ecs_service" "service" {
     }
   }
 
-  # Load balancer configuration
+  # Load balancer configuration - FIXED DEPENDENCY
   dynamic "load_balancer" {
-    for_each = lookup(each.value, "enable_load_balancer", true) && (var.create_alb || var.target_group_arns != {}) ? [1] : []
+    for_each = lookup(each.value, "enable_load_balancer", true) && var.create_alb ? [1] : []
     content {
-      target_group_arn = var.target_group_arns != {} && lookup(var.target_group_arns, each.key, null) != null ? var.target_group_arns[each.key] : aws_lb_target_group.service[each.key].arn
+      target_group_arn = aws_lb_target_group.service[each.key].arn
       container_name   = each.key
       container_port   = each.value.port
     }
@@ -624,7 +627,6 @@ resource "aws_ecs_service" "service" {
   }
 
   # Deployment configuration
-  # Add these top-level arguments:
   deployment_maximum_percent         = 200
   deployment_minimum_healthy_percent = 100
 
@@ -636,9 +638,12 @@ resource "aws_ecs_service" "service" {
     ]))
   }
 
+  # CRITICAL: Proper dependencies
   depends_on = [
     aws_ecs_cluster_capacity_providers.main,
-    aws_lb_target_group.service
+    aws_lb_target_group.service,
+    aws_lb_listener.http,
+    aws_lb_listener.https
   ]
 
   tags = merge(local.common_tags, { Service = each.key })
@@ -745,4 +750,12 @@ resource "aws_service_discovery_service" "services" {
   }
 
   tags = merge(local.common_tags, { Service = each.key })
+}
+
+################################################################################
+# Data Sources
+################################################################################
+
+data "aws_vpc" "main" {
+  id = var.vpc_id
 }
