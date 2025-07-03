@@ -355,29 +355,29 @@ resource "aws_lb" "public_nlb" {
 }
 
 # Target group pointing to internal ALB - HTTP (port 80)
-resource "aws_lb_target_group" "alb_targets_http" {
-  name        = "${local.cluster_name}-alb-tg-http"
-  port        = 80
-  protocol    = "TCP"
-  vpc_id      = module.vpc.vpc_id
-  target_type = "alb"
-
-  health_check {
-    enabled             = true
-    healthy_threshold   = 2
-    interval            = 30
-    port                = "traffic-port"
-    protocol            = "HTTP"
-    timeout             = 6
-    unhealthy_threshold = 2
-    path                = "/"
-    matcher             = "200"
-  }
-
-  tags = merge(var.tags, {
-    Name = "${local.cluster_name}-alb-tg-http"
-  })
-}
+# resource "aws_lb_target_group" "alb_targets_http" {
+#   name        = "${local.cluster_name}-alb-tg-http"
+#   port        = 80
+#   protocol    = "TCP"
+#   vpc_id      = module.vpc.vpc_id
+#   target_type = "alb"
+#
+#   health_check {
+#     enabled             = true
+#     healthy_threshold   = 2
+#     interval            = 30
+#     port                = "traffic-port"
+#     protocol            = "HTTP"
+#     timeout             = 6
+#     unhealthy_threshold = 2
+#     path                = "/"
+#     matcher             = "200"
+#   }
+#
+#   tags = merge(var.tags, {
+#     Name = "${local.cluster_name}-alb-tg-http"
+#   })
+# }
 
 # Attach internal ALB to NLB target group - HTTP
 # resource "aws_lb_target_group_attachment" "alb_target_http" {
@@ -389,13 +389,13 @@ resource "aws_lb_target_group" "alb_targets_http" {
 # }
 
 # NLB Listener - HTTP
-resource "aws_lb_listener" "public_nlb_http" {
-  load_balancer_arn = aws_lb.public_nlb.arn
-  port              = "80"
-  protocol          = "TCP"
-
-  default_action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.alb_targets_http.arn
-  }
-}
+# resource "aws_lb_listener" "public_nlb_http" {
+#   load_balancer_arn = aws_lb.public_nlb.arn
+#   port              = "80"
+#   protocol          = "TCP"
+#
+#   default_action {
+#     type             = "forward"
+#     target_group_arn = aws_lb_target_group.alb_targets_http.arn
+#   }
+# }
