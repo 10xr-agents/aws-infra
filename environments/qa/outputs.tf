@@ -87,11 +87,12 @@ output "ecs_service_urls" {
   value = {
     for name, config in local.ecs_services_with_overrides : name => {
       internal_url = var.enable_service_discovery ? "http://${name}.${local.cluster_name}.local:${config.port}" : null
-      external_url = "http${var.acm_certificate_arn != "" ? "s" : ""}://${module.ecs.alb_dns_name}${lookup(config, "alb_path_patterns", ["/"])[0]}"
-      paths        = lookup(config, "alb_path_patterns", ["/${name}/*"])
+      external_url = "http${var.acm_certificate_arn != "" ? "s" : ""}://${module.ecs.alb_dns_name}${try(config.alb_path_patterns[0], "/")}"
+      paths        = try(config.alb_path_patterns, ["/${name}/*"])
     }
   }
 }
+
 
 # MongoDB outputs
 output "mongodb_instance_ids" {
