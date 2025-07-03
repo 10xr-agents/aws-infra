@@ -469,8 +469,6 @@ variable "redis_cloudwatch_log_retention_days" {
   default     = 7
 }
 
-# environments/qa/variables-ecs.tf
-
 variable "ecs_services" {
   description = "Map of ECS services to create with their configurations"
   type = map(object({
@@ -547,6 +545,256 @@ variable "create_alb_rules" {
   description = "Whether to create ALB listener rules"
   type        = bool
   default     = true
+}
+
+################################################################################
+# Networking Module Variables
+################################################################################
+
+variable "create_nlb" {
+  description = "Whether to create Network Load Balancer"
+  type        = bool
+  default     = true
+}
+
+variable "nlb_internal" {
+  description = "Whether the NLB should be internal (private) or external (public)"
+  type        = bool
+  default     = false
+}
+
+variable "nlb_enable_deletion_protection" {
+  description = "Whether to enable deletion protection for the NLB"
+  type        = bool
+  default     = false
+}
+
+variable "nlb_enable_cross_zone_load_balancing" {
+  description = "Whether to enable cross-zone load balancing for the NLB"
+  type        = bool
+  default     = true
+}
+
+# Target Group Configuration
+variable "create_http_target_group" {
+  description = "Whether to create HTTP target group"
+  type        = bool
+  default     = true
+}
+
+variable "create_https_target_group" {
+  description = "Whether to create HTTPS target group"
+  type        = bool
+  default     = true
+}
+
+variable "http_port" {
+  description = "HTTP port for target group"
+  type        = number
+  default     = 80
+}
+
+variable "https_port" {
+  description = "HTTPS port for target group"
+  type        = number
+  default     = 443
+}
+
+variable "target_type" {
+  description = "Type of target for target groups (ip, instance, alb)"
+  type        = string
+  default     = "alb"
+}
+
+variable "deregistration_delay" {
+  description = "Time to wait for in-flight requests to complete while deregistering a target"
+  type        = number
+  default     = 300
+}
+
+# Health Check Configuration
+variable "health_check_enabled" {
+  description = "Whether to enable health checks"
+  type        = bool
+  default     = true
+}
+
+variable "health_check_healthy_threshold" {
+  description = "Number of consecutive successful health checks"
+  type        = number
+  default     = 2
+}
+
+variable "health_check_interval" {
+  description = "Health check interval in seconds"
+  type        = number
+  default     = 30
+}
+
+variable "health_check_port" {
+  description = "Port for health checks"
+  type        = string
+  default     = "traffic-port"
+}
+
+variable "health_check_protocol" {
+  description = "Protocol for health checks"
+  type        = string
+  default     = "HTTP"
+}
+
+variable "health_check_timeout" {
+  description = "Health check timeout in seconds"
+  type        = number
+  default     = 6
+}
+
+variable "health_check_unhealthy_threshold" {
+  description = "Number of consecutive failed health checks"
+  type        = number
+  default     = 2
+}
+
+variable "health_check_path" {
+  description = "Path for health checks"
+  type        = string
+  default     = "/"
+}
+
+variable "health_check_matcher" {
+  description = "HTTP response codes for successful health checks"
+  type        = string
+  default     = "200"
+}
+
+# Listener Configuration
+variable "create_http_listener" {
+  description = "Whether to create HTTP listener"
+  type        = bool
+  default     = true
+}
+
+variable "create_https_listener" {
+  description = "Whether to create HTTPS listener"
+  type        = bool
+  default     = true
+}
+
+variable "https_listener_protocol" {
+  description = "Protocol for HTTPS listener (TCP or TLS)"
+  type        = string
+  default     = "TCP"
+  validation {
+    condition     = contains(["TCP", "TLS"], var.https_listener_protocol)
+    error_message = "HTTPS listener protocol must be either TCP or TLS."
+  }
+}
+
+# NLB Access Logs
+variable "nlb_access_logs_enabled" {
+  description = "Whether to enable NLB access logs"
+  type        = bool
+  default     = false
+}
+
+variable "nlb_access_logs_bucket" {
+  description = "S3 bucket for NLB access logs"
+  type        = string
+  default     = ""
+}
+
+variable "nlb_access_logs_prefix" {
+  description = "S3 prefix for NLB access logs"
+  type        = string
+  default     = "nlb-access-logs"
+}
+
+# NLB Connection Logs
+variable "nlb_connection_logs_enabled" {
+  description = "Whether to enable NLB connection logs"
+  type        = bool
+  default     = false
+}
+
+variable "nlb_connection_logs_bucket" {
+  description = "S3 bucket for NLB connection logs"
+  type        = string
+  default     = ""
+}
+
+variable "nlb_connection_logs_prefix" {
+  description = "S3 prefix for NLB connection logs"
+  type        = string
+  default     = "nlb-connection-logs"
+}
+
+# Security Groups (optional for NLB)
+variable "create_security_groups" {
+  description = "Whether to create security groups for NLB"
+  type        = bool
+  default     = false
+}
+
+variable "allowed_cidr_blocks" {
+  description = "List of CIDR blocks allowed to access the NLB"
+  type        = list(string)
+  default     = ["0.0.0.0/0"]
+}
+
+variable "additional_ports" {
+  description = "List of additional ports to allow in security groups"
+  type        = list(number)
+  default     = []
+}
+
+# Route 53 Configuration (optional)
+variable "create_route53_record" {
+  description = "Whether to create Route 53 record for NLB"
+  type        = bool
+  default     = false
+}
+
+variable "route53_zone_id" {
+  description = "Route 53 hosted zone ID"
+  type        = string
+  default     = ""
+}
+
+variable "route53_record_name" {
+  description = "Route 53 record name"
+  type        = string
+  default     = ""
+}
+
+variable "route53_evaluate_target_health" {
+  description = "Whether to evaluate target health for Route 53 alias"
+  type        = bool
+  default     = true
+}
+
+# CloudWatch Monitoring (optional)
+variable "create_cloudwatch_alarms" {
+  description = "Whether to create CloudWatch alarms for NLB"
+  type        = bool
+  default     = false
+}
+
+variable "alarm_actions" {
+  description = "List of ARNs to notify when alarms trigger"
+  type        = list(string)
+  default     = []
+}
+
+variable "healthy_host_count_threshold" {
+  description = "Threshold for healthy host count alarm"
+  type        = number
+  default     = 1
+}
+
+variable "unhealthy_host_count_threshold" {
+  description = "Threshold for unhealthy host count alarm"
+  type        = number
+  default     = 0
 }
 
 

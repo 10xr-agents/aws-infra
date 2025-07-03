@@ -359,6 +359,41 @@ redis_store_connection_details_in_ssm = true
 redis_create_cloudwatch_log_group     = true
 redis_cloudwatch_log_retention_days   = 7
 
+# NLB Configuration
+create_nlb = true
+nlb_internal = false
+nlb_enable_deletion_protection = false
+nlb_enable_cross_zone_load_balancing = true
+
+# Target Group Configuration
+create_http_target_group = true
+create_https_target_group = true
+http_port = 80
+https_port = 443
+target_type = "alb"
+deregistration_delay = 30
+
+# Health Check Configuration
+health_check_enabled = true
+health_check_healthy_threshold = 2
+health_check_interval = 30
+health_check_port = "traffic-port"
+health_check_protocol = "HTTP"
+health_check_timeout = 6
+health_check_unhealthy_threshold = 2
+health_check_path = "/"
+health_check_matcher = "200"
+
+# Listener Configuration
+create_http_listener = true
+create_https_listener = true
+https_listener_protocol = "TCP"  # Use "TLS" if you want SSL termination at NLB
+
+# Access Logs (optional - set to true if you want to enable)
+nlb_access_logs_enabled = true
+nlb_access_logs_bucket = "ten-xr-nlb-logs"
+nlb_access_logs_prefix = "nlb-access-logs"
+
 # Global Accelerator Configuration
 create_global_accelerator = true
 global_accelerator_enabled = true

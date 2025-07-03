@@ -176,7 +176,7 @@ module "ecs" {
   private_subnet_ids    = module.vpc.private_subnets
   public_subnet_ids     = module.vpc.public_subnets
 
-  acm_certificate_arn = ""
+  acm_certificate_arn = var.acm_certificate_arn
   create_alb_rules    = true
 
   enable_container_insights = var.enable_container_insights
@@ -206,6 +206,93 @@ module "ecs" {
   depends_on = [module.mongodb, module.redis]
 }
 
+# Networking Module (NEW - replaces the NLB resources)
+module "networking" {
+  source = "../../modules/networking"
+
+  cluster_name = local.cluster_name
+  environment  = var.environment
+  vpc_id       = module.vpc.vpc_id
+
+  public_subnet_ids  = module.vpc.public_subnets
+  private_subnet_ids = module.vpc.private_subnets
+
+  # NLB Configuration
+  create_nlb     = var.create_nlb
+  nlb_internal   = var.nlb_internal
+  nlb_enable_deletion_protection = var.nlb_enable_deletion_protection
+  nlb_enable_cross_zone_load_balancing = var.nlb_enable_cross_zone_load_balancing
+
+  # Target Group Configuration
+  create_http_target_group  = var.create_http_target_group
+  create_https_target_group = var.create_https_target_group
+  http_port                 = var.http_port
+  https_port                = var.https_port
+  target_type              = var.target_type
+
+  # Target Configuration
+  alb_arn = module.ecs.alb_arn
+
+  # Health Check Configuration
+  health_check_enabled             = var.health_check_enabled
+  health_check_healthy_threshold   = var.health_check_healthy_threshold
+  health_check_interval            = var.health_check_interval
+  health_check_port                = var.health_check_port
+  health_check_protocol            = var.health_check_protocol
+  health_check_timeout             = var.health_check_timeout
+  health_check_unhealthy_threshold = var.health_check_unhealthy_threshold
+  health_check_path                = var.health_check_path
+  health_check_matcher             = var.health_check_matcher
+  deregistration_delay             = var.deregistration_delay
+
+  # Listener Configuration
+  create_http_listener      = var.create_http_listener
+  create_https_listener     = var.create_https_listener
+  https_listener_protocol   = var.https_listener_protocol
+  ssl_policy               = var.ssl_policy
+  certificate_arn          = var.acm_certificate_arn
+
+  # Access Logs
+  nlb_access_logs_enabled = var.nlb_access_logs_enabled
+  nlb_access_logs_bucket  = var.nlb_access_logs_bucket
+  nlb_access_logs_prefix  = var.nlb_access_logs_prefix
+
+  # Connection Logs
+  nlb_connection_logs_enabled = var.nlb_connection_logs_enabled
+  nlb_connection_logs_bucket  = var.nlb_connection_logs_bucket
+  nlb_connection_logs_prefix  = var.nlb_connection_logs_prefix
+
+  # Security Groups (optional for NLB)
+  create_security_groups = var.create_security_groups
+  allowed_cidr_blocks    = var.allowed_cidr_blocks
+  additional_ports       = var.additional_ports
+
+  # Route 53 Configuration (optional)
+  create_route53_record          = var.create_route53_record
+  route53_zone_id               = var.route53_zone_id
+  route53_record_name           = var.route53_record_name
+  route53_evaluate_target_health = var.route53_evaluate_target_health
+
+  # CloudWatch Alarms (optional)
+  create_cloudwatch_alarms         = var.create_cloudwatch_alarms
+  alarm_actions                    = var.alarm_actions
+  healthy_host_count_threshold     = var.healthy_host_count_threshold
+  unhealthy_host_count_threshold   = var.unhealthy_host_count_threshold
+
+  tags = merge(
+    var.tags,
+    {
+      "Environment" = var.environment
+      "Project"     = "10xR-Agents"
+      "Component"   = "Networking"
+      "Platform"    = "AWS"
+      "Terraform"   = "true"
+    }
+  )
+
+  depends_on = [module.ecs]
+}
+
 # Global Accelerator Module
 module "global_accelerator" {
   count = var.create_global_accelerator ? 1 : 0
@@ -230,13 +317,17 @@ module "global_accelerator" {
     {
       from_port = 80
       to_port   = 80
+    },
+    {
+      from_port = 443
+      to_port   = 443
     }
   ]
 
   # Endpoints (NLB instead of ALB)
   endpoints = [
     {
-      endpoint_id                    = aws_lb.public_nlb.arn
+      endpoint_id                    = module.networking.nlb_arn
       weight                         = 100
       client_ip_preservation_enabled = false
     }
@@ -259,7 +350,7 @@ module "global_accelerator" {
     "Terraform"   = "true"
   })
 
-  depends_on = [aws_lb.public_nlb]
+  depends_on = [module.networking]
 }
 
 # Cloudflare Module
@@ -275,7 +366,7 @@ module "cloudflare" {
   cloudflare_zone_id = var.cloudflare_zone_id
 
   # DNS Configuration
-  target_dns_name = var.create_global_accelerator ? module.global_accelerator[0].accelerator_dns_name : aws_lb.public_nlb.dns_name
+  target_dns_name = var.create_global_accelerator ? module.global_accelerator[0].accelerator_dns_name : module.networking.nlb_dns_name
   dns_record_type = "CNAME"
   proxied         = var.dns_proxied
   ttl             = var.dns_ttl
@@ -302,7 +393,8 @@ module "cloudflare" {
 
   depends_on = [
     module.ecs,
-    module.global_accelerator
+    module.global_accelerator,
+    module.networking
   ]
 }
 
@@ -333,65 +425,4 @@ resource "aws_security_group_rule" "mongodb_from_ecs" {
   security_group_id        = module.mongodb.security_group_id
 
   depends_on = [module.ecs, module.mongodb]
-}
-
-# Public Network Load Balancer
-resource "aws_lb" "public_nlb" {
-  name               = "${local.cluster_name}-public-nlb"
-  internal           = false
-  load_balancer_type = "network"
-  subnets            = module.vpc.public_subnets
-
-  enable_deletion_protection = false
-
-  tags = merge(var.tags, {
-    Name = "${local.cluster_name}-public-nlb"
-    Component = "PublicNLB"
-  })
-}
-
-# Target group pointing to internal ALB - HTTP (port 80)
-resource "aws_lb_target_group" "alb_targets_http" {
-  name        = "${local.cluster_name}-alb-tg-http"
-  port        = 80
-  protocol    = "TCP"
-  vpc_id      = module.vpc.vpc_id
-  target_type = "alb"
-
-  health_check {
-    enabled             = true
-    healthy_threshold   = 2
-    interval            = 30
-    port                = "traffic-port"
-    protocol            = "HTTP"
-    timeout             = 6
-    unhealthy_threshold = 2
-    path                = "/"
-    matcher             = "200"
-  }
-
-  tags = merge(var.tags, {
-    Name = "${local.cluster_name}-alb-tg-http"
-  })
-}
-
-# Attach internal ALB to NLB target group - HTTP
-resource "aws_lb_target_group_attachment" "alb_target_http" {
-  target_group_arn = aws_lb_target_group.alb_targets_http.arn
-  target_id        = module.ecs.alb_arn
-  port             = 80
-
-  depends_on = [module.ecs]
-}
-
-# NLB Listener - HTTP
-resource "aws_lb_listener" "public_nlb_http" {
-  load_balancer_arn = aws_lb.public_nlb.arn
-  port              = "80"
-  protocol          = "TCP"
-
-  default_action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.alb_targets_http.arn
-  }
 }

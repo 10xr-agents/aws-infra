@@ -182,7 +182,101 @@ output "redis_ssm_parameters" {
   }
 }
 
-# Add these outputs to your environments/qa/outputs.tf
+# Add these outputs to your existing environments/qa/outputs.tf
+
+################################################################################
+# Networking Module Outputs
+################################################################################
+
+output "nlb_arn" {
+  description = "ARN of the Network Load Balancer"
+  value       = module.networking.nlb_arn
+}
+
+output "nlb_dns_name" {
+  description = "DNS name of the Network Load Balancer"
+  value       = module.networking.nlb_dns_name
+}
+
+output "nlb_zone_id" {
+  description = "Hosted zone ID of the Network Load Balancer"
+  value       = module.networking.nlb_zone_id
+}
+
+output "nlb_connection_info" {
+  description = "NLB connection information"
+  value       = module.networking.nlb_connection_info
+}
+
+output "nlb_target_groups" {
+  description = "NLB target groups"
+  value       = module.networking.target_groups
+}
+
+output "nlb_listeners" {
+  description = "NLB listeners"
+  value       = module.networking.listeners
+}
+
+output "nlb_http_target_group_arn" {
+  description = "ARN of the HTTP target group"
+  value       = module.networking.http_target_group_arn
+}
+
+output "nlb_https_target_group_arn" {
+  description = "ARN of the HTTPS target group"
+  value       = module.networking.https_target_group_arn
+}
+
+output "nlb_security_group_id" {
+  description = "ID of the NLB security group (if created)"
+  value       = module.networking.security_group_id
+}
+
+################################################################################
+# Network Architecture Summary
+################################################################################
+
+output "network_architecture" {
+  description = "Summary of the network architecture"
+  value = {
+    # Infrastructure Components
+    vpc_id = module.vpc.vpc_id
+    vpc_cidr = module.vpc.vpc_cidr_block
+
+    # Load Balancers
+    internal_alb = {
+      dns_name = module.ecs.alb_dns_name
+      zone_id  = module.ecs.alb_zone_id
+      internal = true
+    }
+
+    external_nlb = {
+      dns_name = module.networking.nlb_dns_name
+      zone_id  = module.networking.nlb_zone_id
+      internal = var.nlb_internal
+    }
+
+    # Global Accelerator (if enabled)
+    global_accelerator = var.create_global_accelerator ? {
+      dns_name = module.global_accelerator[0].accelerator_dns_name
+      static_ips = module.global_accelerator[0].static_ip_addresses_flat
+    } : null
+
+    # Traffic Flow
+    traffic_flow = {
+      external_requests = var.create_global_accelerator ? "Internet -> Global Accelerator -> NLB -> ALB -> ECS Services" : "Internet -> NLB -> ALB -> ECS Services"
+      internal_requests = "ECS Services -> Service Discovery -> ECS Services"
+    }
+
+    # SSL/TLS Configuration
+    ssl_config = {
+      alb_https_enabled = var.acm_certificate_arn != ""
+      nlb_https_protocol = var.https_listener_protocol
+      ssl_termination_point = var.https_listener_protocol == "TLS" ? "NLB" : (var.acm_certificate_arn != "" ? "ALB" : "None")
+    }
+  }
+}
 
 ################################################################################
 # Global Accelerator Outputs
@@ -252,6 +346,7 @@ output "cloudflare_configuration" {
 # Application URLs Summary
 ################################################################################
 
+# Replace the existing application_urls output with this updated version
 output "application_urls" {
   description = "Complete summary of application access URLs"
   value = {
@@ -259,6 +354,11 @@ output "application_urls" {
     alb_dns_name = module.ecs.alb_dns_name
     alb_http_url = "http://${module.ecs.alb_dns_name}"
     alb_https_url = var.acm_certificate_arn != "" ? "https://${module.ecs.alb_dns_name}" : null
+
+    # NLB access
+    nlb_dns_name = module.networking.nlb_dns_name
+    nlb_http_url = var.create_http_listener ? "http://${module.networking.nlb_dns_name}" : null
+    nlb_https_url = var.create_https_listener ? "https://${module.networking.nlb_dns_name}" : null
 
     # Global Accelerator access (if enabled)
     global_accelerator_dns_name = var.create_global_accelerator ? module.global_accelerator[0].accelerator_dns_name : null
@@ -269,12 +369,16 @@ output "application_urls" {
     # Primary URLs (recommended for users)
     primary_app_url = var.create_cloudflare_dns_records ? module.cloudflare[0].custom_dns_record_urls.qa-main.https_url : (
       var.create_global_accelerator ? "https://${module.global_accelerator[0].accelerator_dns_name}" : (
+      var.create_https_listener ? "https://${module.networking.nlb_dns_name}" : (
       var.acm_certificate_arn != "" ? "https://${module.ecs.alb_dns_name}" : "http://${module.ecs.alb_dns_name}"
+    )
     )
     )
     primary_api_url = var.create_cloudflare_dns_records ? module.cloudflare[0].custom_dns_record_urls.qa-service.https_url : (
       var.create_global_accelerator ? "https://${module.global_accelerator[0].accelerator_dns_name}" : (
+      var.create_https_listener ? "https://${module.networking.nlb_dns_name}" : (
       var.acm_certificate_arn != "" ? "https://${module.ecs.alb_dns_name}" : "http://${module.ecs.alb_dns_name}"
+    )
     )
     )
   }
