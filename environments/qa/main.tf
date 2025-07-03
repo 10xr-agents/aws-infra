@@ -3,8 +3,6 @@
 locals {
   cluster_name = "${var.cluster_name}-${var.environment}"
   vpc_name     = "${var.cluster_name}-${var.environment}-${var.region}"
-  # Get all ECS security group IDs
-  ecs_security_group_ids = values(module.ecs.security_group_ids)
 }
 
 # Add this data source to the top of environments/qa/main.tf after the locals block
@@ -310,7 +308,7 @@ module "cloudflare" {
 
 # Allow ECS to connect to Redis (INGRESS to Redis)
 resource "aws_security_group_rule" "redis_from_ecs_ingress" {
-  for_each = toset(local.ecs_security_group_ids)
+  for_each = module.ecs.security_group_ids
 
   type                     = "ingress"
   from_port                = module.redis.redis_port
