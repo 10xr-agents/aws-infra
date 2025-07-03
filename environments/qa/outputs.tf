@@ -358,7 +358,7 @@ output "application_urls" {
     # NLB access
     nlb_dns_name = module.networking.nlb_dns_name
     nlb_http_url = var.create_http_listener ? "http://${module.networking.nlb_dns_name}" : null
-    nlb_https_url = var.create_https_listener ? "https://${module.networking.nlb_dns_name}" : null
+    nlb_https_url = var.acm_certificate_arn != "" ? "https://${module.networking.nlb_dns_name}" : null
 
     # Global Accelerator access (if enabled)
     global_accelerator_dns_name = var.create_global_accelerator ? module.global_accelerator[0].accelerator_dns_name : null
@@ -369,16 +369,12 @@ output "application_urls" {
     # Primary URLs (recommended for users)
     primary_app_url = var.create_cloudflare_dns_records ? module.cloudflare[0].custom_dns_record_urls.qa-main.https_url : (
       var.create_global_accelerator ? "https://${module.global_accelerator[0].accelerator_dns_name}" : (
-      var.create_https_listener ? "https://${module.networking.nlb_dns_name}" : (
-      var.acm_certificate_arn != "" ? "https://${module.ecs.alb_dns_name}" : "http://${module.ecs.alb_dns_name}"
-    )
+      var.acm_certificate_arn != "" ? "https://${module.networking.nlb_dns_name}" : "http://${module.ecs.alb_dns_name}"
     )
     )
     primary_api_url = var.create_cloudflare_dns_records ? module.cloudflare[0].custom_dns_record_urls.qa-service.https_url : (
       var.create_global_accelerator ? "https://${module.global_accelerator[0].accelerator_dns_name}" : (
-      var.create_https_listener ? "https://${module.networking.nlb_dns_name}" : (
-      var.acm_certificate_arn != "" ? "https://${module.ecs.alb_dns_name}" : "http://${module.ecs.alb_dns_name}"
-    )
+      var.acm_certificate_arn != "" ? "https://${module.networking.nlb_dns_name}" : "http://${module.ecs.alb_dns_name}"
     )
     )
   }
