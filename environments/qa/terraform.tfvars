@@ -382,16 +382,17 @@ cloudflare_api_key    = "ef7027a662a457c814bfc30e81fcf49baa969"
 # Domain Configuration
 domain_name = "10xr.co"
 create_cloudflare_dns_records = true
-dns_proxied = true  # Enable Cloudflare proxy for CDN and protection
-dns_ttl = 300
+# Change these settings for HTTP access
+dns_proxied = false  # Disable proxying to allow direct HTTP access
+manage_cloudflare_zone_settings = false  # Don't manage zone settings for now
 
-# Custom DNS Records for specific subdomain routing
+# Update app_dns_records to not be proxied
 app_dns_records = {
   "qa-main" = {
     name     = "qa"
     content  = "" # Will be set by module to Global Accelerator DNS name
     type     = "CNAME"
-    proxied  = true
+    proxied  = false  # Changed from true to false
     ttl      = 300
     comment  = "Main QA environment - routes to UI console"
     tags     = ["qa", "ui", "main"]
@@ -400,7 +401,7 @@ app_dns_records = {
     name     = "api.qa"
     content  = "" # Will be set by module to Global Accelerator DNS name
     type     = "CNAME"
-    proxied  = true
+    proxied  = false  # Changed from true to false
     ttl      = 300
     comment  = "QA Service environment - routes to backend services"
     tags     = ["qa", "service", "api"]
@@ -409,15 +410,13 @@ app_dns_records = {
     name     = "proxy.qa"
     content  = "" # Will be set by module to Global Accelerator DNS name
     type     = "CNAME"
-    proxied  = true
+    proxied  = false  # Changed from true to false
     ttl      = 300
     comment  = "QA LiveKit environment - routes to LiveKit proxy"
     tags     = ["qa", "livekit", "proxy"]
   }
 }
-
 # Zone Settings (optional)
-manage_cloudflare_zone_settings = false
 cloudflare_ssl_mode = "flexible"
 cloudflare_always_use_https = "off"
 cloudflare_min_tls_version = "1.2"
