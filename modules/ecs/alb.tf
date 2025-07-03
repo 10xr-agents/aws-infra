@@ -270,7 +270,7 @@ resource "aws_lb_listener" "https" {
 ################################################################################
 
 resource "aws_lb_listener_rule" "http_host_rules" {
-  count = var.create_alb ? length(local.services_with_host_headers) : 0
+  count = length(local.services_with_host_headers)
 
   listener_arn = aws_lb_listener.http[0].arn
   priority     = 100 + count.index
