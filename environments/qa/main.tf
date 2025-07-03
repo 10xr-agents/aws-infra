@@ -165,46 +165,46 @@ module "mongodb" {
   depends_on = [module.vpc]
 }
 
-# # ECS Cluster Module
-# module "ecs" {
-#   source = "../../modules/ecs"
-#
-#   cluster_name = var.cluster_name
-#   environment  = var.environment
-#
-#   vpc_id                = module.vpc.vpc_id
-#   private_subnet_ids    = module.vpc.private_subnets
-#   public_subnet_ids     = module.vpc.public_subnets
-#
-#   acm_certificate_arn = ""
-#   create_alb_rules    = true
-#
-#   enable_container_insights = var.enable_container_insights
-#   enable_execute_command    = var.enable_execute_command
-#   enable_service_discovery  = true
-#   create_alb = true
-#   alb_internal = true
-#
-#   # ADD THESE LINES for Redis connectivity
-#   redis_security_group_id   = module.redis.redis_security_group_id
-#   mongodb_security_group_id = module.mongodb.security_group_id
-#
-#   # Pass the entire services configuration from variables
-#   services = local.ecs_services_with_overrides
-#
-#   tags = merge(
-#     var.tags,
-#     {
-#       "Environment" = var.environment
-#       "Project"     = "10xR-Agents"
-#       "Component"   = "ECS"
-#       "Platform"    = "AWS"
-#       "Terraform"   = "true"
-#     }
-#   )
-#
-#   depends_on = [module.mongodb, module.redis]
-# }
+# ECS Cluster Module
+module "ecs" {
+  source = "../../modules/ecs"
+
+  cluster_name = var.cluster_name
+  environment  = var.environment
+
+  vpc_id                = module.vpc.vpc_id
+  private_subnet_ids    = module.vpc.private_subnets
+  public_subnet_ids     = module.vpc.public_subnets
+
+  acm_certificate_arn = ""
+  create_alb_rules    = true
+
+  enable_container_insights = var.enable_container_insights
+  enable_execute_command    = var.enable_execute_command
+  enable_service_discovery  = true
+  create_alb = true
+  alb_internal = true
+
+  # ADD THESE LINES for Redis connectivity
+  redis_security_group_id   = module.redis.redis_security_group_id
+  mongodb_security_group_id = module.mongodb.security_group_id
+
+  # Pass the entire services configuration from variables
+  services = local.ecs_services_with_overrides
+
+  tags = merge(
+    var.tags,
+    {
+      "Environment" = var.environment
+      "Project"     = "10xR-Agents"
+      "Component"   = "ECS"
+      "Platform"    = "AWS"
+      "Terraform"   = "true"
+    }
+  )
+
+  depends_on = [module.mongodb, module.redis]
+}
 
 # Global Accelerator Module
 module "global_accelerator" {
@@ -301,39 +301,39 @@ module "cloudflare" {
   })
 
   depends_on = [
-    #module.ecs,
+    module.ecs,
     module.global_accelerator
   ]
 }
 
-# # Allow ECS to connect to Redis (INGRESS to Redis)
-# resource "aws_security_group_rule" "redis_from_ecs_ingress" {
-#   for_each = module.ecs.security_group_ids
-#
-#   type                     = "ingress"
-#   from_port                = module.redis.redis_port
-#   to_port                  = module.redis.redis_port
-#   protocol                 = "tcp"
-#   source_security_group_id = each.value
-#   security_group_id        = module.redis.redis_security_group_id
-#   description              = "Allow ECS services to access Redis"
-#
-#   depends_on = [module.ecs, module.redis]
-# }
-#
-# # Security Group Rule to allow ECS access to MongoDB
-# resource "aws_security_group_rule" "mongodb_from_ecs" {
-#   for_each = module.ecs.security_group_ids
-#
-#   type                     = "ingress"
-#   from_port                = 27017
-#   to_port                  = 27017
-#   protocol                 = "tcp"
-#   source_security_group_id = each.value
-#   security_group_id        = module.mongodb.security_group_id
-#
-#   depends_on = [module.ecs, module.mongodb]
-# }
+# Allow ECS to connect to Redis (INGRESS to Redis)
+resource "aws_security_group_rule" "redis_from_ecs_ingress" {
+  for_each = module.ecs.security_group_ids
+
+  type                     = "ingress"
+  from_port                = module.redis.redis_port
+  to_port                  = module.redis.redis_port
+  protocol                 = "tcp"
+  source_security_group_id = each.value
+  security_group_id        = module.redis.redis_security_group_id
+  description              = "Allow ECS services to access Redis"
+
+  depends_on = [module.ecs, module.redis]
+}
+
+# Security Group Rule to allow ECS access to MongoDB
+resource "aws_security_group_rule" "mongodb_from_ecs" {
+  for_each = module.ecs.security_group_ids
+
+  type                     = "ingress"
+  from_port                = 27017
+  to_port                  = 27017
+  protocol                 = "tcp"
+  source_security_group_id = each.value
+  security_group_id        = module.mongodb.security_group_id
+
+  depends_on = [module.ecs, module.mongodb]
+}
 
 # Public Network Load Balancer
 resource "aws_lb" "public_nlb" {
@@ -375,14 +375,14 @@ resource "aws_lb_target_group" "alb_targets_http" {
   })
 }
 
-# # Attach internal ALB to NLB target group - HTTP
-# resource "aws_lb_target_group_attachment" "alb_target_http" {
-#   target_group_arn = aws_lb_target_group.alb_targets_http.arn
-#   target_id        = module.ecs.alb_arn
-#   port             = 80
-#
-#   depends_on = [module.ecs]
-# }
+# Attach internal ALB to NLB target group - HTTP
+resource "aws_lb_target_group_attachment" "alb_target_http" {
+  target_group_arn = aws_lb_target_group.alb_targets_http.arn
+  target_id        = module.ecs.alb_arn
+  port             = 80
+
+  depends_on = [module.ecs]
+}
 
 # NLB Listener - HTTP
 resource "aws_lb_listener" "public_nlb_http" {
