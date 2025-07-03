@@ -369,7 +369,7 @@ resource "aws_lb_target_group" "alb_targets_http" {
     healthy_threshold   = 2
     interval            = 30
     port                = "traffic-port"
-    protocol            = "TCP"  # Changed from HTTP to TCP for ALB targets
+    protocol            = "TCP"
     timeout             = 6
     unhealthy_threshold = 2
   }
@@ -392,7 +392,7 @@ resource "aws_lb_target_group" "alb_targets_https" {
     healthy_threshold   = 2
     interval            = 30
     port                = "traffic-port"
-    protocol            = "TCP"  # Changed from HTTPS to TCP for ALB targets
+    protocol            = "TCP"
     timeout             = 6
     unhealthy_threshold = 2
   }
