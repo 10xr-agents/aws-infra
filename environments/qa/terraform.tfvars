@@ -386,8 +386,6 @@ health_check_matcher = "200"
 
 # Listener Configuration
 create_http_listener = true
-create_https_listener = true
-https_listener_protocol = "TCP"  # Use "TLS" if you want SSL termination at NLB
 
 # Access Logs (optional - set to true if you want to enable)
 nlb_access_logs_enabled = true

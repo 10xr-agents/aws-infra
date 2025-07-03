@@ -110,7 +110,7 @@ variable "create_http_target_group" {
 variable "create_https_target_group" {
   description = "Whether to create HTTPS target group"
   type        = bool
-  default     = true
+  default     = false
 }
 
 variable "http_port" {

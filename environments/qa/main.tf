@@ -247,7 +247,7 @@ module "networking" {
 
   # Listener Configuration
   create_http_listener      = var.create_http_listener
-  create_https_listener     = var.create_https_listener
+  create_https_listener     = var.acm_certificate_arn != ""
   https_listener_protocol   = var.https_listener_protocol
   ssl_policy               = var.ssl_policy
   certificate_arn          = var.acm_certificate_arn

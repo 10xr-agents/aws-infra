@@ -674,12 +674,6 @@ variable "create_http_listener" {
   default     = true
 }
 
-variable "create_https_listener" {
-  description = "Whether to create HTTPS listener"
-  type        = bool
-  default     = true
-}
-
 variable "https_listener_protocol" {
   description = "Protocol for HTTPS listener (TCP or TLS)"
   type        = string
