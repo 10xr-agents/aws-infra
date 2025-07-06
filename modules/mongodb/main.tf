@@ -13,8 +13,8 @@ locals {
   common_tags = merge(
     var.tags,
     {
-      Module      = "mongodb"
-      ReplicaSet  = local.replica_set_name
+      Module         = "mongodb"
+      ReplicaSet     = local.replica_set_name
       MongoDBVersion = var.mongodb_version
     }
   )
@@ -43,22 +43,22 @@ resource "aws_ssm_parameter" "mongodb_private_key" {
   name  = "/${var.environment}/${var.cluster_name}/mongodb/ssh-private-key"
   type  = "SecureString"
   value = tls_private_key.mongodb_key.private_key_pem
-  tags = local.common_tags
+  tags  = local.common_tags
 }
 
 # Data source for latest Ubuntu AMI
 data "aws_ami" "ubuntu" {
-  count = var.ami_id == "" ? 1 : 0
+  count       = var.ami_id == "" ? 1 : 0
   most_recent = true
-  owners      = ["099720109477"] # Canonical
+  owners = ["099720109477"] # Canonical
 
   filter {
-    name   = "name"
+    name = "name"
     values = ["ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-*"]
   }
 
   filter {
-    name   = "virtualization-type"
+    name = "virtualization-type"
     values = ["hvm"]
   }
 }
@@ -82,10 +82,10 @@ resource "aws_security_group" "mongodb" {
 
   # Allow MongoDB instances to communicate with each other
   ingress {
-    from_port = 27017
-    to_port   = 27017
-    protocol  = "tcp"
-    self      = true
+    from_port   = 27017
+    to_port     = 27017
+    protocol    = "tcp"
+    self        = true
     description = "MongoDB replica set communication"
   }
 
@@ -194,14 +194,15 @@ resource "aws_ebs_volume" "mongodb_data" {
   availability_zone = data.aws_subnet.selected[count.index].availability_zone
   size              = var.data_volume_size
   type              = var.data_volume_type
-  iops              = var.data_volume_type == "gp3" || var.data_volume_type == "io1" || var.data_volume_type == "io2" ? var.data_volume_iops : null
+  iops              = var.data_volume_type == "gp3" || var.data_volume_type == "io1" || var.data_volume_type == "io2" ?
+    var.data_volume_iops : null
   throughput        = var.data_volume_type == "gp3" ? var.data_volume_throughput : null
   encrypted         = true
 
   tags = merge(
     local.common_tags,
     {
-      Name = "${var.cluster_name}-mongodb-data-${count.index}"
+      Name      = "${var.cluster_name}-mongodb-data-${count.index}"
       NodeIndex = count.index
     }
   )
@@ -210,7 +211,7 @@ resource "aws_ebs_volume" "mongodb_data" {
 # Data source for subnet information
 data "aws_subnet" "selected" {
   count = var.replica_count
-  id    = element(var.subnet_ids, count.index)
+  id = element(var.subnet_ids, count.index)
 }
 
 # EC2 Instances for MongoDB
@@ -219,7 +220,7 @@ resource "aws_instance" "mongodb" {
 
   ami           = var.ami_id != "" ? var.ami_id : data.aws_ami.ubuntu[0].id
   instance_type = var.instance_type
-  subnet_id     = element(var.subnet_ids, count.index)
+  subnet_id = element(var.subnet_ids, count.index)
   key_name      = aws_key_pair.mongodb_key.key_name
 
   vpc_security_group_ids = concat(
@@ -230,26 +231,26 @@ resource "aws_instance" "mongodb" {
   iam_instance_profile = aws_iam_instance_profile.mongodb.name
 
   root_block_device {
-    volume_type = "gp3"
-    volume_size = var.root_volume_size
-    encrypted   = true
+    volume_type           = "gp3"
+    volume_size           = var.root_volume_size
+    encrypted             = true
     delete_on_termination = true
   }
 
   # UPDATED: User data with all node IPs for automatic configuration
-  user_data = base64encode(templatefile("${path.module}/user-data-terraform-cloud.yml", {
+  user_data = base64encode(templatefile("${path.module}/user-data-cloud-init.yml", {
     mongodb_version         = var.mongodb_version
     replica_set_name        = local.replica_set_name
-    node_index             = count.index
-    total_nodes            = var.replica_count
-    mongodb_admin_username = var.mongodb_admin_username
-    mongodb_admin_password = var.mongodb_admin_password
+    node_index              = count.index
+    total_nodes             = var.replica_count
+    mongodb_admin_username  = var.mongodb_admin_username
+    mongodb_admin_password  = var.mongodb_admin_password
     mongodb_keyfile_content = var.mongodb_keyfile_content
-    enable_monitoring      = var.enable_monitoring
-    data_volume_device     = var.data_volume_device
-    cluster_name          = var.cluster_name
+    enable_monitoring       = var.enable_monitoring
+    data_volume_device      = var.data_volume_device
+    cluster_name = var.cluster_name
     # NEW: Pass all node IPs for automatic replica set setup
-    all_node_ips          = join(",", aws_instance.mongodb[*].private_ip)
+    all_node_ips = join(",", aws_instance.mongodb[*].private_ip)
   }))
 
   metadata_options {
@@ -261,7 +262,7 @@ resource "aws_instance" "mongodb" {
   tags = merge(
     local.common_tags,
     {
-      Name = "${var.cluster_name}-mongodb-${count.index}"
+      Name      = "${var.cluster_name}-mongodb-${count.index}"
       NodeIndex = count.index
     }
   )
@@ -337,9 +338,9 @@ resource "aws_route53_record" "mongodb_rs" {
   type    = "A"
   ttl     = 60
 
-  set_identifier                  = each.key
+  set_identifier                   = each.key
   multivalue_answer_routing_policy = true
-  records                         = [each.value]
+  records = [each.value]
 }
 
 # SSM Parameter for connection string
