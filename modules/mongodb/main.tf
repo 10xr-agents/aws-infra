@@ -1,7 +1,7 @@
-# modules/mongodb/main.tf
+# modules/mongodb/main.tf - FIXED VERSION
 
 /**
- * # MongoDB Cluster Module
+ * # MongoDB Cluster Module - Fixed Circular Dependency
  *
  * This module creates a production-grade, self-hosted MongoDB replica set on AWS EC2.
  * It provisions EC2 instances across multiple availability zones, attaches EBS volumes,
@@ -50,15 +50,15 @@ resource "aws_ssm_parameter" "mongodb_private_key" {
 data "aws_ami" "ubuntu" {
   count       = var.ami_id == "" ? 1 : 0
   most_recent = true
-  owners = ["099720109477"] # Canonical
+  owners      = ["099720109477"] # Canonical
 
   filter {
-    name = "name"
+    name   = "name"
     values = ["ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-*"]
   }
 
   filter {
-    name = "virtualization-type"
+    name   = "virtualization-type"
     values = ["hvm"]
   }
 }
@@ -171,10 +171,9 @@ resource "aws_iam_role_policy" "mongodb_coordination" {
           "ssm:DeleteParameter",
           "ssm:GetParameters",
           "ssm:GetParametersByPath",
-          # S3 for coordination (optional)
-          "s3:GetObject",
-          "s3:PutObject",
-          "s3:DeleteObject"
+          # EC2 describe for node discovery
+          "ec2:DescribeInstances",
+          "ec2:DescribeTags"
         ]
         Resource = "*"
       }
@@ -210,7 +209,7 @@ resource "aws_ebs_volume" "mongodb_data" {
 # Data source for subnet information
 data "aws_subnet" "selected" {
   count = var.replica_count
-  id = element(var.subnet_ids, count.index)
+  id    = element(var.subnet_ids, count.index)
 }
 
 # EC2 Instances for MongoDB
@@ -219,7 +218,7 @@ resource "aws_instance" "mongodb" {
 
   ami           = var.ami_id != "" ? var.ami_id : data.aws_ami.ubuntu[0].id
   instance_type = var.instance_type
-  subnet_id = element(var.subnet_ids, count.index)
+  subnet_id     = element(var.subnet_ids, count.index)
   key_name      = aws_key_pair.mongodb_key.key_name
 
   vpc_security_group_ids = concat(
@@ -236,8 +235,8 @@ resource "aws_instance" "mongodb" {
     delete_on_termination = true
   }
 
-  # UPDATED: User data with all node IPs for automatic configuration
-  user_data = base64encode(templatefile("${path.module}/user-data-cloud-init.yml", {
+  # FIXED: User data WITHOUT circular dependency
+  user_data = base64encode(templatefile("${path.module}/user-data-terraform-cloud.yml", {
     mongodb_version         = var.mongodb_version
     replica_set_name        = local.replica_set_name
     node_index              = count.index
@@ -247,9 +246,10 @@ resource "aws_instance" "mongodb" {
     mongodb_keyfile_content = var.mongodb_keyfile_content
     enable_monitoring       = var.enable_monitoring
     data_volume_device      = var.data_volume_device
-    cluster_name = var.cluster_name
-    # NEW: Pass all node IPs for automatic replica set setup
-    all_node_ips = join(",", aws_instance.mongodb[*].private_ip)
+    cluster_name            = var.cluster_name
+    vpc_id                  = var.vpc_id
+    # REMOVED: all_node_ips to break circular dependency
+    # Nodes will discover each other using EC2 tags
   }))
 
   metadata_options {
@@ -261,8 +261,10 @@ resource "aws_instance" "mongodb" {
   tags = merge(
     local.common_tags,
     {
-      Name      = "${var.cluster_name}-mongodb-${count.index}"
-      NodeIndex = count.index
+      Name          = "${var.cluster_name}-mongodb-${count.index}"
+      NodeIndex     = count.index
+      MongoDBCluster = var.cluster_name
+      MongoDBRole   = count.index == 0 ? "primary" : "secondary"
     }
   )
 
@@ -339,10 +341,10 @@ resource "aws_route53_record" "mongodb_rs" {
 
   set_identifier                   = each.key
   multivalue_answer_routing_policy = true
-  records = [each.value]
+  records                          = [each.value]
 }
 
-# SSM Parameter for connection string
+# SSM Parameter for connection string (calculated after instances are created)
 resource "aws_ssm_parameter" "mongodb_connection_string" {
   count = var.store_connection_string_in_ssm ? 1 : 0
 
@@ -351,6 +353,9 @@ resource "aws_ssm_parameter" "mongodb_connection_string" {
   value = local.connection_string
 
   tags = local.common_tags
+
+  # This depends on instances being created
+  depends_on = [aws_instance.mongodb]
 }
 
 # SSM Parameter to signal when setup is complete
@@ -366,8 +371,21 @@ resource "aws_ssm_parameter" "mongodb_setup_complete" {
   }
 }
 
+# Store node discovery information in SSM
+resource "aws_ssm_parameter" "mongodb_cluster_info" {
+  name = "/${var.cluster_name}/mongodb/cluster-info"
+  type = "String"
+  value = jsonencode({
+    cluster_name  = var.cluster_name
+    replica_count = var.replica_count
+    vpc_id        = var.vpc_id
+  })
+
+  tags = local.common_tags
+}
+
 locals {
-  # Connection strings
+  # Connection strings (calculated after instances exist)
   connection_string = format(
     "mongodb://%s:%s@%s/%s?replicaSet=%s&authSource=admin",
     var.mongodb_admin_username,

@@ -1,5 +1,5 @@
 #cloud-config
-# MongoDB Installation and Configuration for Terraform Cloud Deployment
+# MongoDB Installation and Configuration - Fixed Circular Dependency
 
 write_files:
     - path: /opt/mongodb-setup.sh
@@ -19,18 +19,15 @@ write_files:
           ENABLE_MONITORING="${enable_monitoring}"
           DATA_VOLUME_DEVICE="${data_volume_device}"
           CLUSTER_NAME="${cluster_name}"
-          
-          # NEW: All node IPs for automatic replica set configuration
-          ALL_NODE_IPS="${all_node_ips}"
+          VPC_ID="${vpc_id}"
           
           # Log everything
           exec > >(tee /var/log/mongodb-setup.log)
           exec 2>&1
           
-          echo "### Starting MongoDB setup for Terraform Cloud ###"
+          echo "### Starting MongoDB setup ###"
           echo "Version: $MONGODB_VERSION, Replica Set: $REPLICA_SET_NAME, Node: $NODE_INDEX"
           echo "Total nodes: $TOTAL_NODES"
-          echo "All node IPs: $ALL_NODE_IPS"
           
           # Update system
           apt-get update -y
@@ -50,6 +47,26 @@ write_files:
             dpkg -i ./amazon-cloudwatch-agent.deb
             rm -f ./amazon-cloudwatch-agent.deb
           fi
+          
+          # Function to discover other MongoDB nodes using EC2 tags
+          discover_mongodb_nodes() {
+            echo "Discovering MongoDB nodes using EC2 tags..."
+          
+            # Get region
+            REGION=$(curl -s http://169.254.169.254/latest/meta-data/placement/region)
+          
+            # Find all instances with MongoDBCluster tag matching our cluster
+            NODE_IPS=$(aws ec2 describe-instances \
+              --region "$REGION" \
+              --filters \
+                "Name=tag:MongoDBCluster,Values=$CLUSTER_NAME" \
+                "Name=instance-state-name,Values=running" \
+              --query 'Reservations[].Instances[].[PrivateIpAddress,Tags[?Key==`NodeIndex`].Value|[0]]' \
+              --output text | sort -k2 -n | cut -f1)
+          
+            echo "Discovered node IPs: $NODE_IPS"
+            echo "$NODE_IPS"
+          }
           
           # Volume setup (same as before)
           echo "Detecting EBS volume..."
@@ -165,13 +182,28 @@ write_files:
           if [ "$NODE_INDEX" = "0" ]; then
             echo "=== PHASE 2: Initializing replica set on primary ==="
           
-            # Wait for all nodes to be ready
-            echo "Waiting for all nodes to be accessible..."
-            IFS=',' read -ra IP_ARRAY <<< "$ALL_NODE_IPS"
-            for ip in "$${IP_ARRAY[@]}"; do
+            # Wait for all nodes to be discoverable and running
+            echo "Waiting for all nodes to be ready..."
+            while true; do
+              NODE_IPS=$(discover_mongodb_nodes)
+              NODE_COUNT=$(echo "$NODE_IPS" | wc -w)
+          
+              if [ "$NODE_COUNT" -eq "$TOTAL_NODES" ]; then
+                echo "All $TOTAL_NODES nodes are discoverable"
+                break
+              else
+                echo "Found $NODE_COUNT nodes, waiting for $TOTAL_NODES..."
+                sleep 15
+              fi
+            done
+          
+            # Test connectivity to all nodes
+            echo "Testing connectivity to all nodes..."
+            for ip in $NODE_IPS; do
               if [ "$ip" != "$CURRENT_IP" ]; then
-                echo "Waiting for node $ip to be ready..."
+                echo "Testing connection to $ip..."
                 while ! nc -z "$ip" 27017; do
+                  echo "Waiting for MongoDB on $ip..."
                   sleep 10
                 done
                 echo "Node $ip is ready"
@@ -182,7 +214,7 @@ write_files:
             echo "Initializing replica set with all nodes..."
             MEMBERS=""
             ID=0
-            for ip in "$${IP_ARRAY[@]}"; do
+            for ip in $NODE_IPS; do
               if [ $ID -eq 0 ]; then
                 MEMBERS="{ _id: $ID, host: '$ip:27017', priority: 2 }"
               else
@@ -190,6 +222,8 @@ write_files:
               fi
               ID=$((ID + 1))
             done
+          
+            echo "Replica set members: $MEMBERS"
           
             $MONGO_CLI --eval "
             rs.initiate({
@@ -206,10 +240,22 @@ write_files:
             sleep 30
           
             # Wait for replica set to be ready
-            while ! $MONGO_CLI --eval "rs.status()" | grep -q "PRIMARY\|SECONDARY"; do
-              echo "Waiting for replica set to be ready..."
-              sleep 10
+            RETRY_COUNT=0
+            while [ $RETRY_COUNT -lt 20 ]; do
+              if $MONGO_CLI --eval "rs.status()" | grep -q "PRIMARY\|SECONDARY"; then
+                echo "Replica set is ready!"
+                break
+              fi
+              echo "Waiting for replica set to be ready... (attempt $((RETRY_COUNT + 1))/20)"
+              sleep 15
+              RETRY_COUNT=$((RETRY_COUNT + 1))
             done
+          
+            if [ $RETRY_COUNT -eq 20 ]; then
+              echo "ERROR: Replica set failed to initialize properly"
+              $MONGO_CLI --eval "rs.status()" || true
+              exit 1
+            fi
           
             echo "Creating admin user..."
             $MONGO_CLI admin --eval "
@@ -230,7 +276,7 @@ write_files:
             }
           
             echo "Primary setup complete, signaling other nodes..."
-            # Create a signal file in S3 or SSM to indicate primary is ready
+            # Signal that primary is ready
             aws ssm put-parameter \
               --name "/$CLUSTER_NAME/mongodb/primary-ready" \
               --value "true" \
@@ -288,14 +334,26 @@ write_files:
           # Test authentication
           if [ "$NODE_INDEX" = "0" ]; then
             echo "Testing authentication on primary..."
-            $MONGO_CLI -u "$ADMIN_USERNAME" -p "$ADMIN_PASSWORD" --authenticationDatabase admin --eval "
-            print('Authentication test successful!');
-            rs.status();
-            " || {
-              echo "Authentication test failed"
+            RETRY_COUNT=0
+            while [ $RETRY_COUNT -lt 10 ]; do
+              if $MONGO_CLI -u "$ADMIN_USERNAME" -p "$ADMIN_PASSWORD" --authenticationDatabase admin --eval "print('Authentication successful!')"; then
+                echo "Authentication test passed!"
+                break
+              fi
+              echo "Authentication test failed, retrying... (attempt $((RETRY_COUNT + 1))/10)"
+              sleep 10
+              RETRY_COUNT=$((RETRY_COUNT + 1))
+            done
+          
+            if [ $RETRY_COUNT -eq 10 ]; then
+              echo "ERROR: Authentication test failed after 10 attempts"
               tail -n 20 /data/mongodb/logs/mongod.log
               exit 1
-            }
+            fi
+          
+            # Final replica set status check
+            echo "Final replica set status:"
+            $MONGO_CLI -u "$ADMIN_USERNAME" -p "$ADMIN_PASSWORD" --authenticationDatabase admin --eval "rs.status()" || true
           fi
           
           echo "=== MongoDB setup completed successfully! ==="
@@ -305,4 +363,4 @@ write_files:
 runcmd:
     - bash /opt/mongodb-setup.sh
 
-final_message: "✅ MongoDB installation and configuration completed for Terraform Cloud!"
+final_message: "✅ MongoDB installation and configuration completed!"
