@@ -180,22 +180,6 @@ resource "aws_iam_instance_profile" "mongodb" {
   role = aws_iam_role.mongodb.name
 }
 
-# FIXED: User data template with proper cloud-init format
-locals {
-  user_data_template = templatefile("${path.module}/user-data.sh", {
-    mongodb_version         = var.mongodb_version
-    replica_set_name        = local.replica_set_name
-    node_index             = "%{node_index}"
-    total_nodes            = var.replica_count
-    mongodb_admin_username = var.mongodb_admin_username
-    mongodb_admin_password = var.mongodb_admin_password
-    mongodb_keyfile_content = var.mongodb_keyfile_content
-    enable_monitoring      = var.enable_monitoring
-    data_volume_device     = var.data_volume_device
-    cluster_name          = var.cluster_name
-  })
-}
-
 # EC2 Instances for MongoDB
 resource "aws_instance" "mongodb" {
   count = var.replica_count
