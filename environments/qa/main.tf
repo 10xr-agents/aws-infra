@@ -100,7 +100,7 @@ module "redis" {
 module "mongodb" {
   source = "../../modules/mongodb"
 
-  cluster_name = "${local.cluster_name}-mongodb"
+  cluster_name = local.cluster_name
   environment  = var.environment
 
   vpc_id     = module.vpc.vpc_id

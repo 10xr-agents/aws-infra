@@ -291,7 +291,7 @@ ecs_services = {
 mongodb_replica_count    = 3
 mongodb_instance_type    = "t3.large"
 
-mongodb_version          = "7.0"
+mongodb_version          = "8.0"
 mongodb_admin_username   = "admin"
 mongodb_default_database = "ten_xr_agents_qa"
 

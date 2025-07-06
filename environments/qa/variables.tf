@@ -233,7 +233,7 @@ variable "mongodb_ami_id" {
 variable "mongodb_version" {
   description = "MongoDB version to install"
   type        = string
-  default     = "7.0"
+  default     = "8.0"
 }
 
 variable "mongodb_admin_username" {

@@ -18,7 +18,7 @@ locals {
 
   ecs_services = var.ecs_services
 
-  mongodb_connection_string = "mongodb://${var.mongodb_admin_username}:${random_password.mongo_auth_token.result}@${join(",", module.mongodb.endpoints)}/${var.mongodb_default_database}?replicaSet=${module.mongodb.replica_set_name}&authSource=admin"
+  mongodb_connection_string = module.mongodb.connection_string
 
   # You can also merge with environment-specific overrides
   ecs_services_with_overrides = {
