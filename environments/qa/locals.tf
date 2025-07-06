@@ -18,7 +18,7 @@ locals {
 
   ecs_services = var.ecs_services
 
-  mongodb_connection_string = "" #module.mongodb.connection_string
+  mongodb_connection_string = module.mongodb.connection_string
 
   # You can also merge with environment-specific overrides
   ecs_services_with_overrides = {
@@ -56,7 +56,7 @@ locals {
             },
             {
               name       = "MONGODB_PASSWORD"
-              value_from = "" #module.mongodb.ssm_parameter_name
+              value_from = module.mongodb.ssm_parameter_name
             }
           ]
         )
