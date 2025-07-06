@@ -20,13 +20,12 @@ locals {
   )
 }
 
-# Generate a new SSH key pair for MongoDB instances
+# Generate SSH key pair for MongoDB instances
 resource "tls_private_key" "mongodb_key" {
   algorithm = "RSA"
   rsa_bits  = 4096
 }
 
-# Create AWS key pair from the generated private key
 resource "aws_key_pair" "mongodb_key" {
   key_name   = "${var.cluster_name}-mongodb-keypair"
   public_key = tls_private_key.mongodb_key.public_key_openssh
@@ -39,19 +38,17 @@ resource "aws_key_pair" "mongodb_key" {
   )
 }
 
-# Store the private key in AWS Systems Manager Parameter Store for secure access
+# Store private key in SSM
 resource "aws_ssm_parameter" "mongodb_private_key" {
   name  = "/${var.environment}/${var.cluster_name}/mongodb/ssh-private-key"
   type  = "SecureString"
   value = tls_private_key.mongodb_key.private_key_pem
-
   tags = local.common_tags
 }
 
-# Data source for latest Ubuntu AMI if not specified
+# Data source for latest Ubuntu AMI
 data "aws_ami" "ubuntu" {
   count = var.ami_id == "" ? 1 : 0
-
   most_recent = true
   owners      = ["099720109477"] # Canonical
 
@@ -92,7 +89,7 @@ resource "aws_security_group" "mongodb" {
     description = "MongoDB replica set communication"
   }
 
-  # SSH access if specified
+  # SSH access
   dynamic "ingress" {
     for_each = var.allow_ssh && length(var.ssh_cidr_blocks) > 0 ? [1] : []
     content {
@@ -140,7 +137,7 @@ resource "aws_iam_role" "mongodb" {
   tags = local.common_tags
 }
 
-# IAM Role Policy for CloudWatch and SSM
+# IAM policies for MongoDB instances
 resource "aws_iam_role_policy_attachment" "mongodb_cloudwatch" {
   role       = aws_iam_role.mongodb.name
   policy_arn = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
@@ -151,9 +148,9 @@ resource "aws_iam_role_policy_attachment" "mongodb_ssm" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
 }
 
-# IAM Role Policy for EBS Snapshots
-resource "aws_iam_role_policy" "mongodb_ebs" {
-  name = "${var.cluster_name}-mongodb-ebs-policy"
+# Enhanced IAM policy for MongoDB coordination
+resource "aws_iam_role_policy" "mongodb_coordination" {
+  name = "${var.cluster_name}-mongodb-coordination-policy"
   role = aws_iam_role.mongodb.id
 
   policy = jsonencode({
@@ -162,11 +159,22 @@ resource "aws_iam_role_policy" "mongodb_ebs" {
       {
         Effect = "Allow"
         Action = [
+          # EBS operations
           "ec2:CreateSnapshot",
           "ec2:CreateTags",
           "ec2:DescribeSnapshots",
           "ec2:DescribeVolumes",
-          "ec2:DescribeInstances"
+          "ec2:DescribeInstances",
+          # SSM for coordination
+          "ssm:GetParameter",
+          "ssm:PutParameter",
+          "ssm:DeleteParameter",
+          "ssm:GetParameters",
+          "ssm:GetParametersByPath",
+          # S3 for coordination (optional)
+          "s3:GetObject",
+          "s3:PutObject",
+          "s3:DeleteObject"
         ]
         Resource = "*"
       }
@@ -174,10 +182,35 @@ resource "aws_iam_role_policy" "mongodb_ebs" {
   })
 }
 
-# IAM Instance Profile
 resource "aws_iam_instance_profile" "mongodb" {
   name = "${var.cluster_name}-mongodb-profile"
   role = aws_iam_role.mongodb.name
+}
+
+# EBS Volumes for MongoDB data
+resource "aws_ebs_volume" "mongodb_data" {
+  count = var.replica_count
+
+  availability_zone = data.aws_subnet.selected[count.index].availability_zone
+  size              = var.data_volume_size
+  type              = var.data_volume_type
+  iops              = var.data_volume_type == "gp3" || var.data_volume_type == "io1" || var.data_volume_type == "io2" ? var.data_volume_iops : null
+  throughput        = var.data_volume_type == "gp3" ? var.data_volume_throughput : null
+  encrypted         = true
+
+  tags = merge(
+    local.common_tags,
+    {
+      Name = "${var.cluster_name}-mongodb-data-${count.index}"
+      NodeIndex = count.index
+    }
+  )
+}
+
+# Data source for subnet information
+data "aws_subnet" "selected" {
+  count = var.replica_count
+  id    = element(var.subnet_ids, count.index)
 }
 
 # EC2 Instances for MongoDB
@@ -203,8 +236,8 @@ resource "aws_instance" "mongodb" {
     delete_on_termination = true
   }
 
-  # FIXED: Proper user data with cloud-init format
-  user_data = base64encode(templatefile("${path.module}/user-data-cloud-init.yml", {
+  # UPDATED: User data with all node IPs for automatic configuration
+  user_data = base64encode(templatefile("${path.module}/user-data-terraform-cloud.yml", {
     mongodb_version         = var.mongodb_version
     replica_set_name        = local.replica_set_name
     node_index             = count.index
@@ -215,6 +248,8 @@ resource "aws_instance" "mongodb" {
     enable_monitoring      = var.enable_monitoring
     data_volume_device     = var.data_volume_device
     cluster_name          = var.cluster_name
+    # NEW: Pass all node IPs for automatic replica set setup
+    all_node_ips          = join(",", aws_instance.mongodb[*].private_ip)
   }))
 
   metadata_options {
@@ -235,45 +270,21 @@ resource "aws_instance" "mongodb" {
     ignore_changes = [ami]
   }
 
-  depends_on = [aws_key_pair.mongodb_key]
-}
-
-# EBS Volumes for MongoDB data
-resource "aws_ebs_volume" "mongodb_data" {
-  count = var.replica_count
-
-  availability_zone = data.aws_subnet.selected[count.index].availability_zone
-  size              = var.data_volume_size
-  type              = var.data_volume_type
-  iops              = var.data_volume_type == "gp3" || var.data_volume_type == "io1" || var.data_volume_type == "io2" ? var.data_volume_iops : null
-  throughput        = var.data_volume_type == "gp3" ? var.data_volume_throughput : null
-  encrypted         = true
-
-  tags = merge(
-    local.common_tags,
-    {
-      Name = "${var.cluster_name}-mongodb-data-${count.index}"
-      NodeIndex = count.index
-    }
-  )
+  depends_on = [
+    aws_key_pair.mongodb_key,
+    aws_ebs_volume.mongodb_data
+  ]
 }
 
 # Attach EBS volumes to instances
 resource "aws_volume_attachment" "mongodb_data" {
   count = var.replica_count
 
-  # Always use /dev/sdf for attachment - the script will detect actual device
   device_name = "/dev/sdf"
   volume_id   = aws_ebs_volume.mongodb_data[count.index].id
   instance_id = aws_instance.mongodb[count.index].id
 
   depends_on = [aws_instance.mongodb, aws_ebs_volume.mongodb_data]
-}
-
-# Data source for subnet information
-data "aws_subnet" "selected" {
-  count = var.replica_count
-  id    = element(var.subnet_ids, count.index)
 }
 
 # CloudWatch Log Group for MongoDB logs
@@ -315,6 +326,7 @@ resource "aws_route53_record" "mongodb_nodes" {
   records = [aws_instance.mongodb[count.index].private_ip]
 }
 
+# Multi-value DNS record for the replica set
 resource "aws_route53_record" "mongodb_rs" {
   for_each = var.create_dns_records ? {
     for idx, ip in aws_instance.mongodb[*].private_ip : idx => ip
@@ -330,7 +342,7 @@ resource "aws_route53_record" "mongodb_rs" {
   records                         = [each.value]
 }
 
-# Systems Manager Parameter for connection string
+# SSM Parameter for connection string
 resource "aws_ssm_parameter" "mongodb_connection_string" {
   count = var.store_connection_string_in_ssm ? 1 : 0
 
@@ -341,8 +353,21 @@ resource "aws_ssm_parameter" "mongodb_connection_string" {
   tags = local.common_tags
 }
 
+# SSM Parameter to signal when setup is complete
+resource "aws_ssm_parameter" "mongodb_setup_complete" {
+  name  = "/${var.cluster_name}/mongodb/setup-complete"
+  type  = "String"
+  value = "false"
+
+  tags = local.common_tags
+
+  lifecycle {
+    ignore_changes = [value]
+  }
+}
+
 locals {
-  # Build MongoDB connection string
+  # Connection strings
   connection_string = format(
     "mongodb://%s:%s@%s/%s?replicaSet=%s&authSource=admin",
     var.mongodb_admin_username,
@@ -352,7 +377,6 @@ locals {
     local.replica_set_name
   )
 
-  # Build SRV connection string if DNS is enabled
   srv_connection_string = var.create_dns_records ? format(
     "mongodb+srv://%s:%s@%s/%s?replicaSet=%s&authSource=admin",
     var.mongodb_admin_username,

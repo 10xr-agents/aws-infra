@@ -1,5 +1,5 @@
 #cloud-config
-# MongoDB Installation and Configuration via Cloud-Init
+# MongoDB Installation and Configuration for Terraform Cloud Deployment
 
 write_files:
     - path: /opt/mongodb-setup.sh
@@ -20,22 +20,28 @@ write_files:
           DATA_VOLUME_DEVICE="${data_volume_device}"
           CLUSTER_NAME="${cluster_name}"
           
+          # NEW: All node IPs for automatic replica set configuration
+          ALL_NODE_IPS="${all_node_ips}"
+          
           # Log everything
           exec > >(tee /var/log/mongodb-setup.log)
           exec 2>&1
           
-          echo "### Starting MongoDB setup ###"
-          echo "Version: $MONGODB_VERSION, Replica Set: $REPLICA_SET_NAME"
+          echo "### Starting MongoDB setup for Terraform Cloud ###"
+          echo "Version: $MONGODB_VERSION, Replica Set: $REPLICA_SET_NAME, Node: $NODE_INDEX"
+          echo "Total nodes: $TOTAL_NODES"
+          echo "All node IPs: $ALL_NODE_IPS"
           
-          apt-get update
+          # Update system
+          apt-get update -y
           apt-get upgrade -y
-          apt-get install -y gnupg curl wget software-properties-common lsb-release xfsprogs
+          apt-get install -y gnupg curl wget software-properties-common lsb-release xfsprogs awscli jq
           
           # Add MongoDB GPG key and repo
           curl -fsSL https://www.mongodb.org/static/pgp/server-$${MONGODB_VERSION}.asc | gpg --dearmor -o /usr/share/keyrings/mongodb.gpg
           echo "deb [ arch=amd64 signed-by=/usr/share/keyrings/mongodb.gpg ] https://repo.mongodb.org/apt/ubuntu $(lsb_release -cs)/mongodb-org/$${MONGODB_VERSION} multiverse" | tee /etc/apt/sources.list.d/mongodb-org-$${MONGODB_VERSION}.list
           
-          apt-get update
+          apt-get update -y
           apt-get install -y mongodb-org
           
           # Install CloudWatch Agent if enabled
@@ -45,9 +51,9 @@ write_files:
             rm -f ./amazon-cloudwatch-agent.deb
           fi
           
+          # Volume setup (same as before)
           echo "Detecting EBS volume..."
           find_data_device() {
-            # List devices for debugging
             echo "Available block devices:" >&2
             lsblk >&2
           
@@ -67,7 +73,7 @@ write_files:
             return 1
           }
           
-          # Wait up to 5 minutes for volume
+          # Wait for volume attachment
           echo "Waiting for data volume..."
           MAX_WAIT=300
           WAITED=0
@@ -88,12 +94,10 @@ write_files:
           
           echo "Using device: $DATA_DEVICE"
           
-          # Format if needed
+          # Format and mount
           if ! blkid "$DATA_DEVICE"; then
             echo "Formatting $DATA_DEVICE with XFS..."
             mkfs.xfs "$DATA_DEVICE"
-          else
-            echo "Device already formatted"
           fi
           
           mkdir -p /data/mongodb
@@ -102,23 +106,158 @@ write_files:
           UUID=$(blkid -s UUID -o value "$DATA_DEVICE")
           echo "UUID=$UUID /data/mongodb xfs defaults,nofail 0 2" >> /etc/fstab
           
-          chown -R mongodb:mongodb /data/mongodb
           mkdir -p /data/mongodb/{db,logs}
           chown -R mongodb:mongodb /data/mongodb
           
+          # Create keyfile
           if [ -n "$KEYFILE_CONTENT" ]; then
             echo "$KEYFILE_CONTENT" > /etc/mongodb-keyfile
             chmod 400 /etc/mongodb-keyfile
             chown mongodb:mongodb /etc/mongodb-keyfile
           fi
           
+          # Get current node IP
+          CURRENT_IP=$(curl -s http://169.254.169.254/latest/meta-data/local-ipv4)
+          echo "Current node IP: $CURRENT_IP"
+          
+          # PHASE 1: Start MongoDB without authentication
+          echo "=== PHASE 1: Starting MongoDB without authentication ==="
           cat > /etc/mongod.conf <<EOF
           storage:
             dbPath: /data/mongodb/db
             engine: wiredTiger
             wiredTiger:
               engineConfig:
-                cacheSizeGB: 2
+                cacheSizeGB: 1
+          
+          systemLog:
+            destination: file
+            logAppend: true
+            path: /data/mongodb/logs/mongod.log
+          
+          net:
+            port: 27017
+            bindIp: 0.0.0.0
+          
+          processManagement:
+            timeZoneInfo: /usr/share/zoneinfo
+          
+          replication:
+            replSetName: $REPLICA_SET_NAME
+          EOF
+          
+          systemctl daemon-reload
+          systemctl enable mongod
+          systemctl start mongod
+          
+          sleep 15
+          
+          if ! systemctl is-active --quiet mongod; then
+            echo "ERROR: MongoDB failed to start"
+            systemctl status mongod
+            tail -n 50 /data/mongodb/logs/mongod.log
+            exit 1
+          fi
+          
+          MONGO_CLI=$(command -v mongosh 2>/dev/null || command -v mongo)
+          
+          # PHASE 2: Initialize replica set (only on primary)
+          if [ "$NODE_INDEX" = "0" ]; then
+            echo "=== PHASE 2: Initializing replica set on primary ==="
+          
+            # Wait for all nodes to be ready
+            echo "Waiting for all nodes to be accessible..."
+            IFS=',' read -ra IP_ARRAY <<< "$ALL_NODE_IPS"
+            for ip in "$${IP_ARRAY[@]}"; do
+              if [ "$ip" != "$CURRENT_IP" ]; then
+                echo "Waiting for node $ip to be ready..."
+                while ! nc -z "$ip" 27017; do
+                  sleep 10
+                done
+                echo "Node $ip is ready"
+              fi
+            done
+          
+            # Initialize replica set with all nodes
+            echo "Initializing replica set with all nodes..."
+            MEMBERS=""
+            ID=0
+            for ip in "$${IP_ARRAY[@]}"; do
+              if [ $ID -eq 0 ]; then
+                MEMBERS="{ _id: $ID, host: '$ip:27017', priority: 2 }"
+              else
+                MEMBERS="$MEMBERS, { _id: $ID, host: '$ip:27017', priority: 1 }"
+              fi
+              ID=$((ID + 1))
+            done
+          
+            $MONGO_CLI --eval "
+            rs.initiate({
+              _id: '$REPLICA_SET_NAME',
+              members: [ $MEMBERS ]
+            })
+            " || {
+              echo "Failed to initialize replica set"
+              tail -n 20 /data/mongodb/logs/mongod.log
+              exit 1
+            }
+          
+            echo "Waiting for replica set to initialize..."
+            sleep 30
+          
+            # Wait for replica set to be ready
+            while ! $MONGO_CLI --eval "rs.status()" | grep -q "PRIMARY\|SECONDARY"; do
+              echo "Waiting for replica set to be ready..."
+              sleep 10
+            done
+          
+            echo "Creating admin user..."
+            $MONGO_CLI admin --eval "
+            db.createUser({
+              user: '$ADMIN_USERNAME',
+              pwd: '$ADMIN_PASSWORD',
+              roles: [
+                { role: 'root', db: 'admin' },
+                { role: 'clusterAdmin', db: 'admin' },
+                { role: 'userAdminAnyDatabase', db: 'admin' },
+                { role: 'dbAdminAnyDatabase', db: 'admin' },
+                { role: 'readWriteAnyDatabase', db: 'admin' }
+              ]
+            })
+            " || {
+              echo "Failed to create admin user"
+              exit 1
+            }
+          
+            echo "Primary setup complete, signaling other nodes..."
+            # Create a signal file in S3 or SSM to indicate primary is ready
+            aws ssm put-parameter \
+              --name "/$CLUSTER_NAME/mongodb/primary-ready" \
+              --value "true" \
+              --type "String" \
+              --overwrite || true
+          
+          else
+            echo "=== PHASE 2: Secondary node waiting for primary ==="
+            # Wait for primary to signal it's ready
+            while ! aws ssm get-parameter --name "/$CLUSTER_NAME/mongodb/primary-ready" >/dev/null 2>&1; do
+              echo "Waiting for primary node to complete setup..."
+              sleep 30
+            done
+          
+            echo "Primary is ready, continuing with secondary setup..."
+            sleep 60  # Additional wait for replica set to fully initialize
+          fi
+          
+          # PHASE 3: Enable authentication on all nodes
+          echo "=== PHASE 3: Enabling authentication ==="
+          cat > /etc/mongod.conf <<EOF
+          storage:
+            dbPath: /data/mongodb/db
+            engine: wiredTiger
+            wiredTiger:
+              engineConfig:
+                cacheSizeGB: 1
           
           systemLog:
             destination: file
@@ -143,54 +282,27 @@ write_files:
             echo "  keyFile: /etc/mongodb-keyfile" >> /etc/mongod.conf
           fi
           
-          systemctl daemon-reload
-          systemctl enable mongod
-          systemctl start mongod
-          sleep 10
+          systemctl restart mongod
+          sleep 15
           
-          if ! systemctl is-active --quiet mongod; then
-            echo "ERROR: MongoDB failed to start"
-            systemctl status mongod
-            tail -n 50 /data/mongodb/logs/mongod.log
-            exit 1
-          fi
-          
-          # Replica set init
+          # Test authentication
           if [ "$NODE_INDEX" = "0" ]; then
-            echo "Initializing replica set..."
-            sleep 15
-            PRIVATE_IP=$(curl -s http://169.254.169.254/latest/meta-data/local-ipv4)
-          
-            # Use mongosh for MongoDB 8.0 (newer versions)
-            MONGO_CLI=$(command -v mongosh || command -v mongo)
-          
-            $MONGO_CLI --eval "
-            rs.initiate({
-              _id: '$REPLICA_SET_NAME',
-              members: [{ _id: 0, host: '$PRIVATE_IP:27017', priority: 2 }]
-            })
-            "
-          
-            sleep 15
-          
-            echo "Creating admin user..."
-            $MONGO_CLI admin --eval "
-            db.createUser({
-              user: '$ADMIN_USERNAME',
-              pwd: '$ADMIN_PASSWORD',
-              roles: [
-                { role: 'root', db: 'admin' },
-                { role: 'clusterAdmin', db: 'admin' }
-              ]
-            })
-            "
+            echo "Testing authentication on primary..."
+            $MONGO_CLI -u "$ADMIN_USERNAME" -p "$ADMIN_PASSWORD" --authenticationDatabase admin --eval "
+            print('Authentication test successful!');
+            rs.status();
+            " || {
+              echo "Authentication test failed"
+              tail -n 20 /data/mongodb/logs/mongod.log
+              exit 1
+            }
           fi
           
-          echo "MongoDB setup complete!"
+          echo "=== MongoDB setup completed successfully! ==="
           systemctl status mongod --no-pager
           ss -tln | grep 27017
 
 runcmd:
     - bash /opt/mongodb-setup.sh
 
-final_message: "✅ MongoDB installation and configuration completed!"
+final_message: "✅ MongoDB installation and configuration completed for Terraform Cloud!"
