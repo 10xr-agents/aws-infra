@@ -165,242 +165,242 @@ module "mongodb" {
 }
 
 # ECS Cluster Module
-module "ecs" {
-  source = "../../modules/ecs"
-
-  cluster_name = var.cluster_name
-  environment  = var.environment
-
-  vpc_id             = module.vpc.vpc_id
-  private_subnet_ids = module.vpc.private_subnets
-  public_subnet_ids  = module.vpc.public_subnets
-
-  acm_certificate_arn = var.acm_certificate_arn
-  create_alb_rules    = true
-
-  enable_container_insights = var.enable_container_insights
-  enable_execute_command    = var.enable_execute_command
-  enable_service_discovery  = true
-  create_alb                = true
-  alb_internal = true
-
-  # ADD THESE LINES for Redis connectivity
-  redis_security_group_id = module.redis.redis_security_group_id
-  mongodb_security_group_id = module.mongodb.security_group_id
-
-  # Pass the entire services configuration from variables
-  services = local.ecs_services_with_overrides
-
-  tags = merge(
-    var.tags,
-    {
-      "Environment" = var.environment
-      "Project"     = "10xR-Agents"
-      "Component"   = "ECS"
-      "Platform"    = "AWS"
-      "Terraform"   = "true"
-    }
-  )
-
-  depends_on = [module.mongodb, module.redis]
-}
+# module "ecs" {
+#   source = "../../modules/ecs"
+#
+#   cluster_name = var.cluster_name
+#   environment  = var.environment
+#
+#   vpc_id             = module.vpc.vpc_id
+#   private_subnet_ids = module.vpc.private_subnets
+#   public_subnet_ids  = module.vpc.public_subnets
+#
+#   acm_certificate_arn = var.acm_certificate_arn
+#   create_alb_rules    = true
+#
+#   enable_container_insights = var.enable_container_insights
+#   enable_execute_command    = var.enable_execute_command
+#   enable_service_discovery  = true
+#   create_alb                = true
+#   alb_internal = true
+#
+#   # ADD THESE LINES for Redis connectivity
+#   redis_security_group_id = module.redis.redis_security_group_id
+#   mongodb_security_group_id = module.mongodb.security_group_id
+#
+#   # Pass the entire services configuration from variables
+#   services = local.ecs_services_with_overrides
+#
+#   tags = merge(
+#     var.tags,
+#     {
+#       "Environment" = var.environment
+#       "Project"     = "10xR-Agents"
+#       "Component"   = "ECS"
+#       "Platform"    = "AWS"
+#       "Terraform"   = "true"
+#     }
+#   )
+#
+#   depends_on = [module.mongodb, module.redis]
+# }
 
 # Networking Module (NEW - replaces the NLB resources)
-module "networking" {
-  source = "../../modules/networking"
-
-  cluster_name = local.cluster_name
-  environment  = var.environment
-  vpc_id       = module.vpc.vpc_id
-
-  public_subnet_ids = module.vpc.public_subnets
-  private_subnet_ids = module.vpc.private_subnets
-
-  # NLB Configuration
-  create_nlb                     = var.create_nlb
-  nlb_internal                   = var.nlb_internal
-  nlb_enable_deletion_protection = var.nlb_enable_deletion_protection
-  nlb_enable_cross_zone_load_balancing = var.nlb_enable_cross_zone_load_balancing
-
-  # Target Group Configuration
-  create_http_target_group  = var.create_http_target_group
-  create_https_target_group = var.acm_certificate_arn != ""
-  http_port                 = var.http_port
-  https_port                = var.https_port
-  target_type = var.target_type
-
-  # Target Configuration
-  alb_arn = module.ecs.alb_arn
-
-  # Health Check Configuration
-  health_check_enabled             = var.health_check_enabled
-  health_check_healthy_threshold   = var.health_check_healthy_threshold
-  health_check_interval            = var.health_check_interval
-  health_check_port                = var.health_check_port
-  health_check_protocol            = var.health_check_protocol
-  health_check_timeout             = var.health_check_timeout
-  health_check_unhealthy_threshold = var.health_check_unhealthy_threshold
-  health_check_path                = var.health_check_path
-  health_check_matcher             = var.health_check_matcher
-  deregistration_delay = var.deregistration_delay
-
-  # Listener Configuration
-  create_http_listener    = var.create_http_listener
-  create_https_listener   = var.acm_certificate_arn != ""
-  https_listener_protocol = var.https_listener_protocol
-  ssl_policy              = var.ssl_policy
-  certificate_arn = var.acm_certificate_arn
-
-  # Access Logs
-  nlb_access_logs_enabled = var.nlb_access_logs_enabled
-
-  # Connection Logs
-  nlb_connection_logs_enabled = var.nlb_connection_logs_enabled
-
-  tags = merge(
-    var.tags,
-    {
-      "Environment" = var.environment
-      "Project"     = "10xR-Agents"
-      "Component"   = "Networking"
-      "Platform"    = "AWS"
-      "Terraform"   = "true"
-    }
-  )
-
-  depends_on = [module.ecs]
-}
+# module "networking" {
+#   source = "../../modules/networking"
+#
+#   cluster_name = local.cluster_name
+#   environment  = var.environment
+#   vpc_id       = module.vpc.vpc_id
+#
+#   public_subnet_ids = module.vpc.public_subnets
+#   private_subnet_ids = module.vpc.private_subnets
+#
+#   # NLB Configuration
+#   create_nlb                     = var.create_nlb
+#   nlb_internal                   = var.nlb_internal
+#   nlb_enable_deletion_protection = var.nlb_enable_deletion_protection
+#   nlb_enable_cross_zone_load_balancing = var.nlb_enable_cross_zone_load_balancing
+#
+#   # Target Group Configuration
+#   create_http_target_group  = var.create_http_target_group
+#   create_https_target_group = var.acm_certificate_arn != ""
+#   http_port                 = var.http_port
+#   https_port                = var.https_port
+#   target_type = var.target_type
+#
+#   # Target Configuration
+#   alb_arn = module.ecs.alb_arn
+#
+#   # Health Check Configuration
+#   health_check_enabled             = var.health_check_enabled
+#   health_check_healthy_threshold   = var.health_check_healthy_threshold
+#   health_check_interval            = var.health_check_interval
+#   health_check_port                = var.health_check_port
+#   health_check_protocol            = var.health_check_protocol
+#   health_check_timeout             = var.health_check_timeout
+#   health_check_unhealthy_threshold = var.health_check_unhealthy_threshold
+#   health_check_path                = var.health_check_path
+#   health_check_matcher             = var.health_check_matcher
+#   deregistration_delay = var.deregistration_delay
+#
+#   # Listener Configuration
+#   create_http_listener    = var.create_http_listener
+#   create_https_listener   = var.acm_certificate_arn != ""
+#   https_listener_protocol = var.https_listener_protocol
+#   ssl_policy              = var.ssl_policy
+#   certificate_arn = var.acm_certificate_arn
+#
+#   # Access Logs
+#   nlb_access_logs_enabled = var.nlb_access_logs_enabled
+#
+#   # Connection Logs
+#   nlb_connection_logs_enabled = var.nlb_connection_logs_enabled
+#
+#   tags = merge(
+#     var.tags,
+#     {
+#       "Environment" = var.environment
+#       "Project"     = "10xR-Agents"
+#       "Component"   = "Networking"
+#       "Platform"    = "AWS"
+#       "Terraform"   = "true"
+#     }
+#   )
+#
+#   depends_on = [module.ecs]
+# }
 
 # Global Accelerator Module
-module "global_accelerator" {
-  count = var.create_global_accelerator ? 1 : 0
-
-  source = "../../modules/global-accelerator"
-
-  cluster_name = local.cluster_name
-  environment = var.environment
-
-  # Global Accelerator Configuration
-  ip_address_type = var.global_accelerator_ip_address_type
-  enabled = var.global_accelerator_enabled
-
-  # Flow Logs
-  enable_flow_logs = var.global_accelerator_flow_logs_enabled
-  flow_logs_s3_prefix = var.global_accelerator_flow_logs_s3_prefix
-
-  # Listener Configuration
-  client_affinity = var.global_accelerator_client_affinity
-  protocol        = var.global_accelerator_protocol
-  port_ranges = [
-    {
-      from_port = 80
-      to_port   = 80
-    },
-    {
-      from_port = 443
-      to_port   = 443
-    }
-  ]
-
-  # Endpoints (NLB instead of ALB)
-  endpoints = [
-    {
-      endpoint_id                    = module.networking.nlb_arn
-      weight                         = 100
-      client_ip_preservation_enabled = false
-    }
-  ]
-
-  # Health Check Configuration
-  health_check_grace_period_seconds = var.global_accelerator_health_check_grace_period
-  health_check_interval_seconds     = var.global_accelerator_health_check_interval
-  health_check_path                 = var.global_accelerator_health_check_path
-  health_check_port                 = var.global_accelerator_health_check_port
-  health_check_protocol             = var.global_accelerator_health_check_protocol
-  threshold_count                   = var.global_accelerator_threshold_count
-  traffic_dial_percentage           = var.global_accelerator_traffic_dial_percentage
-
-  tags = merge(var.tags, {
-    "Environment" = var.environment
-    "Project"     = "10xR-Agents"
-    "Component"   = "GlobalAccelerator"
-    "Platform"    = "AWS"
-    "Terraform"   = "true"
-  })
-
-  depends_on = [module.networking]
-}
+# module "global_accelerator" {
+#   count = var.create_global_accelerator ? 1 : 0
+#
+#   source = "../../modules/global-accelerator"
+#
+#   cluster_name = local.cluster_name
+#   environment = var.environment
+#
+#   # Global Accelerator Configuration
+#   ip_address_type = var.global_accelerator_ip_address_type
+#   enabled = var.global_accelerator_enabled
+#
+#   # Flow Logs
+#   enable_flow_logs = var.global_accelerator_flow_logs_enabled
+#   flow_logs_s3_prefix = var.global_accelerator_flow_logs_s3_prefix
+#
+#   # Listener Configuration
+#   client_affinity = var.global_accelerator_client_affinity
+#   protocol        = var.global_accelerator_protocol
+#   port_ranges = [
+#     {
+#       from_port = 80
+#       to_port   = 80
+#     },
+#     {
+#       from_port = 443
+#       to_port   = 443
+#     }
+#   ]
+#
+#   # Endpoints (NLB instead of ALB)
+#   endpoints = [
+#     {
+#       endpoint_id                    = module.networking.nlb_arn
+#       weight                         = 100
+#       client_ip_preservation_enabled = false
+#     }
+#   ]
+#
+#   # Health Check Configuration
+#   health_check_grace_period_seconds = var.global_accelerator_health_check_grace_period
+#   health_check_interval_seconds     = var.global_accelerator_health_check_interval
+#   health_check_path                 = var.global_accelerator_health_check_path
+#   health_check_port                 = var.global_accelerator_health_check_port
+#   health_check_protocol             = var.global_accelerator_health_check_protocol
+#   threshold_count                   = var.global_accelerator_threshold_count
+#   traffic_dial_percentage           = var.global_accelerator_traffic_dial_percentage
+#
+#   tags = merge(var.tags, {
+#     "Environment" = var.environment
+#     "Project"     = "10xR-Agents"
+#     "Component"   = "GlobalAccelerator"
+#     "Platform"    = "AWS"
+#     "Terraform"   = "true"
+#   })
+#
+#   depends_on = [module.networking]
+# }
 
 # Cloudflare Module
-module "cloudflare" {
-  count = var.create_cloudflare_dns_records ? 1 : 0
-
-  source = "../../modules/cloudflare"
-
-  cluster_name = local.cluster_name
-  environment = var.environment
-
-  # Cloudflare Configuration
-  cloudflare_zone_id = var.cloudflare_zone_id
-
-  # DNS Configuration
-  target_dns_name = var.create_global_accelerator ? module.global_accelerator[0].accelerator_dns_name : module.networking.nlb_dns_name
-  dns_record_type = "CNAME"
-  proxied         = var.dns_proxied
-  ttl = var.dns_ttl
-
-  # Custom DNS records for our specific routing
-  app_dns_records = var.app_dns_records
-
-  # Zone Settings
-  manage_zone_settings = var.manage_cloudflare_zone_settings
-  zone_settings        = var.manage_cloudflare_zone_settings ? {
-    ssl              = var.cloudflare_ssl_mode
-    always_use_https = var.cloudflare_always_use_https
-    min_tls_version  = var.cloudflare_min_tls_version
-    security_level   = var.cloudflare_security_level
-  } : {}
-
-  tags = merge(var.tags, {
-    "Environment" = var.environment
-    "Project"     = "10xR-Agents"
-    "Component"   = "Cloudflare"
-    "Platform"    = "AWS"
-    "Terraform"   = "true"
-  })
-
-  depends_on = [
-    module.ecs,
-    module.global_accelerator,
-    module.networking
-  ]
-}
-
-# Allow ECS to connect to Redis (INGRESS to Redis)
-resource "aws_security_group_rule" "redis_from_ecs_ingress" {
-  for_each = module.ecs.security_group_ids
-
-  type                     = "ingress"
-  from_port                = module.redis.redis_port
-  to_port                  = module.redis.redis_port
-  protocol                 = "tcp"
-  source_security_group_id = each.value
-  security_group_id        = module.redis.redis_security_group_id
-  description              = "Allow ECS services to access Redis"
-
-  depends_on = [module.ecs, module.redis]
-}
-
-# Security Group Rule to allow ECS access to MongoDB
-resource "aws_security_group_rule" "mongodb_from_ecs" {
-  for_each = module.ecs.security_group_ids
-
-  type                     = "ingress"
-  from_port                = 27017
-  to_port                  = 27017
-  protocol                 = "tcp"
-  source_security_group_id = each.value
-  security_group_id        = module.mongodb.security_group_id
-
-  depends_on = [module.ecs, module.mongodb]
-}
+# module "cloudflare" {
+#   count = var.create_cloudflare_dns_records ? 1 : 0
+#
+#   source = "../../modules/cloudflare"
+#
+#   cluster_name = local.cluster_name
+#   environment = var.environment
+#
+#   # Cloudflare Configuration
+#   cloudflare_zone_id = var.cloudflare_zone_id
+#
+#   # DNS Configuration
+#   target_dns_name = var.create_global_accelerator ? module.global_accelerator[0].accelerator_dns_name : module.networking.nlb_dns_name
+#   dns_record_type = "CNAME"
+#   proxied         = var.dns_proxied
+#   ttl = var.dns_ttl
+#
+#   # Custom DNS records for our specific routing
+#   app_dns_records = var.app_dns_records
+#
+#   # Zone Settings
+#   manage_zone_settings = var.manage_cloudflare_zone_settings
+#   zone_settings        = var.manage_cloudflare_zone_settings ? {
+#     ssl              = var.cloudflare_ssl_mode
+#     always_use_https = var.cloudflare_always_use_https
+#     min_tls_version  = var.cloudflare_min_tls_version
+#     security_level   = var.cloudflare_security_level
+#   } : {}
+#
+#   tags = merge(var.tags, {
+#     "Environment" = var.environment
+#     "Project"     = "10xR-Agents"
+#     "Component"   = "Cloudflare"
+#     "Platform"    = "AWS"
+#     "Terraform"   = "true"
+#   })
+#
+#   depends_on = [
+#     module.ecs,
+#     module.global_accelerator,
+#     module.networking
+#   ]
+# }
+#
+# # Allow ECS to connect to Redis (INGRESS to Redis)
+# resource "aws_security_group_rule" "redis_from_ecs_ingress" {
+#   for_each = module.ecs.security_group_ids
+#
+#   type                     = "ingress"
+#   from_port                = module.redis.redis_port
+#   to_port                  = module.redis.redis_port
+#   protocol                 = "tcp"
+#   source_security_group_id = each.value
+#   security_group_id        = module.redis.redis_security_group_id
+#   description              = "Allow ECS services to access Redis"
+#
+#   depends_on = [module.ecs, module.redis]
+# }
+#
+# # Security Group Rule to allow ECS access to MongoDB
+# resource "aws_security_group_rule" "mongodb_from_ecs" {
+#   for_each = module.ecs.security_group_ids
+#
+#   type                     = "ingress"
+#   from_port                = 27017
+#   to_port                  = 27017
+#   protocol                 = "tcp"
+#   source_security_group_id = each.value
+#   security_group_id        = module.mongodb.security_group_id
+#
+#   depends_on = [module.ecs, module.mongodb]
+# }
