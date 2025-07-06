@@ -344,8 +344,7 @@ module "cloudflare" {
   cloudflare_zone_id = var.cloudflare_zone_id
 
   # DNS Configuration
-  target_dns_name = var.create_global_accelerator ? module.global_accelerator[0].accelerator_dns_name :
-    module.networking.nlb_dns_name
+  target_dns_name = var.create_global_accelerator ? module.global_accelerator[0].accelerator_dns_name : module.networking.nlb_dns_name
   dns_record_type = "CNAME"
   proxied         = var.dns_proxied
   ttl = var.dns_ttl
