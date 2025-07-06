@@ -51,23 +51,23 @@ module "redis" {
   subnet_ids   = module.vpc.private_subnets  # Use private subnets for Redis
 
   # Redis Configuration
-  redis_node_type          = var.redis_node_type
-  redis_engine_version     = var.redis_engine_version
+  redis_node_type      = var.redis_node_type
+  redis_engine_version = var.redis_engine_version
   redis_num_cache_clusters = var.redis_num_cache_clusters
 
   # High Availability
   redis_multi_az_enabled           = var.redis_multi_az_enabled
   redis_automatic_failover_enabled = var.redis_automatic_failover_enabled
   redis_snapshot_retention_limit   = var.redis_snapshot_retention_limit
-  redis_snapshot_window           = var.redis_snapshot_window
-  redis_maintenance_window        = var.redis_maintenance_window
+  redis_snapshot_window            = var.redis_snapshot_window
+  redis_maintenance_window = var.redis_maintenance_window
 
   # Security Configuration
   create_security_group = true
-  allowed_cidr_blocks   = [module.vpc.vpc_cidr_block]
+  allowed_cidr_blocks = [module.vpc.vpc_cidr_block]
 
   # Auth and Encryption
-  auth_token_enabled              = var.redis_auth_token_enabled
+  auth_token_enabled               = var.redis_auth_token_enabled
   redis_transit_encryption_enabled = var.redis_transit_encryption_enabled
   redis_at_rest_encryption_enabled = var.redis_at_rest_encryption_enabled
 
@@ -77,7 +77,7 @@ module "redis" {
   # Monitoring and SSM
   store_connection_details_in_ssm = var.redis_store_connection_details_in_ssm
   create_cloudwatch_log_group     = var.redis_create_cloudwatch_log_group
-  cloudwatch_log_retention_days   = var.redis_cloudwatch_log_retention_days
+  cloudwatch_log_retention_days = var.redis_cloudwatch_log_retention_days
 
   # ADD THIS: Allow access from ECS security groups
   allowed_security_group_ids = []
@@ -129,7 +129,6 @@ module "mongodb" {
   # Security configuration
   create_security_group = true
   allowed_cidr_blocks = [module.vpc.vpc_cidr_block]
-  additional_security_group_ids = []
   allow_ssh             = var.mongodb_allow_ssh
   ssh_cidr_blocks = var.mongodb_ssh_cidr_blocks
 
@@ -172,9 +171,9 @@ module "ecs" {
   cluster_name = var.cluster_name
   environment  = var.environment
 
-  vpc_id                = module.vpc.vpc_id
-  private_subnet_ids    = module.vpc.private_subnets
-  public_subnet_ids     = module.vpc.public_subnets
+  vpc_id             = module.vpc.vpc_id
+  private_subnet_ids = module.vpc.private_subnets
+  public_subnet_ids  = module.vpc.public_subnets
 
   acm_certificate_arn = var.acm_certificate_arn
   create_alb_rules    = true
@@ -182,11 +181,11 @@ module "ecs" {
   enable_container_insights = var.enable_container_insights
   enable_execute_command    = var.enable_execute_command
   enable_service_discovery  = true
-  create_alb = true
+  create_alb                = true
   alb_internal = true
 
   # ADD THESE LINES for Redis connectivity
-  redis_security_group_id   = module.redis.redis_security_group_id
+  redis_security_group_id = module.redis.redis_security_group_id
   mongodb_security_group_id = module.mongodb.security_group_id
 
   # Pass the entire services configuration from variables
@@ -214,12 +213,12 @@ module "networking" {
   environment  = var.environment
   vpc_id       = module.vpc.vpc_id
 
-  public_subnet_ids  = module.vpc.public_subnets
+  public_subnet_ids = module.vpc.public_subnets
   private_subnet_ids = module.vpc.private_subnets
 
   # NLB Configuration
-  create_nlb     = var.create_nlb
-  nlb_internal   = var.nlb_internal
+  create_nlb                     = var.create_nlb
+  nlb_internal                   = var.nlb_internal
   nlb_enable_deletion_protection = var.nlb_enable_deletion_protection
   nlb_enable_cross_zone_load_balancing = var.nlb_enable_cross_zone_load_balancing
 
@@ -228,7 +227,7 @@ module "networking" {
   create_https_target_group = var.acm_certificate_arn != ""
   http_port                 = var.http_port
   https_port                = var.https_port
-  target_type              = var.target_type
+  target_type = var.target_type
 
   # Target Configuration
   alb_arn = module.ecs.alb_arn
@@ -243,14 +242,14 @@ module "networking" {
   health_check_unhealthy_threshold = var.health_check_unhealthy_threshold
   health_check_path                = var.health_check_path
   health_check_matcher             = var.health_check_matcher
-  deregistration_delay             = var.deregistration_delay
+  deregistration_delay = var.deregistration_delay
 
   # Listener Configuration
-  create_http_listener      = var.create_http_listener
-  create_https_listener     = var.acm_certificate_arn != ""
-  https_listener_protocol   = var.https_listener_protocol
-  ssl_policy               = var.ssl_policy
-  certificate_arn          = var.acm_certificate_arn
+  create_http_listener    = var.create_http_listener
+  create_https_listener   = var.acm_certificate_arn != ""
+  https_listener_protocol = var.https_listener_protocol
+  ssl_policy              = var.ssl_policy
+  certificate_arn = var.acm_certificate_arn
 
   # Access Logs
   nlb_access_logs_enabled = var.nlb_access_logs_enabled
@@ -279,15 +278,15 @@ module "global_accelerator" {
   source = "../../modules/global-accelerator"
 
   cluster_name = local.cluster_name
-  environment  = var.environment
+  environment = var.environment
 
   # Global Accelerator Configuration
   ip_address_type = var.global_accelerator_ip_address_type
-  enabled         = var.global_accelerator_enabled
+  enabled = var.global_accelerator_enabled
 
   # Flow Logs
-  enable_flow_logs       = var.global_accelerator_flow_logs_enabled
-  flow_logs_s3_prefix    = var.global_accelerator_flow_logs_s3_prefix
+  enable_flow_logs = var.global_accelerator_flow_logs_enabled
+  flow_logs_s3_prefix = var.global_accelerator_flow_logs_s3_prefix
 
   # Listener Configuration
   client_affinity = var.global_accelerator_client_affinity
@@ -339,23 +338,24 @@ module "cloudflare" {
   source = "../../modules/cloudflare"
 
   cluster_name = local.cluster_name
-  environment  = var.environment
+  environment = var.environment
 
   # Cloudflare Configuration
   cloudflare_zone_id = var.cloudflare_zone_id
 
   # DNS Configuration
-  target_dns_name = var.create_global_accelerator ? module.global_accelerator[0].accelerator_dns_name : module.networking.nlb_dns_name
+  target_dns_name = var.create_global_accelerator ? module.global_accelerator[0].accelerator_dns_name :
+    module.networking.nlb_dns_name
   dns_record_type = "CNAME"
   proxied         = var.dns_proxied
-  ttl             = var.dns_ttl
+  ttl = var.dns_ttl
 
   # Custom DNS records for our specific routing
   app_dns_records = var.app_dns_records
 
   # Zone Settings
   manage_zone_settings = var.manage_cloudflare_zone_settings
-  zone_settings = var.manage_cloudflare_zone_settings ? {
+  zone_settings        = var.manage_cloudflare_zone_settings ? {
     ssl              = var.cloudflare_ssl_mode
     always_use_https = var.cloudflare_always_use_https
     min_tls_version  = var.cloudflare_min_tls_version

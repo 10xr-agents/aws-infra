@@ -289,7 +289,7 @@ ecs_services = {
 
 # MongoDB Configuration
 mongodb_replica_count    = 3
-mongodb_instance_type    = "t3.large"
+mongodb_instance_type    = "db.t3.medium"
 
 mongodb_version          = "8.0"
 mongodb_admin_username   = "admin"
