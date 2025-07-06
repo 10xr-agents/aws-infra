@@ -8,7 +8,7 @@ resource "random_password" "mongo_auth_token" {
 # Generate MongoDB keyfile content for replica set authentication
 resource "random_password" "mongodb_keyfile" {
   length = 756  # MongoDB keyfile should be between 6-1024 characters
-  special = true
+  special = false
   upper   = true
   lower   = true
   numeric = true
