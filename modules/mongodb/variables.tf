@@ -55,10 +55,10 @@ variable "ami_id" {
 variable "mongodb_version" {
   description = "MongoDB version to install"
   type        = string
-  default     = "7.0"
+  default     = "8.0"
   validation {
-    condition     = contains(["6.0", "7.0"], var.mongodb_version)
-    error_message = "MongoDB version must be either 6.0 or 7.0."
+    condition     = contains(["6.0", "7.0", "8.0"], var.mongodb_version)
+    error_message = "MongoDB version must be either 6.0 or 7.0 or 8.0."
   }
 }
 
