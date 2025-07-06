@@ -39,7 +39,6 @@ ecs_services = {
     "memory": 8192,
     "desired_count": 2,
     "environment": {
-      "MONGODB_URI": "mongodb+srv://doadmin:by6n2k14L8g53dt7@db-mongodb-nyc3-70786-efaf17f9.mongo.ondigitalocean.com/ten_xr_temp_agents_local?tls=true&authSource=admin&replicaSet=db-mongodb-nyc3-70786",
       "SERVICE_PORT": "9600"
     },
     "secrets": [],
@@ -139,7 +138,6 @@ ecs_services = {
     "desired_count": 2,
     "environment": {
       "LOG_LEVEL": "INFO",
-      "MONGODB_URI": "mongodb+srv://doadmin:by6n2k14L8g53dt7@db-mongodb-nyc3-70786-efaf17f9.mongo.ondigitalocean.com/ten_xr_temp_agents_local?tls=true&authSource=admin&replicaSet=db-mongodb-nyc3-70786",
       "SERVICE_PORT": "9800"
     },
     "secrets": [],
@@ -238,7 +236,6 @@ ecs_services = {
     "desired_count": 2,
     "environment": {
       "LOG_LEVEL": "INFO",
-      "MONGODB_URI": "mongodb+srv://doadmin:by6n2k14L8g53dt7@db-mongodb-nyc3-70786-efaf17f9.mongo.ondigitalocean.com/ten_xr_temp_agents_local?tls=true&authSource=admin&replicaSet=db-mongodb-nyc3-70786",
       "SERVICE_PORT": "8080"
     },
     "secrets": [],

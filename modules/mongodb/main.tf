@@ -267,12 +267,17 @@ resource "aws_ebs_volume" "mongodb_data" {
 }
 
 # Attach EBS volumes to instances
+# Attach EBS volumes to instances with better device name handling
 resource "aws_volume_attachment" "mongodb_data" {
   count = var.replica_count
 
-  device_name = var.data_volume_device
+  # Use /dev/sdf for attachment - the script will handle NVMe detection
+  device_name = "/dev/sdf"  # This is what AWS expects for attachment
   volume_id   = aws_ebs_volume.mongodb_data[count.index].id
   instance_id = aws_instance.mongodb[count.index].id
+
+  # Add explicit dependency to ensure proper ordering
+  depends_on = [aws_instance.mongodb, aws_ebs_volume.mongodb_data]
 }
 
 # Data source for subnet information

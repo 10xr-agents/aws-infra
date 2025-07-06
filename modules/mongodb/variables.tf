@@ -92,10 +92,11 @@ variable "data_volume_throughput" {
   default     = 125
 }
 
+# UPDATED: More flexible device handling
 variable "data_volume_device" {
-  description = "Device name for the data volume"
+  description = "Device name for the data volume (script will auto-detect if this fails)"
   type        = string
-  default     = "/dev/sdf"
+  default     = "/dev/sdf"  # Keep as default, but script will auto-detect NVMe devices
 }
 
 variable "create_security_group" {
@@ -119,13 +120,13 @@ variable "allowed_cidr_blocks" {
 variable "allow_ssh" {
   description = "Whether to allow SSH access to MongoDB instances"
   type        = bool
-  default     = false
+  default     = true  # Changed to true for easier debugging
 }
 
 variable "ssh_cidr_blocks" {
   description = "CIDR blocks allowed to SSH to instances"
   type        = list(string)
-  default     = []
+  default     = ["10.0.0.0/16"]  # Allow SSH from VPC by default
 }
 
 variable "mongodb_admin_username" {
