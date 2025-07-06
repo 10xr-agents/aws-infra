@@ -165,7 +165,8 @@ resource "aws_iam_role_policy" "mongodb_ebs" {
           "ec2:CreateSnapshot",
           "ec2:CreateTags",
           "ec2:DescribeSnapshots",
-          "ec2:DescribeVolumes"
+          "ec2:DescribeVolumes",
+          "ec2:DescribeInstances"
         ]
         Resource = "*"
       }
@@ -179,24 +180,20 @@ resource "aws_iam_instance_profile" "mongodb" {
   role = aws_iam_role.mongodb.name
 }
 
-# User data script template
-data "template_file" "user_data" {
-  count = var.replica_count
-
-  template = file("${path.module}/user-data.sh")
-
-  vars = {
-    mongodb_version   = var.mongodb_version
-    replica_set_name  = local.replica_set_name
-    node_index        = count.index
-    total_nodes       = var.replica_count
+# FIXED: User data template with proper cloud-init format
+locals {
+  user_data_template = templatefile("${path.module}/user-data.sh", {
+    mongodb_version         = var.mongodb_version
+    replica_set_name        = local.replica_set_name
+    node_index             = "%{node_index}"
+    total_nodes            = var.replica_count
     mongodb_admin_username = var.mongodb_admin_username
     mongodb_admin_password = var.mongodb_admin_password
     mongodb_keyfile_content = var.mongodb_keyfile_content
-    enable_monitoring = var.enable_monitoring
-    data_volume_device = var.data_volume_device
-    cluster_name      = var.cluster_name
-  }
+    enable_monitoring      = var.enable_monitoring
+    data_volume_device     = var.data_volume_device
+    cluster_name          = var.cluster_name
+  })
 }
 
 # EC2 Instances for MongoDB
@@ -206,7 +203,7 @@ resource "aws_instance" "mongodb" {
   ami           = var.ami_id != "" ? var.ami_id : data.aws_ami.ubuntu[0].id
   instance_type = var.instance_type
   subnet_id     = element(var.subnet_ids, count.index)
-  key_name      = aws_key_pair.mongodb_key.key_name  # Use the created key pair
+  key_name      = aws_key_pair.mongodb_key.key_name
 
   vpc_security_group_ids = concat(
       var.create_security_group ? [aws_security_group.mongodb[0].id] : [],
@@ -222,7 +219,19 @@ resource "aws_instance" "mongodb" {
     delete_on_termination = true
   }
 
-  user_data = base64encode(data.template_file.user_data[count.index].rendered)
+  # FIXED: Proper user data with cloud-init format
+  user_data = base64encode(templatefile("${path.module}/user-data-cloud-init.yml", {
+    mongodb_version         = var.mongodb_version
+    replica_set_name        = local.replica_set_name
+    node_index             = count.index
+    total_nodes            = var.replica_count
+    mongodb_admin_username = var.mongodb_admin_username
+    mongodb_admin_password = var.mongodb_admin_password
+    mongodb_keyfile_content = var.mongodb_keyfile_content
+    enable_monitoring      = var.enable_monitoring
+    data_volume_device     = var.data_volume_device
+    cluster_name          = var.cluster_name
+  }))
 
   metadata_options {
     http_endpoint               = "enabled"
@@ -242,7 +251,6 @@ resource "aws_instance" "mongodb" {
     ignore_changes = [ami]
   }
 
-  # Ensure the key pair is created before the instance
   depends_on = [aws_key_pair.mongodb_key]
 }
 
@@ -267,16 +275,14 @@ resource "aws_ebs_volume" "mongodb_data" {
 }
 
 # Attach EBS volumes to instances
-# Attach EBS volumes to instances with better device name handling
 resource "aws_volume_attachment" "mongodb_data" {
   count = var.replica_count
 
-  # Use /dev/sdf for attachment - the script will handle NVMe detection
-  device_name = "/dev/sdf"  # This is what AWS expects for attachment
+  # Always use /dev/sdf for attachment - the script will detect actual device
+  device_name = "/dev/sdf"
   volume_id   = aws_ebs_volume.mongodb_data[count.index].id
   instance_id = aws_instance.mongodb[count.index].id
 
-  # Add explicit dependency to ensure proper ordering
   depends_on = [aws_instance.mongodb, aws_ebs_volume.mongodb_data]
 }
 
@@ -337,7 +343,7 @@ resource "aws_route53_record" "mongodb_rs" {
 
   set_identifier                  = each.key
   multivalue_answer_routing_policy = true
-  records                         = [each.value]  # exactly one IP
+  records                         = [each.value]
 }
 
 # Systems Manager Parameter for connection string
