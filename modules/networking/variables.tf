@@ -201,7 +201,6 @@ variable "health_check_matcher" {
 variable "alb_arn" {
   description = "ARN of the ALB to attach to NLB target groups"
   type        = string
-  default     = ""
 }
 
 variable "default_http_target_group_arn" {

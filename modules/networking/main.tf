@@ -173,7 +173,7 @@ resource "aws_lb_target_group" "custom" {
 
 # HTTP Target Group Attachment
 resource "aws_lb_target_group_attachment" "alb_target_http" {
-  count = var.create_nlb && var.create_http_target_group && var.alb_arn != "" ? 1 : 0
+  count = var.create_nlb && var.create_http_target_group ? 1 : 0
 
   target_group_arn = aws_lb_target_group.alb_targets_http[0].arn
   target_id        = var.alb_arn
@@ -182,7 +182,7 @@ resource "aws_lb_target_group_attachment" "alb_target_http" {
 
 # HTTPS Target Group Attachment
 resource "aws_lb_target_group_attachment" "alb_target_https" {
-  count = var.create_nlb && var.create_https_target_group && var.alb_arn != "" ? 1 : 0
+  count = var.create_nlb && var.create_https_target_group ? 1 : 0
 
   target_group_arn = aws_lb_target_group.alb_targets_https[0].arn
   target_id        = var.alb_arn
