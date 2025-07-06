@@ -115,8 +115,6 @@ write_files:
           cat > /etc/mongod.conf <<EOF
           storage:
             dbPath: /data/mongodb/db
-            journal:
-              enabled: true
             engine: wiredTiger
             wiredTiger:
               engineConfig:
@@ -163,7 +161,7 @@ write_files:
             sleep 15
             PRIVATE_IP=$(curl -s http://169.254.169.254/latest/meta-data/local-ipv4)
           
-            # Fallback for mongosh
+            # Use mongosh for MongoDB 8.0 (newer versions)
             MONGO_CLI=$(command -v mongosh || command -v mongo)
           
             $MONGO_CLI --eval "
