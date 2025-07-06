@@ -47,8 +47,9 @@ write_files:
           
           echo "Detecting EBS volume..."
           find_data_device() {
-            echo "Available block devices:"
-            lsblk
+            # List devices for debugging
+            echo "Available block devices:" >&2
+            lsblk >&2
           
             for device in /dev/nvme*n1; do
               if [ -e "$device" ] && ! mount | grep -q "$device" && ! lsblk "$device" | grep -q "/"; then

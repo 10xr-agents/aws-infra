@@ -18,7 +18,7 @@ locals {
 
   ecs_services = var.ecs_services
 
-  mongodb_connection_string = module.mongodb.connection_string
+  # mongodb_connection_string = module.mongodb.connection_string
 
   # You can also merge with environment-specific overrides
   ecs_services_with_overrides = {
@@ -40,8 +40,8 @@ locals {
             REDIS_USERNAME         = module.redis.redis_username
             REDIS_TLS_ENABLED      = tostring(var.redis_transit_encryption_enabled)
 
-            SPRING_DATA_MONGODB_URI = local.mongodb_connection_string
-            MONGO_DB_URI            = local.mongodb_connection_string
+            # SPRING_DATA_MONGODB_URI = local.mongodb_connection_string
+            # MONGO_DB_URI            = local.mongodb_connection_string
             MONGODB_DATABASE        = var.mongodb_default_database
             DATABASE_NAME           = var.mongodb_default_database
           }
@@ -53,11 +53,11 @@ locals {
             {
               name       = "REDIS_PASSWORD"
               value_from = module.redis.ssm_parameter_redis_auth_token
-            },
-            {
-              name       = "MONGODB_PASSWORD"
-              value_from = module.mongodb.ssm_parameter_name
             }
+#             {
+#               name       = "MONGODB_PASSWORD"
+#               value_from = module.mongodb.ssm_parameter_name
+#             }
           ]
         )
 
