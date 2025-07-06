@@ -8,7 +8,7 @@ write_files:
           #!/bin/bash
           set -e
           
-          # Variables from Terraform
+          # Terraform Variables
           MONGODB_VERSION="${mongodb_version}"
           REPLICA_SET_NAME="${replica_set_name}"
           NODE_INDEX="${node_index}"
@@ -24,156 +24,94 @@ write_files:
           exec > >(tee /var/log/mongodb-setup.log)
           exec 2>&1
           
-          echo "Starting MongoDB setup..."
-          echo "MongoDB Version: $MONGODB_VERSION"
-          echo "Replica Set: $REPLICA_SET_NAME"
-          echo "Node Index: $NODE_INDEX"
-          echo "Expected device: $DATA_VOLUME_DEVICE"
+          echo "### Starting MongoDB setup ###"
+          echo "Version: $MONGODB_VERSION, Replica Set: $REPLICA_SET_NAME"
           
-          # Update system
           apt-get update
           apt-get upgrade -y
+          apt-get install -y gnupg curl wget software-properties-common lsb-release xfsprogs
           
-          # Install prerequisites
-          apt-get install -y gnupg curl wget software-properties-common
+          # Add MongoDB GPG key and repo
+          curl -fsSL https://www.mongodb.org/static/pgp/server-$${MONGODB_VERSION}.asc | gpg --dearmor -o /usr/share/keyrings/mongodb.gpg
+          echo "deb [ arch=amd64 signed-by=/usr/share/keyrings/mongodb.gpg ] https://repo.mongodb.org/apt/ubuntu $(lsb_release -cs)/mongodb-org/$${MONGODB_VERSION} multiverse" | tee /etc/apt/sources.list.d/mongodb-org-$${MONGODB_VERSION}.list
           
-          # Import MongoDB GPG key
-          wget -qO - https://www.mongodb.org/static/pgp/server-$${MONGODB_VERSION}.asc | apt-key add -
-          
-          # Add MongoDB repository
-          echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu jammy/mongodb-org/$${MONGODB_VERSION} multiverse" | tee /etc/apt/sources.list.d/mongodb-org-$${MONGODB_VERSION}.list
-          
-          # Update package list
           apt-get update
-          
-          # Install MongoDB
           apt-get install -y mongodb-org
           
-          # Install CloudWatch agent if monitoring is enabled
+          # Install CloudWatch Agent if enabled
           if [ "$ENABLE_MONITORING" = "true" ]; then
-              wget https://s3.amazonaws.com/amazoncloudwatch-agent/ubuntu/amd64/latest/amazon-cloudwatch-agent.deb
-              dpkg -i -E ./amazon-cloudwatch-agent.deb
-              rm ./amazon-cloudwatch-agent.deb
+            wget https://s3.amazonaws.com/amazoncloudwatch-agent/ubuntu/amd64/latest/amazon-cloudwatch-agent.deb
+            dpkg -i ./amazon-cloudwatch-agent.deb
+            rm -f ./amazon-cloudwatch-agent.deb
           fi
           
-          # FIXED: Smart device detection for NVMe vs traditional EBS
-          echo "Detecting attached EBS volume..."
-          
-          # Function to find the actual device name
+          echo "Detecting EBS volume..."
           find_data_device() {
-              # List all block devices
-              echo "Available block devices:"
-              lsblk
+            echo "Available block devices:"
+            lsblk
           
-              # For NVMe instances, EBS volumes appear as /dev/nvme*n* 
-              # The root volume is typically nvme0n1, so data volume would be nvme1n1, nvme2n1, etc.
+            for device in /dev/nvme*n1; do
+              if [ -e "$device" ] && ! mount | grep -q "$device" && ! lsblk "$device" | grep -q "/"; then
+                echo "$device"
+                return 0
+              fi
+            done
           
-              # Method 1: Look for unmounted volumes that aren't the root
-              for device in /dev/nvme*n1; do
-                  if [ -e "$device" ]; then
-                      # Skip if it's the root device
-                      if ! mount | grep -q "$device"; then
-                          # Check if it's not part of the root filesystem
-                          if ! lsblk "$device" | grep -q "/"; then
-                              echo "Found unmounted NVMe device: $device"
-                              echo "$device"
-                              return 0
-                          fi
-                      fi
-                  fi
-              done
-          
-              # Method 2: Look for traditional EBS device names
-              for device in /dev/xvd[f-z] /dev/sd[f-z]; do
-                  if [ -e "$device" ]; then
-                      if ! mount | grep -q "$device"; then
-                          echo "Found unmounted traditional device: $device"
-                          echo "$device"
-                          return 0
-                      fi
-                  fi
-              done
-          
-              return 1
+            for device in /dev/xvd[f-z] /dev/sd[f-z]; do
+              if [ -e "$device" ] && ! mount | grep -q "$device"; then
+                echo "$device"
+                return 0
+              fi
+            done
+            return 1
           }
           
-          # Wait for EBS volume to be attached and find it
-          echo "Waiting for data volume to be attached..."
-          ACTUAL_DEVICE=""
-          MAX_WAIT=300  # 5 minutes
-          WAIT_COUNT=0
-          
-          while [ $WAIT_COUNT -lt $MAX_WAIT ]; do
-              # Try to find the device
-              if ACTUAL_DEVICE=$(find_data_device); then
-                  echo "Found data device: $ACTUAL_DEVICE"
-                  break
-              fi
-          
-              echo "Waiting for data volume... ($WAIT_COUNT/$MAX_WAIT)"
-              sleep 5
-              WAIT_COUNT=$((WAIT_COUNT + 5))
+          # Wait up to 5 minutes for volume
+          echo "Waiting for data volume..."
+          MAX_WAIT=300
+          WAITED=0
+          DATA_DEVICE=""
+          while [ $WAITED -lt $MAX_WAIT ]; do
+            if DATA_DEVICE=$(find_data_device); then
+              break
+            fi
+            sleep 5
+            WAITED=$((WAITED + 5))
           done
           
-          if [ -z "$ACTUAL_DEVICE" ]; then
-              echo "ERROR: Could not find data volume after $MAX_WAIT seconds"
-              echo "Available devices:"
-              lsblk
-              exit 1
+          if [ -z "$DATA_DEVICE" ]; then
+            echo "ERROR: No data volume found"
+            lsblk
+            exit 1
           fi
           
-          # Use the detected device
-          DATA_DEVICE="$ACTUAL_DEVICE"
           echo "Using device: $DATA_DEVICE"
           
-          # Check if the volume needs formatting
-          echo "Checking if volume needs formatting..."
-          if [ "$(file -s $DATA_DEVICE)" = "$DATA_DEVICE: data" ]; then
-              echo "Formatting data volume with XFS..."
-              mkfs -t xfs $DATA_DEVICE
+          # Format if needed
+          if ! blkid "$DATA_DEVICE"; then
+            echo "Formatting $DATA_DEVICE with XFS..."
+            mkfs.xfs "$DATA_DEVICE"
           else
-              echo "Volume already formatted or contains data"
+            echo "Device already formatted"
           fi
           
-          # Create mount point
           mkdir -p /data/mongodb
+          mount "$DATA_DEVICE" /data/mongodb
           
-          # Mount the volume
-          echo "Mounting $DATA_DEVICE to /data/mongodb"
-          mount $DATA_DEVICE /data/mongodb
+          UUID=$(blkid -s UUID -o value "$DATA_DEVICE")
+          echo "UUID=$UUID /data/mongodb xfs defaults,nofail 0 2" >> /etc/fstab
           
-          # Add to fstab for persistent mounting (use UUID for reliability)
-          DEVICE_UUID=$(blkid -s UUID -o value $DATA_DEVICE)
-          if [ -n "$DEVICE_UUID" ]; then
-              echo "UUID=$DEVICE_UUID /data/mongodb xfs defaults,nofail 0 2" >> /etc/fstab
-          else
-              echo "$DATA_DEVICE /data/mongodb xfs defaults,nofail 0 2" >> /etc/fstab
-          fi
-          
-          # Verify mount
-          df -h /data/mongodb
-          echo "Mount successful!"
-          
-          # Set permissions
+          chown -R mongodb:mongodb /data/mongodb
+          mkdir -p /data/mongodb/{db,logs}
           chown -R mongodb:mongodb /data/mongodb
           
-          # Create necessary directories
-          mkdir -p /data/mongodb/db
-          mkdir -p /data/mongodb/logs
-          mkdir -p /etc/mongodb
-          chown -R mongodb:mongodb /data/mongodb
-          
-          # Create keyfile for replica set authentication if provided
-          if [ ! -z "$KEYFILE_CONTENT" ]; then
-              echo "$KEYFILE_CONTENT" > /etc/mongodb/keyfile
-              chmod 400 /etc/mongodb/keyfile
-              chown mongodb:mongodb /etc/mongodb/keyfile
+          if [ -n "$KEYFILE_CONTENT" ]; then
+            echo "$KEYFILE_CONTENT" > /etc/mongodb-keyfile
+            chmod 400 /etc/mongodb-keyfile
+            chown mongodb:mongodb /etc/mongodb-keyfile
           fi
           
-          # Configure MongoDB
           cat > /etc/mongod.conf <<EOF
-          # MongoDB configuration file
-          
           storage:
             dbPath: /data/mongodb/db
             journal:
@@ -202,78 +140,58 @@ write_files:
             authorization: enabled
           EOF
           
-          # Add keyfile to config if provided
-          if [ ! -z "$KEYFILE_CONTENT" ]; then
-              echo "  keyFile: /etc/mongodb/keyfile" >> /etc/mongod.conf
+          if [ -n "$KEYFILE_CONTENT" ]; then
+            echo "  keyFile: /etc/mongodb-keyfile" >> /etc/mongod.conf
           fi
           
-          # Start MongoDB
           systemctl daemon-reload
           systemctl enable mongod
           systemctl start mongod
-          
-          # Wait for MongoDB to start
-          echo "Starting MongoDB service..."
           sleep 10
           
-          # Check if MongoDB started successfully
           if ! systemctl is-active --quiet mongod; then
-              echo "ERROR: MongoDB failed to start. Checking logs..."
-              systemctl status mongod
-              tail -50 /data/mongodb/logs/mongod.log
-              exit 1
+            echo "ERROR: MongoDB failed to start"
+            systemctl status mongod
+            tail -n 50 /data/mongodb/logs/mongod.log
+            exit 1
           fi
           
-          echo "MongoDB started successfully!"
-          
-          # Initialize replica set on the first node
+          # Replica set init
           if [ "$NODE_INDEX" = "0" ]; then
-              echo "Initializing replica set..."
+            echo "Initializing replica set..."
+            sleep 15
+            PRIVATE_IP=$(curl -s http://169.254.169.254/latest/meta-data/local-ipv4)
           
-              # Get instance metadata
-              INSTANCE_ID=$(curl -s http://169.254.169.254/latest/meta-data/instance-id)
-              PRIVATE_IP=$(curl -s http://169.254.169.254/latest/meta-data/local-ipv4)
+            # Fallback for mongosh
+            MONGO_CLI=$(command -v mongosh || command -v mongo)
           
-              # Wait for MongoDB to be ready
-              sleep 15
+            $MONGO_CLI --eval "
+            rs.initiate({
+              _id: '$REPLICA_SET_NAME',
+              members: [{ _id: 0, host: '$PRIVATE_IP:27017', priority: 2 }]
+            })
+            "
           
-              # Initialize replica set (without authentication first)
-              mongosh --eval "
-              rs.initiate({
-                  _id: '$REPLICA_SET_NAME',
-                  members: [
-                      { _id: 0, host: '$PRIVATE_IP:27017', priority: 2 }
-                  ]
-              })
-              "
+            sleep 15
           
-              # Wait for replica set to initialize
-              echo "Waiting for replica set to initialize..."
-              sleep 15
-          
-              # Create admin user
-              echo "Creating admin user..."
-              mongosh admin --eval "
-              db.createUser({
-                  user: '$ADMIN_USERNAME',
-                  pwd: '$ADMIN_PASSWORD',
-                  roles: [
-                      { role: 'root', db: 'admin' },
-                      { role: 'clusterAdmin', db: 'admin' }
-                  ]
-              })
-              "
-          
-              echo "Admin user created successfully!"
+            echo "Creating admin user..."
+            $MONGO_CLI admin --eval "
+            db.createUser({
+              user: '$ADMIN_USERNAME',
+              pwd: '$ADMIN_PASSWORD',
+              roles: [
+                { role: 'root', db: 'admin' },
+                { role: 'clusterAdmin', db: 'admin' }
+              ]
+            })
+            "
           fi
           
           echo "MongoDB setup complete!"
-          echo "Final status:"
           systemctl status mongod --no-pager
-          echo "Listening on port 27017:"
           ss -tln | grep 27017
 
 runcmd:
-    - [/opt/mongodb-setup.sh]
+    - bash /opt/mongodb-setup.sh
 
-final_message: "MongoDB installation and configuration completed successfully!"
+final_message: "✅ MongoDB installation and configuration completed!"
