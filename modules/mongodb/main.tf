@@ -194,8 +194,7 @@ resource "aws_ebs_volume" "mongodb_data" {
   availability_zone = data.aws_subnet.selected[count.index].availability_zone
   size              = var.data_volume_size
   type              = var.data_volume_type
-  iops              = var.data_volume_type == "gp3" || var.data_volume_type == "io1" || var.data_volume_type == "io2" ?
-    var.data_volume_iops : null
+  iops              = var.data_volume_type == "gp3" || var.data_volume_type == "io1" || var.data_volume_type == "io2" ? var.data_volume_iops : null
   throughput        = var.data_volume_type == "gp3" ? var.data_volume_throughput : null
   encrypted         = true
 
