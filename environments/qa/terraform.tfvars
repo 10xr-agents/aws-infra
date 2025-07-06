@@ -293,9 +293,6 @@ mongodb_instance_type    = "t3.large"
 
 mongodb_version          = "7.0"
 mongodb_admin_username   = "admin"
-mongodb_admin_password   = "TenXR-MongoDB-QA-2024!"  # Please change this to a secure password
-mongodb_keyfile_content  = ""  # Generate a secure keyfile content for replica set authentication
-
 mongodb_default_database = "ten_xr_agents_qa"
 
 # Storage Configuration
@@ -367,7 +364,6 @@ nlb_enable_cross_zone_load_balancing = true
 
 # Target Group Configuration
 create_http_target_group = true
-create_https_target_group = true
 http_port = 80
 https_port = 443
 target_type = "alb"
@@ -440,13 +436,13 @@ app_dns_records = {
     comment  = "QA Service environment - routes to backend services"
     tags     = ["qa", "service", "api"]
   },
-  "qa-livekit" = {
+  "qa-proxy" = {
     name     = "proxy.qa"
     content  = "" # Will be set by module to Global Accelerator DNS name
     type     = "CNAME"
     proxied  = false  # Changed from true to false
     ttl      = 300
-    comment  = "QA LiveKit environment - routes to LiveKit proxy"
+    comment  = "QA LiveKit Proxy environment - routes to LiveKit proxy"
     tags     = ["qa", "livekit", "proxy"]
   }
 }

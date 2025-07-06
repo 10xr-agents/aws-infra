@@ -19,7 +19,7 @@ variable "cluster_name" {
 }
 
 variable "domain" {
-  description = "Domain name for LiveKit services"
+  description = "Domain name for 10xR services"
   type        = string
   default     = "qa.10xr.com"
 }
@@ -243,23 +243,10 @@ variable "mongodb_admin_username" {
   sensitive   = true
 }
 
-variable "mongodb_admin_password" {
-  description = "MongoDB admin password"
-  type        = string
-  sensitive   = true
-}
-
-variable "mongodb_keyfile_content" {
-  description = "Content of the MongoDB keyfile for replica set authentication"
-  type        = string
-  default     = ""
-  sensitive   = true
-}
-
 variable "mongodb_default_database" {
   description = "Default database name"
   type        = string
-  default     = "livekit_qa"
+  default     = "ten_xr_app_qa"
 }
 
 variable "mongodb_root_volume_size" {

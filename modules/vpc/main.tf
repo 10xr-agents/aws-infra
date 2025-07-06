@@ -45,23 +45,6 @@ module "vpc" {
   # Default security group configuration
   default_security_group_name = "${var.vpc_name}-default-sg"
 
-  default_security_group_ingress = [
-    {
-      from_port   = 10000
-      to_port     = 60000
-      protocol    = "udp"
-      cidr_blocks = "0.0.0.0/0"
-      description = "UDP ports for WebRTC traffic"
-    },
-    {
-      from_port   = 7880
-      to_port     = 7881
-      protocol    = "tcp"
-      cidr_blocks = "0.0.0.0/0"
-      description = "TCP ports for LiveKit signaling"
-    }
-  ]
-
   default_security_group_egress = [
     {
       from_port   = 0

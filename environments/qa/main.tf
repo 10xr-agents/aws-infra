@@ -115,8 +115,8 @@ module "mongodb" {
   # MongoDB configuration
   mongodb_version         = var.mongodb_version
   mongodb_admin_username  = var.mongodb_admin_username
-  mongodb_admin_password  = var.mongodb_admin_password
-  mongodb_keyfile_content = var.mongodb_keyfile_content
+  mongodb_admin_password  = random_password.mongo_auth_token
+  mongodb_keyfile_content = random_password.mongodb_keyfile
   default_database = var.mongodb_default_database
 
   # Storage configuration
