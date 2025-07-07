@@ -1,5 +1,5 @@
 #cloud-config
-# MongoDB Installation and Configuration - FIXED Region and Discovery
+# MongoDB 8.0 Installation and Configuration - FIXED VERSION
 
 write_files:
     - path: /opt/mongodb-setup.sh
@@ -17,7 +17,6 @@ write_files:
           ADMIN_PASSWORD="${mongodb_admin_password}"
           KEYFILE_CONTENT="${mongodb_keyfile_content}"
           ENABLE_MONITORING="${enable_monitoring}"
-          DATA_VOLUME_DEVICE="${data_volume_device}"
           CLUSTER_NAME="${cluster_name}"
           VPC_ID="${vpc_id}"
           
@@ -25,25 +24,42 @@ write_files:
           exec > >(tee /var/log/mongodb-setup.log)
           exec 2>&1
           
-          echo "### Starting MongoDB setup ###"
+          echo "### Starting MongoDB 8.0 setup ###"
           echo "Version: $MONGODB_VERSION, Replica Set: $REPLICA_SET_NAME, Node: $NODE_INDEX"
           echo "Total nodes: $TOTAL_NODES"
+          echo "Cluster: $CLUSTER_NAME"
           
           # Update system
+          echo "Updating system packages..."
           apt-get update -y
-          apt-get upgrade -y
-          apt-get install -y gnupg curl wget software-properties-common lsb-release xfsprogs awscli jq netcat-openbsd
+          DEBIAN_FRONTEND=noninteractive apt-get upgrade -y
           
-          # FIXED: Better region detection and AWS CLI setup
+          # Install prerequisites
+          echo "Installing prerequisites..."
+          apt-get install -y \
+            curl \
+            wget \
+            gnupg \
+            lsb-release \
+            ca-certificates \
+            apt-transport-https \
+            software-properties-common \
+            xfsprogs \
+            awscli \
+            jq \
+            netcat-openbsd \
+            htop \
+            iotop \
+            unzip
+          
+          # Region detection with multiple fallbacks
           get_region() {
-            # Try multiple methods to get the region
             local region=""
           
             # Method 1: Instance metadata (most reliable)
             region=$(curl -s --max-time 10 http://169.254.169.254/latest/meta-data/placement/region 2>/dev/null || echo "")
           
             if [ -n "$region" ] && [ "$region" != "" ]; then
-              echo "Found region via metadata: $region" >&2
               echo "$region"
               return 0
             fi
@@ -51,151 +67,155 @@ write_files:
             # Method 2: Availability zone metadata
             local az=$(curl -s --max-time 10 http://169.254.169.254/latest/meta-data/placement/availability-zone 2>/dev/null || echo "")
             if [ -n "$az" ] && [ "$az" != "" ]; then
-              # Extract region from AZ (remove last character)
-              region=$${az%?}
-              echo "Found region via AZ: $region" >&2
+              region=${az%?}
               echo "$region"
               return 0
             fi
           
-            # Method 3: Fallback to hardcoded region for this deployment
-            region="us-east-1"
-            echo "Using fallback region: $region" >&2
-            echo "$region"
+            # Method 3: AWS configure fallback
+            region=$(aws configure get region 2>/dev/null || echo "")
+            if [ -n "$region" ] && [ "$region" != "" ]; then
+              echo "$region"
+              return 0
+            fi
+          
+            # Method 4: Default fallback
+            echo "us-east-1"
           }
           
-          # Get and validate region
+          # Configure AWS CLI
           REGION=$(get_region)
-          if [ -z "$REGION" ] || [ "$REGION" = "" ]; then
-            echo "ERROR: Could not determine AWS region"
-            exit 1
-          fi
-          
           echo "Using AWS region: $REGION"
           
-          # Configure AWS CLI with region
           aws configure set region "$REGION"
           aws configure set default.region "$REGION"
           export AWS_DEFAULT_REGION="$REGION"
           
-          # Test AWS CLI connectivity
+          # Test AWS connectivity
           echo "Testing AWS CLI connectivity..."
           if ! aws sts get-caller-identity >/dev/null 2>&1; then
-            echo "WARNING: AWS CLI test failed, but continuing..."
+            echo "WARNING: AWS CLI test failed, continuing anyway..."
           else
             echo "AWS CLI connectivity confirmed"
           fi
-  
-          # Add MongoDB GPG key and repo
-          curl -fsSL https://www.mongodb.org/static/pgp/server-$${MONGODB_VERSION}.asc | gpg --dearmor -o /usr/share/keyrings/mongodb.gpg
-          echo "deb [ arch=amd64 signed-by=/usr/share/keyrings/mongodb.gpg ] https://repo.mongodb.org/apt/ubuntu $(lsb_release -cs)/mongodb-org/$${MONGODB_VERSION} multiverse" | tee /etc/apt/sources.list.d/mongodb-org-$${MONGODB_VERSION}.list
           
+          # Install MongoDB 8.0 - FIXED for Ubuntu 22.04
+          echo "Installing MongoDB 8.0..."
+          
+          # Import MongoDB GPG key
+          curl -fsSL https://www.mongodb.org/static/pgp/server-8.0.asc | \
+            gpg --dearmor -o /usr/share/keyrings/mongodb-server-8.0.gpg
+          
+          # Add MongoDB repository - FIXED for Ubuntu 22.04 (jammy)
+          echo "deb [ arch=amd64,arm64 signed-by=/usr/share/keyrings/mongodb-server-8.0.gpg ] https://repo.mongodb.org/apt/ubuntu jammy/mongodb-org/8.0 multiverse" | \
+            tee /etc/apt/sources.list.d/mongodb-org-8.0.list
+          
+          # Update package list
           apt-get update -y
+          
+          # Install MongoDB
+          echo "Installing MongoDB packages..."
           apt-get install -y mongodb-org
           
-          # Install CloudWatch Agent if enabled
+          # Pin MongoDB packages to prevent accidental upgrades
+          echo "mongodb-org hold" | dpkg --set-selections
+          echo "mongodb-org-database hold" | dpkg --set-selections
+          echo "mongodb-org-server hold" | dpkg --set-selections
+          echo "mongodb-org-mongos hold" | dpkg --set-selections
+          echo "mongodb-org-tools hold" | dpkg --set-selections
+          
+          # Install CloudWatch agent if enabled
           if [ "$ENABLE_MONITORING" = "true" ]; then
-            wget https://s3.amazonaws.com/amazoncloudwatch-agent/ubuntu/amd64/latest/amazon-cloudwatch-agent.deb
+            echo "Installing CloudWatch agent..."
+            wget -q https://s3.amazonaws.com/amazoncloudwatch-agent/ubuntu/amd64/latest/amazon-cloudwatch-agent.deb
             dpkg -i ./amazon-cloudwatch-agent.deb
             rm -f ./amazon-cloudwatch-agent.deb
           fi
           
-          # FIXED: Function to discover other MongoDB nodes using EC2 tags
-          discover_mongodb_nodes() {
-            echo "Discovering MongoDB nodes using EC2 tags in region $REGION..." >&2
+          # Volume setup - IMPROVED device detection
+          echo "Setting up data volume..."
           
-            # Retry logic for AWS API calls
-            local max_retries=3
-            local retry_count=0
-            local node_ips=""
-          
-            while [ $retry_count -lt $max_retries ]; do
-              echo "Attempt $((retry_count + 1))/$max_retries to discover nodes..." >&2
-          
-              # Try to get instances with explicit region
-              node_ips=$(aws ec2 describe-instances \
-                --region "$REGION" \
-                --filters \
-                  "Name=tag:MongoDBCluster,Values=$CLUSTER_NAME" \
-                  "Name=instance-state-name,Values=running" \
-                --query 'Reservations[].Instances[].[PrivateIpAddress,Tags[?Key==`NodeIndex`].Value|[0]]' \
-                --output text 2>/dev/null | sort -k2 -n | cut -f1 | grep -v '^$' || echo "")
-          
-              if [ -n "$node_ips" ] && [ "$node_ips" != "" ]; then
-                echo "Successfully discovered nodes: $node_ips" >&2
-                echo "$node_ips"
-                return 0
-              fi
-          
-              echo "Discovery attempt $((retry_count + 1)) failed, retrying in 10 seconds..." >&2
-              sleep 10
-              retry_count=$((retry_count + 1))
-            done
-          
-            echo "ERROR: Failed to discover nodes after $max_retries attempts" >&2
-            return 1
-          }
-          
-          # Volume setup
-          echo "Detecting EBS volume..."
           find_data_device() {
             echo "Available block devices:" >&2
             lsblk >&2
           
+            # Check for NVMe devices first (common on newer AWS instances)
             for device in /dev/nvme*n1; do
-              if [ -e "$device" ] && ! mount | grep -q "$device" && ! lsblk "$device" | grep -q "/"; then
-                echo "$device"
-                return 0
+              if [ -e "$device" ]; then
+                # Skip if it's already mounted or is the root device
+                if ! mount | grep -q "$device" && ! lsblk "$device" | grep -q "/\|/boot"; then
+                  # Additional check: ensure it's not a partition
+                  if ! lsblk "$device" | grep -q "part"; then
+                    echo "$device"
+                    return 0
+                  fi
+                fi
               fi
             done
           
+            # Fall back to traditional device names
             for device in /dev/xvd[f-z] /dev/sd[f-z]; do
               if [ -e "$device" ] && ! mount | grep -q "$device"; then
                 echo "$device"
                 return 0
               fi
             done
+          
             return 1
           }
           
-          # Wait for volume attachment
+          # Wait for volume with timeout
           echo "Waiting for data volume..."
           MAX_WAIT=300
           WAITED=0
           DATA_DEVICE=""
+          
           while [ $WAITED -lt $MAX_WAIT ]; do
             if DATA_DEVICE=$(find_data_device); then
               break
             fi
+            echo "Waiting for volume... ($WAITED/$MAX_WAIT seconds)"
             sleep 5
             WAITED=$((WAITED + 5))
           done
           
           if [ -z "$DATA_DEVICE" ]; then
-            echo "ERROR: No data volume found"
+            echo "ERROR: No data volume found after $MAX_WAIT seconds"
             lsblk
             exit 1
           fi
           
-          echo "Using device: $DATA_DEVICE"
+          echo "Using data device: $DATA_DEVICE"
           
-          # Format and mount
-          if ! blkid "$DATA_DEVICE"; then
+          # Format and mount volume
+          if ! blkid "$DATA_DEVICE" | grep -q "TYPE="; then
             echo "Formatting $DATA_DEVICE with XFS..."
-            mkfs.xfs "$DATA_DEVICE"
+            mkfs.xfs -f "$DATA_DEVICE"
+          else
+            echo "Volume already formatted: $(blkid "$DATA_DEVICE")"
           fi
           
+          # Create mount point
           mkdir -p /data/mongodb
+          
+          # Mount volume
           mount "$DATA_DEVICE" /data/mongodb
           
+          # Add to fstab
           UUID=$(blkid -s UUID -o value "$DATA_DEVICE")
-          echo "UUID=$UUID /data/mongodb xfs defaults,nofail 0 2" >> /etc/fstab
+          if [ -n "$UUID" ]; then
+            echo "UUID=$UUID /data/mongodb xfs defaults,nofail 0 2" >> /etc/fstab
+          else
+            echo "$DATA_DEVICE /data/mongodb xfs defaults,nofail 0 2" >> /etc/fstab
+          fi
           
+          # Create MongoDB directories
           mkdir -p /data/mongodb/{db,logs}
           chown -R mongodb:mongodb /data/mongodb
           
-          # Create keyfile
+          # Create keyfile if provided
           if [ -n "$KEYFILE_CONTENT" ]; then
+            echo "Creating keyfile..."
             echo "$KEYFILE_CONTENT" > /etc/mongodb-keyfile
             chmod 400 /etc/mongodb-keyfile
             chown mongodb:mongodb /etc/mongodb-keyfile
@@ -205,11 +225,55 @@ write_files:
           CURRENT_IP=$(curl -s http://169.254.169.254/latest/meta-data/local-ipv4)
           echo "Current node IP: $CURRENT_IP"
           
+          # Node discovery function
+          discover_mongodb_nodes() {
+            echo "Discovering MongoDB nodes..." >&2
+          
+            local max_retries=5
+            local retry_count=0
+          
+            while [ $retry_count -lt $max_retries ]; do
+              echo "Discovery attempt $((retry_count + 1))/$max_retries..." >&2
+          
+              # Get nodes by tags, sorted by NodeIndex
+              local node_ips=$(aws ec2 describe-instances \
+                --region "$REGION" \
+                --filters \
+                  "Name=tag:MongoDBCluster,Values=$CLUSTER_NAME" \
+                  "Name=instance-state-name,Values=running" \
+                --query 'Reservations[].Instances[].[PrivateIpAddress,Tags[?Key==`NodeIndex`].Value|[0]]' \
+                --output text 2>/dev/null | \
+                sort -k2 -n | \
+                cut -f1 | \
+                grep -v '^$' || echo "")
+          
+              if [ -n "$node_ips" ]; then
+                local node_count=$(echo "$node_ips" | wc -w)
+                echo "Found $node_count nodes: $node_ips" >&2
+          
+                if [ "$node_count" -ge 1 ]; then
+                  echo "$node_ips"
+                  return 0
+                fi
+              fi
+          
+              echo "Retrying in 10 seconds..." >&2
+              sleep 10
+              retry_count=$((retry_count + 1))
+            done
+          
+            echo "ERROR: Node discovery failed after $max_retries attempts" >&2
+            return 1
+          }
+          
           # PHASE 1: Start MongoDB without authentication
           echo "=== PHASE 1: Starting MongoDB without authentication ==="
+          
           cat > /etc/mongod.conf <<EOF
           storage:
             dbPath: /data/mongodb/db
+            journal:
+              enabled: true
             engine: wiredTiger
             wiredTiger:
               engineConfig:
@@ -219,6 +283,7 @@ write_files:
             destination: file
             logAppend: true
             path: /data/mongodb/logs/mongod.log
+            logRotate: reopen
           
           net:
             port: 27017
@@ -226,56 +291,69 @@ write_files:
           
           processManagement:
             timeZoneInfo: /usr/share/zoneinfo
+            fork: false
           
           replication:
             replSetName: $REPLICA_SET_NAME
           EOF
           
+          echo "Starting MongoDB service..."
           systemctl daemon-reload
           systemctl enable mongod
           systemctl start mongod
           
-          sleep 15
+          # Wait for MongoDB to start
+          echo "Waiting for MongoDB to start..."
+          sleep 20
           
+          # Check if MongoDB is running
           if ! systemctl is-active --quiet mongod; then
             echo "ERROR: MongoDB failed to start"
             systemctl status mongod
+            journalctl -u mongod --no-pager -l
             tail -n 50 /data/mongodb/logs/mongod.log
             exit 1
           fi
           
-          MONGO_CLI=$(command -v mongosh 2>/dev/null || command -v mongo)
+          echo "MongoDB started successfully"
           
-          # PHASE 2: Initialize replica set (only on primary)
+          # Determine MongoDB client command
+          if command -v mongosh >/dev/null 2>&1; then
+            MONGO_CLI="mongosh"
+          elif command -v mongo >/dev/null 2>&1; then
+            MONGO_CLI="mongo"
+          else
+            echo "ERROR: No MongoDB client found"
+            exit 1
+          fi
+          
+          echo "Using MongoDB client: $MONGO_CLI"
+          
+          # PHASE 2: Initialize replica set (primary node only)
           if [ "$NODE_INDEX" = "0" ]; then
             echo "=== PHASE 2: Initializing replica set on primary ==="
           
-            # Wait for all nodes to be discoverable and running
+            # Wait for all nodes to be discoverable
             echo "Waiting for all nodes to be ready..."
             while true; do
               if NODE_IPS=$(discover_mongodb_nodes); then
                 NODE_COUNT=$(echo "$NODE_IPS" | wc -w)
+                echo "Found $NODE_COUNT nodes, need $TOTAL_NODES"
           
-                echo "DEBUG: Found IPs: '$NODE_IPS'"
-                echo "DEBUG: Node count: $NODE_COUNT"
-          
-                if [ "$NODE_COUNT" -eq "$TOTAL_NODES" ]; then
-                  echo "All $TOTAL_NODES nodes are discoverable"
+                if [ "$NODE_COUNT" -ge "$TOTAL_NODES" ]; then
+                  echo "All nodes are discoverable"
                   break
-                else
-                  echo "Found $NODE_COUNT nodes, waiting for $TOTAL_NODES..."
                 fi
-              else
-                echo "Node discovery failed, retrying..."
               fi
+              echo "Waiting for more nodes..."
               sleep 15
             done
           
-            # Test connectivity to all nodes
-            echo "Testing connectivity to all nodes..."
+            # Test connectivity to other nodes
+            echo "Testing connectivity to other nodes..."
             for ip in $NODE_IPS; do
               if [ "$ip" != "$CURRENT_IP" ]; then
-                echo "Testing connection to $ip..."
+                echo "Testing MongoDB connectivity to $ip..."
                 while ! nc -z "$ip" 27017; do
                   echo "Waiting for MongoDB on $ip..."
                   sleep 10
@@ -284,97 +362,142 @@ write_files:
               fi
             done
           
-            # Initialize replica set with all nodes
-            echo "Initializing replica set with all nodes..."
+            # Initialize replica set
+            echo "Initializing replica set..."
             MEMBERS=""
             ID=0
+          
             for ip in $NODE_IPS; do
               if [ $ID -eq 0 ]; then
+                # Primary node gets higher priority
                 MEMBERS="{ _id: $ID, host: '$ip:27017', priority: 2 }"
               else
+                # Secondary nodes get lower priority
                 MEMBERS="$MEMBERS, { _id: $ID, host: '$ip:27017', priority: 1 }"
               fi
               ID=$((ID + 1))
             done
           
-            echo "Replica set members: $MEMBERS"
+            echo "Replica set configuration: [$MEMBERS]"
           
+            # Initialize the replica set
             $MONGO_CLI --eval "
-            rs.initiate({
-              _id: '$REPLICA_SET_NAME',
-              members: [ $MEMBERS ]
-            })
+            try {
+              rs.initiate({
+                _id: '$REPLICA_SET_NAME',
+                members: [ $MEMBERS ]
+              });
+            } catch (e) {
+              print('Error initializing replica set:', e);
+              quit(1);
+            }
             " || {
               echo "Failed to initialize replica set"
-              tail -n 20 /data/mongodb/logs/mongod.log
+              tail -n 30 /data/mongodb/logs/mongod.log
               exit 1
             }
           
-            echo "Waiting for replica set to initialize..."
+            echo "Replica set initialized, waiting for election..."
             sleep 30
           
-            # Wait for replica set to be ready
+            # Wait for replica set to stabilize
+            echo "Waiting for replica set to stabilize..."
             RETRY_COUNT=0
-            while [ $RETRY_COUNT -lt 20 ]; do
-              if $MONGO_CLI --eval "rs.status()" | grep -q "PRIMARY\|SECONDARY"; then
-                echo "Replica set is ready!"
+            while [ $RETRY_COUNT -lt 30 ]; do
+              STATUS=$($MONGO_CLI --eval "try { rs.status().ok } catch(e) { 0 }" 2>/dev/null | tail -1)
+              if [ "$STATUS" = "1" ]; then
+                echo "Replica set is stable!"
                 break
               fi
-              echo "Waiting for replica set to be ready... (attempt $((RETRY_COUNT + 1))/20)"
-              sleep 15
+              echo "Waiting for replica set... (attempt $((RETRY_COUNT + 1))/30)"
+              sleep 10
               RETRY_COUNT=$((RETRY_COUNT + 1))
             done
           
-            if [ $RETRY_COUNT -eq 20 ]; then
-              echo "ERROR: Replica set failed to initialize properly"
+            if [ $RETRY_COUNT -eq 30 ]; then
+              echo "ERROR: Replica set failed to stabilize"
               $MONGO_CLI --eval "rs.status()" || true
               exit 1
             fi
           
+            # Create admin user
             echo "Creating admin user..."
             $MONGO_CLI admin --eval "
-            db.createUser({
-              user: '$ADMIN_USERNAME',
-              pwd: '$ADMIN_PASSWORD',
-              roles: [
-                { role: 'root', db: 'admin' },
-                { role: 'clusterAdmin', db: 'admin' },
-                { role: 'userAdminAnyDatabase', db: 'admin' },
-                { role: 'dbAdminAnyDatabase', db: 'admin' },
-                { role: 'readWriteAnyDatabase', db: 'admin' }
-              ]
-            })
+            try {
+              db.createUser({
+                user: '$ADMIN_USERNAME',
+                pwd: '$ADMIN_PASSWORD',
+                roles: [
+                  { role: 'root', db: 'admin' },
+                  { role: 'clusterAdmin', db: 'admin' },
+                  { role: 'userAdminAnyDatabase', db: 'admin' },
+                  { role: 'dbAdminAnyDatabase', db: 'admin' },
+                  { role: 'readWriteAnyDatabase', db: 'admin' }
+                ]
+              });
+              print('Admin user created successfully');
+            } catch (e) {
+              print('Error creating admin user:', e);
+              quit(1);
+            }
             " || {
               echo "Failed to create admin user"
               exit 1
             }
           
+            # Signal primary is ready
             echo "Primary setup complete, signaling other nodes..."
-            # Signal that primary is ready
             aws ssm put-parameter \
               --region "$REGION" \
               --name "/$CLUSTER_NAME/mongodb/primary-ready" \
               --value "true" \
               --type "String" \
-              --overwrite || true
+              --overwrite || {
+              echo "Warning: Failed to signal primary ready via SSM"
+            }
           
           else
             echo "=== PHASE 2: Secondary node waiting for primary ==="
-            # Wait for primary to signal it's ready
-            while ! aws ssm get-parameter --region "$REGION" --name "/$CLUSTER_NAME/mongodb/primary-ready" >/dev/null 2>&1; do
-              echo "Waiting for primary node to complete setup..."
+          
+            # Wait for primary to be ready
+            echo "Waiting for primary node to complete initialization..."
+            WAIT_COUNT=0
+            while [ $WAIT_COUNT -lt 60 ]; do
+              if aws ssm get-parameter \
+                --region "$REGION" \
+                --name "/$CLUSTER_NAME/mongodb/primary-ready" \
+                >/dev/null 2>&1; then
+                echo "Primary is ready!"
+                break
+              fi
+              echo "Waiting for primary... ($WAIT_COUNT/60)"
               sleep 30
+              WAIT_COUNT=$((WAIT_COUNT + 1))
             done
           
-            echo "Primary is ready, continuing with secondary setup..."
-            sleep 60
+            if [ $WAIT_COUNT -eq 60 ]; then
+              echo "WARNING: Primary readiness timeout, continuing anyway..."
+            fi
+          
+            # Additional wait for replica set to stabilize
+            echo "Waiting for replica set to stabilize..."
+            sleep 90
           fi
           
-          # PHASE 3: Enable authentication on all nodes
+          # PHASE 3: Enable authentication
           echo "=== PHASE 3: Enabling authentication ==="
+          
+          # Stop MongoDB
+          echo "Stopping MongoDB to enable authentication..."
+          systemctl stop mongod
+          sleep 10
+          
+          # Update configuration with authentication
           cat > /etc/mongod.conf <<EOF
           storage:
             dbPath: /data/mongodb/db
+            journal:
+              enabled: true
             engine: wiredTiger
             wiredTiger:
               engineConfig:
@@ -384,6 +507,7 @@ write_files:
             destination: file
             logAppend: true
             path: /data/mongodb/logs/mongod.log
+            logRotate: reopen
           
           net:
             port: 27017
@@ -391,6 +515,7 @@ write_files:
           
           processManagement:
             timeZoneInfo: /usr/share/zoneinfo
+            fork: false
           
           replication:
             replSetName: $REPLICA_SET_NAME
@@ -399,43 +524,114 @@ write_files:
             authorization: enabled
           EOF
           
+          # Add keyfile if provided
           if [ -n "$KEYFILE_CONTENT" ]; then
             echo "  keyFile: /etc/mongodb-keyfile" >> /etc/mongod.conf
           fi
           
-          systemctl restart mongod
-          sleep 15
+          echo "Restarting MongoDB with authentication..."
+          systemctl start mongod
+          sleep 20
           
-          # Test authentication
+          # Verify authentication works
           if [ "$NODE_INDEX" = "0" ]; then
             echo "Testing authentication on primary..."
             RETRY_COUNT=0
-            while [ $RETRY_COUNT -lt 10 ]; do
-              if $MONGO_CLI -u "$ADMIN_USERNAME" -p "$ADMIN_PASSWORD" --authenticationDatabase admin --eval "print('Authentication successful!')"; then
+            while [ $RETRY_COUNT -lt 15 ]; do
+              if $MONGO_CLI -u "$ADMIN_USERNAME" -p "$ADMIN_PASSWORD" \
+                --authenticationDatabase admin \
+                --eval "print('Authentication successful!')"; then
                 echo "Authentication test passed!"
                 break
               fi
-              echo "Authentication test failed, retrying... (attempt $((RETRY_COUNT + 1))/10)"
+              echo "Authentication test failed, retrying... ($((RETRY_COUNT + 1))/15)"
               sleep 10
               RETRY_COUNT=$((RETRY_COUNT + 1))
             done
           
-            if [ $RETRY_COUNT -eq 10 ]; then
-              echo "ERROR: Authentication test failed after 10 attempts"
-              tail -n 20 /data/mongodb/logs/mongod.log
+            if [ $RETRY_COUNT -eq 15 ]; then
+              echo "ERROR: Authentication test failed"
+              tail -n 30 /data/mongodb/logs/mongod.log
               exit 1
             fi
           
-            # Final replica set status check
+            # Final status check
             echo "Final replica set status:"
-            $MONGO_CLI -u "$ADMIN_USERNAME" -p "$ADMIN_PASSWORD" --authenticationDatabase admin --eval "rs.status()" || true
+            $MONGO_CLI -u "$ADMIN_USERNAME" -p "$ADMIN_PASSWORD" \
+              --authenticationDatabase admin \
+              --eval "rs.status()" || true
           fi
           
-          echo "=== MongoDB setup completed successfully! ==="
+          # Configure CloudWatch monitoring
+          if [ "$ENABLE_MONITORING" = "true" ]; then
+            echo "Configuring CloudWatch monitoring..."
+          
+            cat > /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json <<EOF
+          {
+            "agent": {
+              "metrics_collection_interval": 60,
+              "run_as_user": "root"
+            },
+            "logs": {
+              "logs_collected": {
+                "files": {
+                  "collect_list": [
+                    {
+                      "file_path": "/data/mongodb/logs/mongod.log",
+                      "log_group_name": "/aws/ec2/mongodb/$CLUSTER_NAME",
+                      "log_stream_name": "{instance_id}-mongodb-$NODE_INDEX",
+                      "retention_in_days": 7
+                    }
+                  ]
+                }
+              }
+            },
+            "metrics": {
+              "namespace": "MongoDB/$CLUSTER_NAME",
+              "metrics_collected": {
+                "disk": {
+                  "measurement": ["used_percent"],
+                  "metrics_collection_interval": 60,
+                  "resources": ["/data/mongodb"]
+                },
+                "mem": {
+                  "measurement": ["mem_used_percent"],
+                  "metrics_collection_interval": 60
+                },
+                "cpu": {
+                  "measurement": ["cpu_usage_idle", "cpu_usage_iowait"],
+                  "metrics_collection_interval": 60
+                }
+              }
+            }
+          }
+          EOF
+          
+            # Start CloudWatch agent
+            /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl \
+              -a fetch-config \
+              -m ec2 \
+              -s \
+              -c file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json
+          fi
+          
+          echo "=== MongoDB 8.0 setup completed successfully! ==="
+          echo "Node $NODE_INDEX is ready"
+          echo "Service status:"
           systemctl status mongod --no-pager
+          echo "MongoDB is listening on:"
           ss -tln | grep 27017
+          
+          # Final validation
+          echo "Final validation..."
+          if ! systemctl is-active --quiet mongod; then
+            echo "ERROR: MongoDB is not running"
+            exit 1
+          fi
+          
+          echo "✅ MongoDB setup completed successfully!"
 
 runcmd:
     - bash /opt/mongodb-setup.sh
 
-final_message: "✅ MongoDB installation and configuration completed!"
+final_message: "✅ MongoDB 8.0 installation and configuration completed!"

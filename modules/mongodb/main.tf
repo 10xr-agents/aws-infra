@@ -1,11 +1,18 @@
-# modules/mongodb/main.tf - FIXED VERSION
+# modules/mongodb/main.tf - UPDATED VERSION
 
 /**
- * # MongoDB Cluster Module - Fixed Circular Dependency
+ * # MongoDB 8.0 Cluster Module - Updated
  *
- * This module creates a production-grade, self-hosted MongoDB replica set on AWS EC2.
+ * This module creates a production-grade, self-hosted MongoDB 8.0 replica set on AWS EC2.
  * It provisions EC2 instances across multiple availability zones, attaches EBS volumes,
  * configures security groups, and sets up MongoDB with automatic replica set initialization.
+ *
+ * Key improvements:
+ * - Fixed MongoDB 8.0 installation for Ubuntu 22.04
+ * - Improved device detection for both NVMe and traditional EBS volumes
+ * - Better error handling and logging
+ * - Enhanced authentication setup
+ * - Improved node discovery and coordination
  */
 
 locals {
@@ -16,6 +23,7 @@ locals {
       Module         = "mongodb"
       ReplicaSet     = local.replica_set_name
       MongoDBVersion = var.mongodb_version
+      Environment    = var.environment
     }
   )
 }
@@ -46,7 +54,7 @@ resource "aws_ssm_parameter" "mongodb_private_key" {
   tags  = local.common_tags
 }
 
-# Data source for latest Ubuntu AMI
+# Data source for latest Ubuntu 22.04 AMI
 data "aws_ami" "ubuntu" {
   count       = var.ami_id == "" ? 1 : 0
   most_recent = true
@@ -61,6 +69,11 @@ data "aws_ami" "ubuntu" {
     name   = "virtualization-type"
     values = ["hvm"]
   }
+
+  filter {
+    name   = "state"
+    values = ["available"]
+  }
 }
 
 # Security Group for MongoDB
@@ -68,7 +81,7 @@ resource "aws_security_group" "mongodb" {
   count = var.create_security_group ? 1 : 0
 
   name        = "${var.cluster_name}-mongodb-sg"
-  description = "Security group for MongoDB replica set"
+  description = "Security group for MongoDB 8.0 replica set"
   vpc_id      = var.vpc_id
 
   # MongoDB port
@@ -165,15 +178,21 @@ resource "aws_iam_role_policy" "mongodb_coordination" {
           "ec2:DescribeSnapshots",
           "ec2:DescribeVolumes",
           "ec2:DescribeInstances",
+          "ec2:DescribeTags",
+          "ec2:ModifyInstanceAttribute",
           # SSM for coordination
           "ssm:GetParameter",
           "ssm:PutParameter",
           "ssm:DeleteParameter",
           "ssm:GetParameters",
           "ssm:GetParametersByPath",
-          # EC2 describe for node discovery
-          "ec2:DescribeInstances",
-          "ec2:DescribeTags"
+          # CloudWatch for monitoring
+          "cloudwatch:PutMetricData",
+          "cloudwatch:GetMetricStatistics",
+          "cloudwatch:ListMetrics",
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents"
         ]
         Resource = "*"
       }
@@ -195,13 +214,14 @@ resource "aws_ebs_volume" "mongodb_data" {
   type              = var.data_volume_type
   iops              = var.data_volume_type == "gp3" || var.data_volume_type == "io1" || var.data_volume_type == "io2" ? var.data_volume_iops : null
   throughput        = var.data_volume_type == "gp3" ? var.data_volume_throughput : null
-  encrypted         = true
+  encrypted         = var.enable_encryption_at_rest
 
   tags = merge(
     local.common_tags,
     {
       Name      = "${var.cluster_name}-mongodb-data-${count.index}"
       NodeIndex = count.index
+      Purpose   = "MongoDB Data"
     }
   )
 }
@@ -210,6 +230,16 @@ resource "aws_ebs_volume" "mongodb_data" {
 data "aws_subnet" "selected" {
   count = var.replica_count
   id    = element(var.subnet_ids, count.index)
+}
+
+# CloudWatch Log Group for MongoDB logs
+resource "aws_cloudwatch_log_group" "mongodb" {
+  count = var.enable_monitoring ? 1 : 0
+
+  name              = "/aws/ec2/mongodb/${var.cluster_name}"
+  retention_in_days = var.log_retention_days
+
+  tags = local.common_tags
 }
 
 # EC2 Instances for MongoDB
@@ -231,11 +261,18 @@ resource "aws_instance" "mongodb" {
   root_block_device {
     volume_type           = "gp3"
     volume_size           = var.root_volume_size
-    encrypted             = true
+    encrypted             = var.enable_encryption_at_rest
     delete_on_termination = true
+
+    tags = merge(
+      local.common_tags,
+      {
+        Name = "${var.cluster_name}-mongodb-root-${count.index}"
+      }
+    )
   }
 
-  # FIXED: User data WITHOUT circular dependency
+  # User data with improved cloud-init script
   user_data_base64 = base64gzip(templatefile("${path.module}/user-data-cloud-init.yml", {
     mongodb_version         = var.mongodb_version
     replica_set_name        = local.replica_set_name
@@ -245,36 +282,41 @@ resource "aws_instance" "mongodb" {
     mongodb_admin_password  = var.mongodb_admin_password
     mongodb_keyfile_content = var.mongodb_keyfile_content
     enable_monitoring       = var.enable_monitoring
-    data_volume_device      = var.data_volume_device
     cluster_name            = var.cluster_name
     vpc_id                  = var.vpc_id
-    # REMOVED: all_node_ips to break circular dependency
-    # Nodes will discover each other using EC2 tags
   }))
 
   metadata_options {
     http_endpoint               = "enabled"
     http_tokens                 = "required"
-    http_put_response_hop_limit = 1
+    http_put_response_hop_limit = 2
+    instance_metadata_tags      = "enabled"
   }
+
+  monitoring = var.enable_monitoring
 
   tags = merge(
     local.common_tags,
     {
-      Name          = "${var.cluster_name}-mongodb-${count.index}"
-      NodeIndex     = count.index
+      Name           = "${var.cluster_name}-mongodb-${count.index}"
+      NodeIndex      = count.index
       MongoDBCluster = var.cluster_name
-      MongoDBRole   = count.index == 0 ? "primary" : "secondary"
+      MongoDBRole    = count.index == 0 ? "primary" : "secondary"
+      BackupEnabled  = var.backup_enabled ? "true" : "false"
     }
   )
 
   lifecycle {
-    ignore_changes = [ami]
+    ignore_changes = [
+      ami,
+      user_data
+    ]
   }
 
   depends_on = [
     aws_key_pair.mongodb_key,
-    aws_ebs_volume.mongodb_data
+    aws_ebs_volume.mongodb_data,
+    aws_cloudwatch_log_group.mongodb
   ]
 }
 
@@ -286,17 +328,15 @@ resource "aws_volume_attachment" "mongodb_data" {
   volume_id   = aws_ebs_volume.mongodb_data[count.index].id
   instance_id = aws_instance.mongodb[count.index].id
 
-  depends_on = [aws_instance.mongodb, aws_ebs_volume.mongodb_data]
-}
+  # Prevent attachment during instance replacement
+  lifecycle {
+    ignore_changes = [instance_id]
+  }
 
-# CloudWatch Log Group for MongoDB logs
-resource "aws_cloudwatch_log_group" "mongodb" {
-  count = var.enable_monitoring ? 1 : 0
-
-  name              = "/aws/ec2/mongodb/${var.cluster_name}"
-  retention_in_days = var.log_retention_days
-
-  tags = local.common_tags
+  depends_on = [
+    aws_instance.mongodb,
+    aws_ebs_volume.mongodb_data
+  ]
 }
 
 # Route53 Private Hosted Zone (optional)
@@ -326,6 +366,8 @@ resource "aws_route53_record" "mongodb_nodes" {
   type    = "A"
   ttl     = "300"
   records = [aws_instance.mongodb[count.index].private_ip]
+
+  depends_on = [aws_instance.mongodb]
 }
 
 # Multi-value DNS record for the replica set
@@ -339,12 +381,14 @@ resource "aws_route53_record" "mongodb_rs" {
   type    = "A"
   ttl     = 60
 
-  set_identifier                   = each.key
+  set_identifier                   = tostring(each.key)
   multivalue_answer_routing_policy = true
   records                          = [each.value]
+
+  depends_on = [aws_instance.mongodb]
 }
 
-# SSM Parameter for connection string (calculated after instances are created)
+# SSM Parameter for connection string
 resource "aws_ssm_parameter" "mongodb_connection_string" {
   count = var.store_connection_string_in_ssm ? 1 : 0
 
@@ -352,40 +396,133 @@ resource "aws_ssm_parameter" "mongodb_connection_string" {
   type  = "SecureString"
   value = local.connection_string
 
-  tags = local.common_tags
+  description = "MongoDB connection string for ${var.cluster_name}"
+  tags        = local.common_tags
 
-  # This depends on instances being created
   depends_on = [aws_instance.mongodb]
 }
 
-# SSM Parameter to signal when setup is complete
-resource "aws_ssm_parameter" "mongodb_setup_complete" {
-  name  = "/${var.cluster_name}/mongodb/setup-complete"
-  type  = "String"
-  value = "false"
+# SSM Parameter for SRV connection string
+resource "aws_ssm_parameter" "mongodb_srv_connection_string" {
+  count = var.store_connection_string_in_ssm && var.create_dns_records ? 1 : 0
 
-  tags = local.common_tags
+  name  = "/${var.environment}/${var.cluster_name}/mongodb/srv-connection-string"
+  type  = "SecureString"
+  value = local.srv_connection_string
 
-  lifecycle {
-    ignore_changes = [value]
-  }
+  description = "MongoDB SRV connection string for ${var.cluster_name}"
+  tags        = local.common_tags
+
+  depends_on = [
+    aws_instance.mongodb,
+    aws_route53_zone.mongodb
+  ]
 }
 
-# Store node discovery information in SSM
-resource "aws_ssm_parameter" "mongodb_cluster_info" {
-  name = "/${var.cluster_name}/mongodb/cluster-info"
+# Store cluster configuration in SSM
+resource "aws_ssm_parameter" "mongodb_cluster_config" {
+  name = "/${var.cluster_name}/mongodb/cluster-config"
   type = "String"
   value = jsonencode({
-    cluster_name  = var.cluster_name
-    replica_count = var.replica_count
-    vpc_id        = var.vpc_id
+    cluster_name         = var.cluster_name
+    replica_set_name     = local.replica_set_name
+    replica_count        = var.replica_count
+    mongodb_version      = var.mongodb_version
+    vpc_id               = var.vpc_id
+    subnets              = var.subnet_ids
+    security_group_id    = var.create_security_group ? aws_security_group.mongodb[0].id : null
+    private_domain       = var.create_dns_records ? aws_route53_zone.mongodb[0].name : null
+    backup_enabled       = var.backup_enabled
+    monitoring_enabled   = var.enable_monitoring
+    created_at           = timestamp()
+  })
+
+  description = "MongoDB cluster configuration for ${var.cluster_name}"
+  tags        = local.common_tags
+}
+
+# Backup configuration using AWS Backup (optional)
+resource "aws_backup_vault" "mongodb" {
+  count = var.backup_enabled ? 1 : 0
+
+  name        = "${var.cluster_name}-mongodb-backup-vault"
+  kms_key_arn = var.enable_encryption_at_rest ? null : null
+
+  tags = local.common_tags
+}
+
+resource "aws_backup_plan" "mongodb" {
+  count = var.backup_enabled ? 1 : 0
+
+  name = "${var.cluster_name}-mongodb-backup-plan"
+
+  rule {
+    rule_name         = "mongodb_backup_rule"
+    target_vault_name = aws_backup_vault.mongodb[0].name
+    schedule          = var.backup_schedule
+
+    lifecycle {
+      delete_after = var.backup_retention_days
+    }
+
+    recovery_point_tags = merge(
+      local.common_tags,
+      {
+        BackupType = "MongoDB"
+      }
+    )
+  }
+
+  tags = local.common_tags
+}
+
+# Backup selection for MongoDB volumes
+resource "aws_backup_selection" "mongodb" {
+  count = var.backup_enabled ? 1 : 0
+
+  iam_role_arn = aws_iam_role.backup[0].arn
+  name         = "${var.cluster_name}-mongodb-backup-selection"
+  plan_id      = aws_backup_plan.mongodb[0].id
+
+  resources = aws_ebs_volume.mongodb_data[*].arn
+
+  depends_on = [
+    aws_ebs_volume.mongodb_data,
+    aws_backup_plan.mongodb
+  ]
+}
+
+# IAM role for AWS Backup
+resource "aws_iam_role" "backup" {
+  count = var.backup_enabled ? 1 : 0
+
+  name = "${var.cluster_name}-mongodb-backup-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "backup.amazonaws.com"
+        }
+      }
+    ]
   })
 
   tags = local.common_tags
 }
 
+resource "aws_iam_role_policy_attachment" "backup" {
+  count = var.backup_enabled ? 1 : 0
+
+  role       = aws_iam_role.backup[0].name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSBackupServiceRolePolicyForBackup"
+}
+
+# Local values for connection strings
 locals {
-  # Connection strings (calculated after instances exist)
   connection_string = format(
     "mongodb://%s:%s@%s/%s?replicaSet=%s&authSource=admin",
     var.mongodb_admin_username,
@@ -399,7 +536,7 @@ locals {
     "mongodb+srv://%s:%s@%s/%s?replicaSet=%s&authSource=admin",
     var.mongodb_admin_username,
     var.mongodb_admin_password,
-      var.private_domain != "" ? var.private_domain : "${var.cluster_name}.mongodb.local",
+    replace(aws_route53_zone.mongodb[0].name, "/\\.$/", ""),
     var.default_database,
     local.replica_set_name
   ) : ""
