@@ -245,6 +245,10 @@ data "aws_availability_zones" "available" {
   state = "available"
 }
 
+data "aws_vpc" "main" {
+  id = var.vpc_id
+}
+
 ################################################################################
 # ECS Cluster
 ################################################################################
@@ -401,88 +405,6 @@ resource "aws_iam_role_policy_attachment" "additional_task_policies" {
 
   role       = each.value.role
   policy_arn = each.value.policy_arn
-}
-
-################################################################################
-# Security Groups
-################################################################################
-
-resource "aws_security_group" "ecs_service" {
-  for_each = local.services_config
-
-  name        = each.value.security_group_name
-  description = "Security group for ECS service ${each.key}"
-  vpc_id      = var.vpc_id
-
-  # Ingress from ALB (if ALB is enabled)
-  dynamic "ingress" {
-    for_each = (var.create_alb || var.alb_security_group_id != "") && lookup(each.value, "enable_load_balancer", true) ? [1] : []
-    content {
-      from_port       = each.value.port
-      to_port         = each.value.port
-      protocol        = "tcp"
-      security_groups = var.create_alb ? [aws_security_group.alb[0].id] : [var.alb_security_group_id]
-    }
-  }
-
-  # Ingress for service-to-service communication within VPC
-  ingress {
-    description = "Service to service communication"
-    from_port   = 0
-    to_port     = 65535
-    protocol    = "tcp"
-    cidr_blocks = [data.aws_vpc.main.cidr_block]
-  }
-
-  # Ingress from other ECS services (for service discovery)
-  dynamic "ingress" {
-    for_each = var.enable_service_discovery ? [1] : []
-    content {
-      description = "Service discovery communication"
-      from_port   = each.value.port
-      to_port     = each.value.port
-      protocol    = "tcp"
-      self        = true
-    }
-  }
-
-  # Egress to internet
-  egress {
-    description = "All outbound traffic"
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  # Egress to Redis (if Redis security group is provided)
-  dynamic "egress" {
-    for_each = var.redis_security_group_id != "" ? [1] : []
-    content {
-      description     = "To Redis cluster"
-      from_port       = 6379
-      to_port         = 6379
-      protocol        = "tcp"
-      security_groups = [var.redis_security_group_id]
-    }
-  }
-
-  # Egress to MongoDB (if MongoDB security group is provided)
-  dynamic "egress" {
-    for_each = var.mongodb_security_group_id != "" ? [1] : []
-    content {
-      description     = "To MongoDB cluster"
-      from_port       = 27017
-      to_port         = 27017
-      protocol        = "tcp"
-      security_groups = [var.mongodb_security_group_id]
-    }
-  }
-
-  tags = merge(local.common_tags, {
-    Name    = each.value.security_group_name
-    Service = each.key
-  })
 }
 
 ################################################################################
@@ -643,7 +565,8 @@ resource "aws_ecs_service" "service" {
     aws_ecs_cluster_capacity_providers.main,
     aws_lb_target_group.service,
     aws_lb_listener.http,
-    aws_lb_listener.https
+    aws_lb_listener.https,
+    aws_security_group_rule.ecs_service_from_alb
   ]
 
   tags = merge(local.common_tags, { Service = each.key })
