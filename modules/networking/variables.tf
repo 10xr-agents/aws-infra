@@ -77,18 +77,6 @@ variable "nlb_connection_logs_enabled" {
 # Target Groups Configuration
 ################################################################################
 
-variable "create_http_target_group" {
-  description = "Whether to create HTTP target group"
-  type        = bool
-  default     = true
-}
-
-variable "create_https_target_group" {
-  description = "Whether to create HTTPS target group"
-  type        = bool
-  default     = false
-}
-
 variable "http_port" {
   description = "HTTP port for target group"
   type        = number
@@ -203,33 +191,9 @@ variable "alb_arn" {
   type        = string
 }
 
-variable "default_http_target_group_arn" {
-  description = "Default HTTP target group ARN (if not creating one)"
-  type        = string
-  default     = ""
-}
-
-variable "default_https_target_group_arn" {
-  description = "Default HTTPS target group ARN (if not creating one)"
-  type        = string
-  default     = ""
-}
-
 ################################################################################
 # Listener Configuration
 ################################################################################
-
-variable "create_http_listener" {
-  description = "Whether to create HTTP listener"
-  type        = bool
-  default     = true
-}
-
-variable "create_https_listener" {
-  description = "Whether to create HTTPS listener"
-  type        = bool
-  default     = true
-}
 
 variable "https_listener_protocol" {
   description = "Protocol for HTTPS listener (TCP or TLS)"

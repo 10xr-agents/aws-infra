@@ -264,8 +264,6 @@ module "networking" {
   nlb_enable_cross_zone_load_balancing = var.nlb_enable_cross_zone_load_balancing
 
   # Target Group Configuration
-  create_http_target_group  = var.create_http_target_group
-  create_https_target_group = local.acm_certificate_arn != ""
   http_port                 = var.http_port
   https_port                = var.https_port
   target_type = var.target_type

@@ -95,7 +95,7 @@ output "s3_buckets" {
 
 output "http_target_group_arn" {
   description = "ARN of the HTTP target group"
-  value       = var.create_nlb && var.create_http_target_group ? aws_lb_target_group.alb_targets_http[0].arn : null
+  value       = var.create_nlb ? aws_lb_target_group.alb_targets_http[0].arn : null
 }
 
 output "https_target_group_arn" {
@@ -105,7 +105,7 @@ output "https_target_group_arn" {
 
 output "http_target_group_name" {
   description = "Name of the HTTP target group"
-  value       = var.create_nlb && var.create_http_target_group ? aws_lb_target_group.alb_targets_http[0].name : null
+  value       = var.create_nlb ? aws_lb_target_group.alb_targets_http[0].name : null
 }
 
 output "https_target_group_name" {
@@ -130,7 +130,7 @@ output "custom_target_group_names" {
 output "target_groups" {
   description = "Map of all target groups"
   value = merge(
-      var.create_nlb && var.create_http_target_group ? {
+      var.create_nlb ? {
       http = {
         arn  = aws_lb_target_group.alb_targets_http[0].arn
         name = aws_lb_target_group.alb_targets_http[0].name
@@ -160,17 +160,17 @@ output "target_groups" {
 
 output "http_listener_arn" {
   description = "ARN of the HTTP listener"
-  value       = var.create_nlb && var.create_http_listener ? aws_lb_listener.public_nlb_http[0].arn : null
+  value       = var.create_nlb ? aws_lb_listener.public_nlb_http[0].arn : null
 }
 
 output "https_tcp_listener_arn" {
   description = "ARN of the HTTPS TCP listener"
-  value       = var.create_nlb && var.create_https_listener && var.https_listener_protocol == "TCP" ? aws_lb_listener.public_nlb_https_tcp[0].arn : null
+  value       = var.create_nlb && var.https_listener_protocol == "TCP" ? aws_lb_listener.public_nlb_https_tcp[0].arn : null
 }
 
 output "https_tls_listener_arn" {
   description = "ARN of the HTTPS TLS listener"
-  value       = var.create_nlb && var.create_https_listener && var.https_listener_protocol == "TLS" ? aws_lb_listener.public_nlb_https_tls[0].arn : null
+  value       = var.create_nlb && var.https_listener_protocol == "TLS" ? aws_lb_listener.public_nlb_https_tls[0].arn : null
 }
 
 output "custom_listener_arns" {
@@ -183,21 +183,21 @@ output "custom_listener_arns" {
 output "listeners" {
   description = "Map of all listeners"
   value = merge(
-      var.create_nlb && var.create_http_listener ? {
+      var.create_nlb ? {
       http = {
         arn      = aws_lb_listener.public_nlb_http[0].arn
         port     = aws_lb_listener.public_nlb_http[0].port
         protocol = aws_lb_listener.public_nlb_http[0].protocol
       }
     } : {},
-      var.create_nlb && var.create_https_listener && var.https_listener_protocol == "TCP" ? {
+      var.create_nlb && var.https_listener_protocol == "TCP" ? {
       https_tcp = {
         arn      = aws_lb_listener.public_nlb_https_tcp[0].arn
         port     = aws_lb_listener.public_nlb_https_tcp[0].port
         protocol = aws_lb_listener.public_nlb_https_tcp[0].protocol
       }
     } : {},
-      var.create_nlb && var.create_https_listener && var.https_listener_protocol == "TLS" ? {
+      var.create_nlb && var.https_listener_protocol == "TLS" ? {
       https_tls = {
         arn      = aws_lb_listener.public_nlb_https_tls[0].arn
         port     = aws_lb_listener.public_nlb_https_tls[0].port
@@ -266,8 +266,8 @@ output "nlb_connection_info" {
     dns_name = aws_lb.public_nlb[0].dns_name
     zone_id  = aws_lb.public_nlb[0].zone_id
     arn      = aws_lb.public_nlb[0].arn
-    http_url = var.create_http_listener ? "http://${aws_lb.public_nlb[0].dns_name}" : null
-    https_url = var.create_https_listener ? "https://${aws_lb.public_nlb[0].dns_name}" : null
+    http_url = "http://${aws_lb.public_nlb[0].dns_name}"
+    https_url = "https://${aws_lb.public_nlb[0].dns_name}"
     subnets  = aws_lb.public_nlb[0].subnets
     vpc_id   = aws_lb.public_nlb[0].vpc_id
     internal = aws_lb.public_nlb[0].internal
@@ -288,10 +288,10 @@ output "nlb_configuration" {
     deletion_protection_enabled      = aws_lb.public_nlb[0].enable_deletion_protection
     access_logs_enabled              = var.nlb_access_logs_enabled
     connection_logs_enabled          = var.nlb_connection_logs_enabled
-    http_listener_enabled            = var.create_http_listener
-    https_listener_enabled           = var.create_https_listener
+    http_listener_enabled            = true
+    https_listener_enabled           = true
     https_listener_protocol          = var.https_listener_protocol
-    target_groups_created            = length(aws_lb_target_group.custom) + (var.create_http_target_group ? 1 : 0) + (var.create_https_target_group ? 1 : 0)
+    target_groups_created            = length(aws_lb_target_group.custom) + 2
     custom_listeners_created         = length(aws_lb_listener.custom)
     security_groups_created          = var.create_security_groups
     route53_record_created           = var.create_route53_record

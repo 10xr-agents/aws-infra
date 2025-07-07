@@ -76,7 +76,7 @@ resource "aws_lb" "public_nlb" {
 
 # HTTP Target Group
 resource "aws_lb_target_group" "alb_targets_http" {
-  count = var.create_nlb && var.create_http_target_group ? 1 : 0
+  count = var.create_nlb ? 1 : 0
 
   name        = "${local.name_prefix}-alb-tg-http"
   port        = var.http_port
@@ -175,7 +175,7 @@ resource "aws_lb_target_group" "custom" {
 
 # HTTP Target Group Attachment
 resource "aws_lb_target_group_attachment" "alb_target_http" {
-  count = var.create_nlb && var.create_http_target_group ? 1 : 0
+  count = var.create_nlb ? 1 : 0
 
   target_group_arn = aws_lb_target_group.alb_targets_http[0].arn
   target_id        = var.alb_arn
@@ -209,7 +209,7 @@ resource "aws_lb_target_group_attachment" "custom" {
 
 # HTTP Listener
 resource "aws_lb_listener" "public_nlb_http" {
-  count = var.create_nlb && var.create_http_listener ? 1 : 0
+  count = var.create_nlb ? 1 : 0
 
   load_balancer_arn = aws_lb.public_nlb[0].arn
   port              = var.http_port
@@ -217,7 +217,7 @@ resource "aws_lb_listener" "public_nlb_http" {
 
   default_action {
     type             = "forward"
-    target_group_arn = var.create_http_target_group ? aws_lb_target_group.alb_targets_http[0].arn : var.default_http_target_group_arn
+    target_group_arn = aws_lb_target_group.alb_targets_http[0].arn
   }
 
   tags = merge(local.common_tags, {
@@ -228,7 +228,7 @@ resource "aws_lb_listener" "public_nlb_http" {
 
 # HTTPS Listener (TCP)
 resource "aws_lb_listener" "public_nlb_https_tcp" {
-  count = var.create_nlb && var.create_https_listener && var.https_listener_protocol == "TCP" ? 1 : 0
+  count = var.create_nlb && var.https_listener_protocol == "TCP" ? 1 : 0
 
   load_balancer_arn = aws_lb.public_nlb[0].arn
   port              = var.https_port
@@ -236,7 +236,7 @@ resource "aws_lb_listener" "public_nlb_https_tcp" {
 
   default_action {
     type             = "forward"
-    target_group_arn = var.create_https_target_group ? aws_lb_target_group.alb_targets_https[0].arn : var.default_https_target_group_arn
+    target_group_arn = aws_lb_target_group.alb_targets_https[0].arn
   }
 
   tags = merge(local.common_tags, {
@@ -247,7 +247,7 @@ resource "aws_lb_listener" "public_nlb_https_tcp" {
 
 # HTTPS Listener (TLS)
 resource "aws_lb_listener" "public_nlb_https_tls" {
-  count = var.create_nlb && var.create_https_listener && var.https_listener_protocol == "TLS" ? 1 : 0
+  count = var.create_nlb && var.https_listener_protocol == "TLS" ? 1 : 0
 
   load_balancer_arn = aws_lb.public_nlb[0].arn
   port              = var.https_port
@@ -257,7 +257,7 @@ resource "aws_lb_listener" "public_nlb_https_tls" {
 
   default_action {
     type             = "forward"
-    target_group_arn = var.create_https_target_group ? aws_lb_target_group.alb_targets_https[0].arn : var.default_https_target_group_arn
+    target_group_arn = aws_lb_target_group.alb_targets_https[0].arn
   }
 
   tags = merge(local.common_tags, {
@@ -301,27 +301,21 @@ resource "aws_security_group" "nlb" {
   vpc_id      = var.vpc_id
 
   # HTTP ingress
-  dynamic "ingress" {
-    for_each = var.create_http_listener ? [1] : []
-    content {
-      description = "HTTP"
-      from_port   = var.http_port
-      to_port     = var.http_port
-      protocol    = "tcp"
-      cidr_blocks = var.allowed_cidr_blocks
-    }
+  ingress {
+    description = "HTTP"
+    from_port   = var.http_port
+    to_port     = var.http_port
+    protocol    = "tcp"
+    cidr_blocks = var.allowed_cidr_blocks
   }
 
   # HTTPS ingress
-  dynamic "ingress" {
-    for_each = var.create_https_listener ? [1] : []
-    content {
-      description = "HTTPS"
-      from_port   = var.https_port
-      to_port     = var.https_port
-      protocol    = "tcp"
-      cidr_blocks = var.allowed_cidr_blocks
-    }
+  ingress {
+    description = "HTTPS"
+    from_port   = var.https_port
+    to_port     = var.https_port
+    protocol    = "tcp"
+    cidr_blocks = var.allowed_cidr_blocks
   }
 
   # Custom port ingress
