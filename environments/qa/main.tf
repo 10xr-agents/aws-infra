@@ -442,7 +442,6 @@ resource "aws_security_group_rule" "mongodb_external_access" {
 }
 
 resource "aws_lb_target_group_attachment" "mongodb_targets" {
-
   target_group_arn = module.networking.custom_target_group_arns.mongodb
   target_id        = module.mongodb.primary_ip_address
   port             = 27017
