@@ -232,6 +232,30 @@ module "networking" {
   # Target Configuration
   alb_arn = module.ecs.alb_arn
 
+  custom_target_groups = {
+    mongodb = {
+      port        = 27017
+      protocol    = "TCP"
+      target_type = "ip"
+      health_check = {
+        enabled             = true
+        healthy_threshold   = 2
+        interval            = 30
+        port                = "27017"
+        protocol            = "TCP"
+        timeout             = 6
+        unhealthy_threshold = 2
+      }
+    }
+  }
+
+  custom_listeners = {
+    mongodb = {
+      port     = 27017
+      protocol = "TCP"
+    }
+  }
+
   # Health Check Configuration
   health_check_enabled             = var.health_check_enabled
   health_check_healthy_threshold   = var.health_check_healthy_threshold
@@ -403,4 +427,14 @@ resource "aws_security_group_rule" "mongodb_from_ecs" {
   security_group_id        = module.mongodb.security_group_id
 
   depends_on = [module.ecs, module.mongodb]
+}
+
+resource "aws_lb_target_group_attachment" "mongodb_targets" {
+  count = var.mongodb_replica_count
+
+  target_group_arn = module.networking.custom_target_group_arns.mongodb
+  target_id        = module.mongodb.instance_private_ips[count.index]
+  port             = 27017
+
+  depends_on = [module.networking, module.mongodb]
 }
