@@ -429,6 +429,18 @@ resource "aws_security_group_rule" "mongodb_from_ecs" {
   depends_on = [module.ecs, module.mongodb]
 }
 
+resource "aws_security_group_rule" "mongodb_external_access" {
+  type              = "ingress"
+  from_port         = 27017
+  to_port           = 27017
+  protocol          = "tcp"
+  cidr_blocks       = ["0.0.0.0/0"]  # Allow from anywhere - adjust as needed
+  security_group_id = module.mongodb.security_group_id
+  description       = "Allow external access to MongoDB via NLB"
+
+  depends_on = [module.mongodb]
+}
+
 resource "aws_lb_target_group_attachment" "mongodb_targets" {
   count = var.mongodb_replica_count
 
