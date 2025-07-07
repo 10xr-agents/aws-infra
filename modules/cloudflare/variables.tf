@@ -42,18 +42,6 @@ variable "ttl" {
   default     = 300
 }
 
-variable "create_public_mongodb_dns" {
-  description = "Whether to create public DNS records for MongoDB"
-  type        = bool
-  default     = false
-}
-
-variable "mongo_instance_private_ips" {
-  description = "Private IP addresses of the MongoDB instances"
-  type = list(string)
-  default = []
-}
-
 ################################################################################
 # Application DNS Records
 ################################################################################

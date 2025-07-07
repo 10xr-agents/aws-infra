@@ -140,6 +140,11 @@ module "mongodb" {
   create_dns_records = var.mongodb_create_dns_records
   private_domain = var.mongodb_private_domain
 
+  # Public DNS configuration
+  create_public_dns_records = var.mongodb_create_public_dns_records
+  public_domain             = var.mongodb_public_domain
+  use_existing_public_zone_id = var.mongodb_use_existing_public_zone_id
+
   # Backup configuration
   backup_enabled  = var.mongodb_backup_enabled
   backup_schedule = var.mongodb_backup_schedule
@@ -344,16 +349,14 @@ module "cloudflare" {
   cloudflare_zone_id = var.cloudflare_zone_id
 
   # DNS Configuration
-  target_dns_name = var.create_global_accelerator ? module.global_accelerator[0].accelerator_dns_name : module.networking.nlb_dns_name
+  target_dns_name = var.create_global_accelerator ? module.global_accelerator[0].accelerator_dns_name :
+    module.networking.nlb_dns_name
   dns_record_type = "CNAME"
   proxied         = var.dns_proxied
   ttl = var.dns_ttl
 
   # Custom DNS records for our specific routing
   app_dns_records = var.app_dns_records
-
-  create_public_mongodb_dns = true
-  mongo_instance_private_ips = module.mongodb.instance_private_ips
 
   # Zone Settings
   manage_zone_settings = var.manage_cloudflare_zone_settings

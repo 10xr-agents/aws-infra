@@ -102,6 +102,35 @@ output "private_key_ssm_parameter" {
   value       = aws_ssm_parameter.mongodb_private_key.name
 }
 
+# Add these outputs to your modules/mongodb/outputs.tf file
+
+output "public_connection_string" {
+  description = "MongoDB public connection string for external access"
+  value       = var.create_public_dns_records ? local.public_dns_connection_string : null
+  sensitive   = true
+}
+
+output "public_endpoints" {
+  description = "List of MongoDB public endpoints"
+  value       = var.create_public_dns_records ? formatlist("%s:27017", aws_instance.mongodb[*].public_ip) : []
+}
+
+output "public_dns_zone_id" {
+  description = "ID of the public DNS zone"
+  value       = var.create_public_dns_records ? (var.use_existing_public_zone_id != "" ? var.use_existing_public_zone_id : aws_route53_zone.mongodb_public[0].zone_id) : null
+}
+
+output "public_dns_zone_name" {
+  description = "Name of the public DNS zone"
+  value       = var.create_public_dns_records ? (var.use_existing_public_zone_id != "" ? data.aws_route53_zone.existing_public[0].name : aws_route53_zone.mongodb_public[0].name) : null
+}
+
+output "mongodb_compass_connection_url" {
+  description = "MongoDB connection URL for MongoDB Compass"
+  value       = var.create_public_dns_records ? local.public_dns_connection_string : null
+  sensitive   = true
+}
+
 output "cluster_details" {
   description = "Detailed information about the MongoDB cluster"
   value = {

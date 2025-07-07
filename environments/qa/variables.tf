@@ -315,6 +315,24 @@ variable "mongodb_private_domain" {
   default     = ""
 }
 
+variable "mongodb_create_public_dns_records" {
+  description = "Whether to create public Route53 DNS records for MongoDB"
+  type        = bool
+  default     = false
+}
+
+variable "mongodb_public_domain" {
+  description = "Public domain for MongoDB DNS records"
+  type        = string
+  default     = ""
+}
+
+variable "mongodb_use_existing_public_zone_id" {
+  description = "Use existing public Route53 zone ID instead of creating new one"
+  type        = string
+  default     = ""
+}
+
 variable "mongodb_backup_enabled" {
   description = "Whether to enable automated EBS snapshots for MongoDB"
   type        = bool
