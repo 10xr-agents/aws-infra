@@ -52,6 +52,11 @@ output "primary_endpoint" {
   value       = "${aws_instance.mongodb[0].private_ip}:27017"
 }
 
+output "primary_ip_address" {
+  description = "Primary MongoDB endpoint (first instance)"
+  value       = aws_instance.mongodb[0].private_ip
+}
+
 output "ssm_parameter_name" {
   description = "Name of the SSM parameter containing the connection string"
   value       = var.store_connection_string_in_ssm ? aws_ssm_parameter.mongodb_connection_string[0].name : null
