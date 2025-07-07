@@ -26,7 +26,6 @@ enable_fargate           = true
 enable_fargate_spot      = true
 
 # SSL Configuration (add your certificate ARN here if you have one)
-acm_certificate_arn = ""  # Add your ACM certificate ARN here for HTTPS
 ssl_policy          = "ELBSecurityPolicy-TLS-1-2-2017-01"
 
 # ECS Services Configuration (keeping your existing services)
@@ -407,7 +406,8 @@ cloudflare_account_id = "929c1d893cb7bb8455e151ae08f3b538"
 cloudflare_api_key    = "ef7027a662a457c814bfc30e81fcf49baa969"
 
 # Domain Configuration
-domain_name = "10xr.co"
+domain = "qa.10xr.co"
+base_domain_name = "10xr.co"
 create_cloudflare_dns_records = true
 # Change these settings for HTTP access
 dns_proxied = false  # Disable proxying to allow direct HTTP access

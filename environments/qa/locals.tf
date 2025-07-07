@@ -20,6 +20,8 @@ locals {
 
   mongodb_connection_string = module.mongodb.connection_string
 
+  acm_certificate_arn = aws_acm_certificate.main.arn
+
   # You can also merge with environment-specific overrides
   ecs_services_with_overrides = {
     for name, config in local.ecs_services : name => merge(

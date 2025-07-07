@@ -11,6 +11,47 @@ data "aws_region" "current" {}
 
 data "aws_caller_identity" "current" {}
 
+resource "aws_acm_certificate" "main" {
+  domain_name       = var.domain
+  validation_method = "DNS"
+  subject_alternative_names = [
+    "*.${var.domain}",
+    "services.${var.domain}",
+    "app.${var.domain}",
+    "api.${var.domain}",
+    "proxy.${var.domain}"
+  ]
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+# Cloudflare DNS record for certificate validation
+resource "cloudflare_record" "cert_validation" {
+  for_each = {
+    for dvo in aws_acm_certificate.main.domain_validation_options : dvo.domain_name => {
+      name   = dvo.resource_record_name
+      record = dvo.resource_record_value
+      type   = dvo.resource_record_type
+    }
+    if dvo.domain_name != "*.${var.domain}"
+  }
+
+  zone_id = var.cloudflare_zone_id
+  name    = each.value.name
+  content = each.value.record
+  type    = each.value.type
+  ttl     = 60
+  proxied = false
+}
+
+# Certificate Validation
+resource "aws_acm_certificate_validation" "main" {
+  certificate_arn         = aws_acm_certificate.main.arn
+  validation_record_fqdns = [for record in cloudflare_record.cert_validation : record.hostname]
+}
+
 # VPC Module - Reuse existing VPC module
 module "vpc" {
   source = "../../modules/vpc"
@@ -175,7 +216,7 @@ module "ecs" {
   private_subnet_ids = module.vpc.private_subnets
   public_subnet_ids  = module.vpc.public_subnets
 
-  acm_certificate_arn = var.acm_certificate_arn
+  acm_certificate_arn = local.acm_certificate_arn
   create_alb_rules    = true
 
   enable_container_insights = var.enable_container_insights
@@ -224,7 +265,7 @@ module "networking" {
 
   # Target Group Configuration
   create_http_target_group  = var.create_http_target_group
-  create_https_target_group = var.acm_certificate_arn != ""
+  create_https_target_group = local.acm_certificate_arn != ""
   http_port                 = var.http_port
   https_port                = var.https_port
   target_type = var.target_type
@@ -270,10 +311,10 @@ module "networking" {
 
   # Listener Configuration
   create_http_listener    = var.create_http_listener
-  create_https_listener   = var.acm_certificate_arn != ""
+  create_https_listener   = local.acm_certificate_arn != ""
   https_listener_protocol = var.https_listener_protocol
   ssl_policy              = var.ssl_policy
-  certificate_arn = var.acm_certificate_arn
+  certificate_arn = local.acm_certificate_arn
 
   # Access Logs
   nlb_access_logs_enabled = var.nlb_access_logs_enabled

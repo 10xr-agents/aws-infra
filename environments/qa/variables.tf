@@ -166,12 +166,6 @@ variable "alb_idle_timeout" {
   default     = 60
 }
 
-variable "acm_certificate_arn" {
-  description = "ARN of the ACM certificate for HTTPS"
-  type        = string
-  default     = ""
-}
-
 variable "ssl_policy" {
   description = "SSL policy for the HTTPS listener"
   type        = string
@@ -856,7 +850,7 @@ variable "cloudflare_zone_id" {
   type        = string
 }
 
-variable "domain_name" {
+variable "base_domain_name" {
   description = "Base domain name"
   type        = string
   default     = "10xr.co"
