@@ -308,8 +308,6 @@ module "networking" {
   deregistration_delay = var.deregistration_delay
 
   # Listener Configuration
-  create_http_listener    = var.create_http_listener
-  create_https_listener   = local.acm_certificate_arn != ""
   https_listener_protocol = var.https_listener_protocol
   ssl_policy              = var.ssl_policy
   certificate_arn = local.acm_certificate_arn
