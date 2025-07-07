@@ -236,7 +236,7 @@ resource "aws_instance" "mongodb" {
   }
 
   # FIXED: User data WITHOUT circular dependency
-  user_data = base64gzip(templatefile("${path.module}/user-data-cloud-init.yml", {
+  user_data_base64 = base64gzip(templatefile("${path.module}/user-data-cloud-init.yml", {
     mongodb_version         = var.mongodb_version
     replica_set_name        = local.replica_set_name
     node_index              = count.index
