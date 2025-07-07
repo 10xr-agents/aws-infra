@@ -42,6 +42,18 @@ variable "ttl" {
   default     = 300
 }
 
+variable "create_public_mongodb_dns" {
+  description = "Whether to create public DNS records for MongoDB"
+  type        = bool
+  default     = false
+}
+
+variable "mongo_instance_private_ips" {
+  description = "Private IP addresses of the MongoDB instances"
+  type = list(string)
+  default = []
+}
+
 ################################################################################
 # Application DNS Records
 ################################################################################
@@ -49,14 +61,14 @@ variable "ttl" {
 variable "app_dns_records" {
   description = "Map of custom DNS records to create"
   type = map(object({
-    name     = string
-    content  = string
-    type     = string
-    proxied  = optional(bool)
-    ttl      = optional(number)
+    name    = string
+    content = string
+    type    = string
+    proxied = optional(bool)
+    ttl = optional(number)
     priority = optional(number)
-    comment  = optional(string)
-    tags     = optional(list(string), [])
+    comment = optional(string)
+    tags = optional(list(string), [])
   }))
   default = {}
 }
@@ -82,16 +94,16 @@ variable "certificate_validation_records" {
 variable "page_rules" {
   description = "Map of Cloudflare page rules to create"
   type = map(object({
-    target   = string
+    target = string
     priority = optional(number, 1)
-    status   = optional(string, "active")
+    status = optional(string, "active")
     actions = object({
-      ssl                = optional(string)
-      cache_level        = optional(string)
-      edge_cache_ttl     = optional(number)
-      security_level     = optional(string)
-      browser_cache_ttl  = optional(number)
-      always_use_https   = optional(bool)
+      ssl = optional(string)
+      cache_level = optional(string)
+      edge_cache_ttl = optional(number)
+      security_level = optional(string)
+      browser_cache_ttl = optional(number)
+      always_use_https = optional(bool)
       forwarding_url = optional(object({
         url         = string
         status_code = number
@@ -111,12 +123,12 @@ variable "firewall_rules" {
     description = string
     expression  = string
     action      = string
-    priority    = optional(number)
-    paused      = optional(bool, false)
+    priority = optional(number)
+    paused = optional(bool, false)
     action_parameters = optional(object({
       uri = optional(string)
       overrides = optional(object({
-        action      = optional(string)
+        action = optional(string)
         sensitivity = optional(string)
       }))
     }))
@@ -138,38 +150,38 @@ variable "zone_settings" {
   description = "Cloudflare zone settings configuration"
   type = object({
     # SSL settings
-    ssl                      = optional(string, "flexible")
-    always_use_https        = optional(string, "off")
-    min_tls_version         = optional(string, "1.2")
+    ssl = optional(string, "flexible")
+    always_use_https = optional(string, "off")
+    min_tls_version = optional(string, "1.2")
     opportunistic_encryption = optional(string, "on")
-    tls_1_3                 = optional(string, "zrt")
+    tls_1_3 = optional(string, "zrt")
     automatic_https_rewrites = optional(string, "on")
 
     # Security settings
-    security_level          = optional(string, "medium")
-    challenge_ttl           = optional(number, 1800)
-    browser_check           = optional(string, "on")
-    hotlink_protection      = optional(string, "off")
+    security_level = optional(string, "medium")
+    challenge_ttl = optional(number, 1800)
+    browser_check = optional(string, "on")
+    hotlink_protection = optional(string, "off")
 
     # Performance settings
-    brotli                  = optional(string, "on")
-    minify_css             = optional(bool, true)
-    minify_html            = optional(bool, true)
-    minify_js              = optional(bool, true)
+    brotli = optional(string, "on")
+    minify_css = optional(bool, true)
+    minify_html = optional(bool, true)
+    minify_js = optional(bool, true)
 
     # Caching
-    browser_cache_ttl       = optional(number, 14400)
-    always_online           = optional(string, "off")
+    browser_cache_ttl = optional(number, 14400)
+    always_online = optional(string, "off")
 
     # Network settings
-    ipv6                    = optional(string, "on")
-    websockets              = optional(string, "on")
-    opportunistic_onion     = optional(string, "on")
-    pseudo_ipv4             = optional(string, "off")
-    ip_geolocation          = optional(string, "on")
+    ipv6 = optional(string, "on")
+    websockets = optional(string, "on")
+    opportunistic_onion = optional(string, "on")
+    pseudo_ipv4 = optional(string, "off")
+    ip_geolocation = optional(string, "on")
 
     # Rocket Loader
-    rocket_loader           = optional(string, "off")
+    rocket_loader = optional(string, "off")
   })
   default = {}
 }
@@ -180,6 +192,6 @@ variable "zone_settings" {
 
 variable "tags" {
   description = "A map of tags to add to all resources"
-  type        = map(string)
-  default     = {}
+  type = map(string)
+  default = {}
 }

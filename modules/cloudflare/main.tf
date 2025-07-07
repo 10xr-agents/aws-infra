@@ -37,7 +37,52 @@ resource "cloudflare_record" "app_dns_records" {
 
   comment = lookup(each.value, "comment", "Application DNS record for ${var.environment} environment")
 
-  # Removed tags - Cloudflare has a quota of 0 tags for DNS records
+}
+
+# Public DNS records for MongoDB (add to existing configuration)
+resource "aws_route53_record" "mongodb_public_primary" {
+  count = var.create_public_mongodb_dns ? 1 : 0
+
+  zone_id = var.cloudflare_zone_id  # Use your existing zone
+  name    = "mongodb-primary.qa"
+  type    = "A"
+  ttl     = 300
+  records = [var.mongo_instance_private_ips[0]]
+}
+
+resource "aws_route53_record" "mongodb_public_secondary1" {
+  count = var.create_public_mongodb_dns ? 1 : 0
+
+  zone_id = var.cloudflare_zone_id
+  name    = "mongodb-secondary1.qa"
+  type    = "A"
+  ttl     = 300
+  records = [var.mongo_instance_private_ips[1]]
+}
+
+resource "aws_route53_record" "mongodb_public_secondary2" {
+  count = var.create_public_mongodb_dns ? 1 : 0
+
+  zone_id = var.cloudflare_zone_id
+  name    = "mongodb-secondary2.qa"
+  type    = "A"
+  ttl     = 300
+  records = [var.mongo_instance_private_ips[2]]
+}
+
+# SRV record for MongoDB+SRV connection
+resource "aws_route53_record" "mongodb_srv_public" {
+  count = var.create_public_mongodb_dns ? 1 : 0
+
+  zone_id = var.cloudflare_zone_id
+  name    = "_mongodb._tcp.qa"
+  type    = "SRV"
+  ttl     = 300
+  records = [
+    "0 5 27017 mongodb-primary.qa.10xr.co",
+    "0 5 27017 mongodb-secondary1.qa.10xr.co",
+    "0 5 27017 mongodb-secondary2.qa.10xr.co"
+  ]
 }
 
 ################################################################################
