@@ -1,5 +1,5 @@
 #cloud-config
-# MongoDB Installation and Configuration - FIXED Discovery Function
+# MongoDB Installation and Configuration - FIXED Region and Discovery
 
 write_files:
     - path: /opt/mongodb-setup.sh
@@ -29,6 +29,58 @@ write_files:
           echo "Version: $MONGODB_VERSION, Replica Set: $REPLICA_SET_NAME, Node: $NODE_INDEX"
           echo "Total nodes: $TOTAL_NODES"
           
+          # FIXED: Better region detection and AWS CLI setup
+          get_region() {
+            # Try multiple methods to get the region
+            local region=""
+          
+            # Method 1: Instance metadata (most reliable)
+            region=$(curl -s --max-time 10 http://169.254.169.254/latest/meta-data/placement/region 2>/dev/null || echo "")
+          
+            if [ -n "$region" ] && [ "$region" != "" ]; then
+              echo "Found region via metadata: $region" >&2
+              echo "$region"
+              return 0
+            fi
+          
+            # Method 2: Availability zone metadata
+            local az=$(curl -s --max-time 10 http://169.254.169.254/latest/meta-data/placement/availability-zone 2>/dev/null || echo "")
+            if [ -n "$az" ] && [ "$az" != "" ]; then
+              # Extract region from AZ (remove last character)
+              region=$${az%?}
+              echo "Found region via AZ: $region" >&2
+              echo "$region"
+              return 0
+            fi
+          
+            # Method 3: Fallback to hardcoded region for this deployment
+            region="us-east-1"
+            echo "Using fallback region: $region" >&2
+            echo "$region"
+          }
+          
+          # Get and validate region
+          REGION=$(get_region)
+          if [ -z "$REGION" ] || [ "$REGION" = "" ]; then
+            echo "ERROR: Could not determine AWS region"
+            exit 1
+          fi
+          
+          echo "Using AWS region: $REGION"
+          
+          # Configure AWS CLI with region
+          aws configure set region "$REGION"
+          aws configure set default.region "$REGION"
+          export AWS_DEFAULT_REGION="$REGION"
+          
+          # Test AWS CLI connectivity
+          echo "Testing AWS CLI connectivity..."
+          if ! aws sts get-caller-identity >/dev/null 2>&1; then
+            echo "WARNING: AWS CLI test failed, but continuing..."
+          else
+            echo "AWS CLI connectivity confirmed"
+          fi
+          
           # Update system
           apt-get update -y
           apt-get upgrade -y
@@ -50,26 +102,38 @@ write_files:
           
           # FIXED: Function to discover other MongoDB nodes using EC2 tags
           discover_mongodb_nodes() {
-            # Send debug output to stderr so it doesn't get captured
-            echo "Discovering MongoDB nodes using EC2 tags..." >&2
+            echo "Discovering MongoDB nodes using EC2 tags in region $REGION..." >&2
           
-            # Get region
-            REGION=$(curl -s http://169.254.169.254/latest/meta-data/placement/region)
+            # Retry logic for AWS API calls
+            local max_retries=3
+            local retry_count=0
+            local node_ips=""
           
-            # Find all instances with MongoDBCluster tag matching our cluster
-            NODE_IPS=$(aws ec2 describe-instances \
-              --region "$REGION" \
-              --filters \
-                "Name=tag:MongoDBCluster,Values=$CLUSTER_NAME" \
-                "Name=instance-state-name,Values=running" \
-              --query 'Reservations[].Instances[].[PrivateIpAddress,Tags[?Key==`NodeIndex`].Value|[0]]' \
-              --output text | sort -k2 -n | cut -f1)
+            while [ $retry_count -lt $max_retries ]; do
+              echo "Attempt $((retry_count + 1))/$max_retries to discover nodes..." >&2
           
-            # Send debug output to stderr
-            echo "Discovered node IPs: $NODE_IPS" >&2
+              # Try to get instances with explicit region
+              node_ips=$(aws ec2 describe-instances \
+                --region "$REGION" \
+                --filters \
+                  "Name=tag:MongoDBCluster,Values=$CLUSTER_NAME" \
+                  "Name=instance-state-name,Values=running" \
+                --query 'Reservations[].Instances[].[PrivateIpAddress,Tags[?Key==`NodeIndex`].Value|[0]]' \
+                --output text 2>/dev/null | sort -k2 -n | cut -f1 | grep -v '^$' || echo "")
           
-            # Only return the IPs (to stdout)
-            echo "$NODE_IPS"
+              if [ -n "$node_ips" ] && [ "$node_ips" != "" ]; then
+                echo "Successfully discovered nodes: $node_ips" >&2
+                echo "$node_ips"
+                return 0
+              fi
+          
+              echo "Discovery attempt $((retry_count + 1)) failed, retrying in 10 seconds..." >&2
+              sleep 10
+              retry_count=$((retry_count + 1))
+            done
+          
+            echo "ERROR: Failed to discover nodes after $max_retries attempts" >&2
+            return 1
           }
           
           # Volume setup
@@ -189,19 +253,22 @@ write_files:
             # Wait for all nodes to be discoverable and running
             echo "Waiting for all nodes to be ready..."
             while true; do
-              NODE_IPS=$(discover_mongodb_nodes)
-              NODE_COUNT=$(echo "$NODE_IPS" | wc -w)
+              if NODE_IPS=$(discover_mongodb_nodes); then
+                NODE_COUNT=$(echo "$NODE_IPS" | wc -w)
           
-              echo "DEBUG: Found IPs: '$NODE_IPS'"
-              echo "DEBUG: Node count: $NODE_COUNT"
+                echo "DEBUG: Found IPs: '$NODE_IPS'"
+                echo "DEBUG: Node count: $NODE_COUNT"
           
-              if [ "$NODE_COUNT" -eq "$TOTAL_NODES" ]; then
-                echo "All $TOTAL_NODES nodes are discoverable"
-                break
+                if [ "$NODE_COUNT" -eq "$TOTAL_NODES" ]; then
+                  echo "All $TOTAL_NODES nodes are discoverable"
+                  break
+                else
+                  echo "Found $NODE_COUNT nodes, waiting for $TOTAL_NODES..."
+                fi
               else
-                echo "Found $NODE_COUNT nodes, waiting for $TOTAL_NODES..."
-                sleep 15
+                echo "Node discovery failed, retrying..."
               fi
+              sleep 15
             done
           
             # Test connectivity to all nodes
@@ -285,6 +352,7 @@ write_files:
             echo "Primary setup complete, signaling other nodes..."
             # Signal that primary is ready
             aws ssm put-parameter \
+              --region "$REGION" \
               --name "/$CLUSTER_NAME/mongodb/primary-ready" \
               --value "true" \
               --type "String" \
@@ -293,13 +361,13 @@ write_files:
           else
             echo "=== PHASE 2: Secondary node waiting for primary ==="
             # Wait for primary to signal it's ready
-            while ! aws ssm get-parameter --name "/$CLUSTER_NAME/mongodb/primary-ready" >/dev/null 2>&1; do
+            while ! aws ssm get-parameter --region "$REGION" --name "/$CLUSTER_NAME/mongodb/primary-ready" >/dev/null 2>&1; do
               echo "Waiting for primary node to complete setup..."
               sleep 30
             done
           
             echo "Primary is ready, continuing with secondary setup..."
-            sleep 60  # Additional wait for replica set to fully initialize
+            sleep 60
           fi
           
           # PHASE 3: Enable authentication on all nodes
