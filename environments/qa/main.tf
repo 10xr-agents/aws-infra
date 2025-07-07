@@ -430,8 +430,10 @@ resource "aws_security_group_rule" "mongodb_from_ecs" {
 }
 
 resource "aws_lb_target_group_attachment" "mongodb_targets" {
+  count = var.mongodb_replica_count
+
   target_group_arn = module.networking.custom_target_group_arns.mongodb
-  target_id        = module.mongodb.instance_private_dns[0]
+  target_id        = module.mongodb.instance_private_ips[count.index]
   port             = 27017
 
   depends_on = [module.networking, module.mongodb]
