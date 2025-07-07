@@ -154,8 +154,10 @@ resource "aws_lb_target_group" "custom" {
       protocol            = lookup(health_check.value, "protocol", var.health_check_protocol)
       timeout             = lookup(health_check.value, "timeout", var.health_check_timeout)
       unhealthy_threshold = lookup(health_check.value, "unhealthy_threshold", var.health_check_unhealthy_threshold)
-      path                = lookup(health_check.value, "path", var.health_check_path)
-      matcher             = lookup(health_check.value, "matcher", var.health_check_matcher)
+
+      # Only include path and matcher for HTTP/HTTPS health checks
+      path    = lookup(health_check.value, "protocol", var.health_check_protocol) == "HTTP" || lookup(health_check.value, "protocol", var.health_check_protocol) == "HTTPS" ? lookup(health_check.value, "path", var.health_check_path) : null
+      matcher = lookup(health_check.value, "protocol", var.health_check_protocol) == "HTTP" || lookup(health_check.value, "protocol", var.health_check_protocol) == "HTTPS" ? lookup(health_check.value, "matcher", var.health_check_matcher) : null
     }
   }
 
