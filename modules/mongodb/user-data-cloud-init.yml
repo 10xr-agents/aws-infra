@@ -1,3 +1,6 @@
+#cloud-config
+# MongoDB Installation and Configuration - Fixed Circular Dependency
+
 write_files:
     - path: /opt/mongodb-setup.sh
       permissions: '0755'
