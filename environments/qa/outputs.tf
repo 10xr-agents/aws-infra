@@ -87,7 +87,7 @@ output "ecs_service_urls" {
   value = {
     for name, config in local.ecs_services_with_overrides : name => {
       internal_url = var.enable_service_discovery ? "http://${name}.${local.cluster_name}.local:${config.port}" : null
-      external_url = "http${var.acm_certificate_arn != "" ? "s" : ""}://${module.ecs.alb_dns_name}${try(config.alb_path_patterns[0], "/")}"
+      external_url = "http${local.acm_certificate_arn != "" ? "s" : ""}://${module.ecs.alb_dns_name}${try(config.alb_path_patterns[0], "/")}"
       paths        = try(config.alb_path_patterns, ["/${name}/*"])
     }
   }
@@ -287,9 +287,9 @@ output "network_architecture" {
 
     # SSL/TLS Configuration
     ssl_config = {
-      alb_https_enabled = var.acm_certificate_arn != ""
+      alb_https_enabled = local.acm_certificate_arn != ""
       nlb_https_protocol = var.https_listener_protocol
-      ssl_termination_point = var.https_listener_protocol == "TLS" ? "NLB" : (var.acm_certificate_arn != "" ? "ALB" : "None")
+      ssl_termination_point = var.https_listener_protocol == "TLS" ? "NLB" : (local.acm_certificate_arn != "" ? "ALB" : "None")
     }
   }
 }
@@ -369,12 +369,12 @@ output "application_urls" {
     # Direct ALB access
     alb_dns_name = module.ecs.alb_dns_name
     alb_http_url = "http://${module.ecs.alb_dns_name}"
-    alb_https_url = var.acm_certificate_arn != "" ? "https://${module.ecs.alb_dns_name}" : null
+    alb_https_url = local.acm_certificate_arn != "" ? "https://${module.ecs.alb_dns_name}" : null
 
     # NLB access
     nlb_dns_name = module.networking.nlb_dns_name
     nlb_http_url = var.create_http_listener ? "http://${module.networking.nlb_dns_name}" : null
-    nlb_https_url = var.acm_certificate_arn != "" ? "https://${module.networking.nlb_dns_name}" : null
+    nlb_https_url = local.acm_certificate_arn != "" ? "https://${module.networking.nlb_dns_name}" : null
 
     # Global Accelerator access (if enabled)
     global_accelerator_dns_name = var.create_global_accelerator ? module.global_accelerator[0].accelerator_dns_name : null
@@ -385,12 +385,12 @@ output "application_urls" {
     # Primary URLs (recommended for users)
     primary_app_url = var.create_cloudflare_dns_records ? module.cloudflare[0].custom_dns_record_urls.qa-main.https_url : (
       var.create_global_accelerator ? "https://${module.global_accelerator[0].accelerator_dns_name}" : (
-      var.acm_certificate_arn != "" ? "https://${module.networking.nlb_dns_name}" : "http://${module.ecs.alb_dns_name}"
+      local.acm_certificate_arn != "" ? "https://${module.networking.nlb_dns_name}" : "http://${module.ecs.alb_dns_name}"
     )
     )
     primary_api_url = var.create_cloudflare_dns_records ? module.cloudflare[0].custom_dns_record_urls.qa-service.https_url : (
       var.create_global_accelerator ? "https://${module.global_accelerator[0].accelerator_dns_name}" : (
-      var.acm_certificate_arn != "" ? "https://${module.networking.nlb_dns_name}" : "http://${module.ecs.alb_dns_name}"
+      local.acm_certificate_arn != "" ? "https://${module.networking.nlb_dns_name}" : "http://${module.ecs.alb_dns_name}"
     )
     )
   }
