@@ -311,11 +311,6 @@ mongodb_log_retention_days = 7
 mongodb_create_dns_records = true
 mongodb_private_domain     = "mongodb.qa.10xr.local"
 
-# MongoDB Public DNS Configuration
-mongodb_create_public_dns_records = true
-mongodb_public_domain = "mongodb.qa.10xr.co"  # Or use your preferred subdomain
-mongodb_use_existing_public_zone_id = ""  # Leave empty to create new zone, or provide existing zone ID
-
 # Backup Configuration
 mongodb_backup_enabled        = true
 mongodb_backup_schedule       = "cron(0 2 * * ? *)"  # Daily at 2 AM

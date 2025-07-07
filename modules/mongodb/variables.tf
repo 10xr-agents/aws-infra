@@ -215,24 +215,6 @@ variable "enable_audit_logging" {
   default     = false
 }
 
-variable "create_public_dns_records" {
-  description = "Whether to create public Route53 DNS records for MongoDB"
-  type        = bool
-  default     = false
-}
-
-variable "public_domain" {
-  description = "Public domain for MongoDB DNS records (e.g., mongodb.yourdomain.com)"
-  type        = string
-  default     = ""
-}
-
-variable "use_existing_public_zone_id" {
-  description = "Use existing public Route53 zone ID instead of creating new one"
-  type        = string
-  default     = ""
-}
-
 variable "tags" {
   description = "Map of tags to apply to all resources"
   type        = map(string)

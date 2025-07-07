@@ -542,8 +542,6 @@ locals {
   ) : ""
 }
 
-# Add this to your modules/mongodb/main.tf file
-
 # Create a public hosted zone for MongoDB access (optional - if you want a separate zone)
 resource "aws_route53_zone" "mongodb_public" {
   count = var.create_public_dns_records ? 1 : 0

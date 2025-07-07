@@ -140,11 +140,6 @@ module "mongodb" {
   create_dns_records = var.mongodb_create_dns_records
   private_domain = var.mongodb_private_domain
 
-  # Public DNS configuration
-  create_public_dns_records = var.mongodb_create_public_dns_records
-  public_domain             = var.mongodb_public_domain
-  use_existing_public_zone_id = var.mongodb_use_existing_public_zone_id
-
   # Backup configuration
   backup_enabled  = var.mongodb_backup_enabled
   backup_schedule = var.mongodb_backup_schedule
