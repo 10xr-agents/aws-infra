@@ -1,5 +1,5 @@
 #cloud-config
-# MongoDB Installation and Configuration - Fixed Circular Dependency
+# MongoDB Installation and Configuration - FIXED Discovery Function
 
 write_files:
     - path: /opt/mongodb-setup.sh
@@ -32,7 +32,7 @@ write_files:
           # Update system
           apt-get update -y
           apt-get upgrade -y
-          apt-get install -y gnupg curl wget software-properties-common lsb-release xfsprogs awscli jq
+          apt-get install -y gnupg curl wget software-properties-common lsb-release xfsprogs awscli jq netcat-openbsd
           
           # Add MongoDB GPG key and repo
           curl -fsSL https://www.mongodb.org/static/pgp/server-$${MONGODB_VERSION}.asc | gpg --dearmor -o /usr/share/keyrings/mongodb.gpg
@@ -48,9 +48,10 @@ write_files:
             rm -f ./amazon-cloudwatch-agent.deb
           fi
           
-          # Function to discover other MongoDB nodes using EC2 tags
+          # FIXED: Function to discover other MongoDB nodes using EC2 tags
           discover_mongodb_nodes() {
-            echo "Discovering MongoDB nodes using EC2 tags..."
+            # Send debug output to stderr so it doesn't get captured
+            echo "Discovering MongoDB nodes using EC2 tags..." >&2
           
             # Get region
             REGION=$(curl -s http://169.254.169.254/latest/meta-data/placement/region)
@@ -64,11 +65,14 @@ write_files:
               --query 'Reservations[].Instances[].[PrivateIpAddress,Tags[?Key==`NodeIndex`].Value|[0]]' \
               --output text | sort -k2 -n | cut -f1)
           
-            echo "Discovered node IPs: $NODE_IPS"
+            # Send debug output to stderr
+            echo "Discovered node IPs: $NODE_IPS" >&2
+          
+            # Only return the IPs (to stdout)
             echo "$NODE_IPS"
           }
           
-          # Volume setup (same as before)
+          # Volume setup
           echo "Detecting EBS volume..."
           find_data_device() {
             echo "Available block devices:" >&2
@@ -187,6 +191,9 @@ write_files:
             while true; do
               NODE_IPS=$(discover_mongodb_nodes)
               NODE_COUNT=$(echo "$NODE_IPS" | wc -w)
+          
+              echo "DEBUG: Found IPs: '$NODE_IPS'"
+              echo "DEBUG: Node count: $NODE_COUNT"
           
               if [ "$NODE_COUNT" -eq "$TOTAL_NODES" ]; then
                 echo "All $TOTAL_NODES nodes are discoverable"
