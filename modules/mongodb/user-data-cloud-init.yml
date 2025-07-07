@@ -272,8 +272,6 @@ write_files:
           cat > /etc/mongod.conf <<EOF
           storage:
             dbPath: /data/mongodb/db
-            journal:
-              enabled: true
             engine: wiredTiger
             wiredTiger:
               engineConfig:
