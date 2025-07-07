@@ -32,7 +32,7 @@ resource "aws_lb_listener_rule" "voice_agent_http_host_rule" {
 
 # HTTPS Host-based routing rule for voice-agent (if SSL certificate provided)
 resource "aws_lb_listener_rule" "voice_agent_https_host_rule" {
-  count = var.create_alb && var.acm_certificate_arn != "" ? 1 : 0
+  count = var.create_alb ? 1 : 0
 
   listener_arn = aws_lb_listener.https[0].arn
   priority     = 101
@@ -94,7 +94,7 @@ resource "aws_lb_listener_rule" "livekit_proxy_http_host_rule" {
 
 # HTTPS Host-based routing rule for livekit-proxy (if SSL certificate provided)
 resource "aws_lb_listener_rule" "livekit_proxy_https_host_rule" {
-  count = var.create_alb && var.acm_certificate_arn != "" ? 1 : 0
+  count = var.create_alb ? 1 : 0
 
   listener_arn = aws_lb_listener.https[0].arn
   priority     = 102
@@ -156,7 +156,7 @@ resource "aws_lb_listener_rule" "agent_analytics_http_host_rule" {
 
 # HTTPS Host-based routing rule for agent-analytics (if SSL certificate provided)
 resource "aws_lb_listener_rule" "agent_analytics_https_host_rule" {
-  count = var.create_alb && var.acm_certificate_arn != "" ? 1 : 0
+  count = var.create_alb ? 1 : 0
 
   listener_arn = aws_lb_listener.https[0].arn
   priority     = 103
@@ -218,7 +218,7 @@ resource "aws_lb_listener_rule" "agentic_services_http_host_rule" {
 
 # HTTPS Host-based routing rule for agentic-services (if SSL certificate provided)
 resource "aws_lb_listener_rule" "agentic_services_https_host_rule" {
-  count = var.create_alb && var.acm_certificate_arn != "" ? 1 : 0
+  count = var.create_alb ? 1 : 0
 
   listener_arn = aws_lb_listener.https[0].arn
   priority     = 104
@@ -280,7 +280,7 @@ resource "aws_lb_listener_rule" "ui_console_http_host_rule" {
 
 # HTTPS Host-based routing rule for ui-console (if SSL certificate provided)
 resource "aws_lb_listener_rule" "ui_console_https_host_rule" {
-  count = var.create_alb && var.acm_certificate_arn != "" ? 1 : 0
+  count = var.create_alb ? 1 : 0
 
   listener_arn = aws_lb_listener.https[0].arn
   priority     = 105
