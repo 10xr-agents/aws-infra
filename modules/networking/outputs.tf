@@ -100,7 +100,7 @@ output "http_target_group_arn" {
 
 output "https_target_group_arn" {
   description = "ARN of the HTTPS target group"
-  value       = var.create_nlb && var.create_https_target_group ? aws_lb_target_group.alb_targets_https[0].arn : null
+  value       = var.create_nlb ? aws_lb_target_group.alb_targets_https[0].arn : null
 }
 
 output "http_target_group_name" {
@@ -110,7 +110,7 @@ output "http_target_group_name" {
 
 output "https_target_group_name" {
   description = "Name of the HTTPS target group"
-  value       = var.create_nlb && var.create_https_target_group ? aws_lb_target_group.alb_targets_https[0].name : null
+  value       = var.create_nlb ? aws_lb_target_group.alb_targets_https[0].name : null
 }
 
 output "custom_target_group_arns" {
@@ -137,7 +137,7 @@ output "target_groups" {
         port = aws_lb_target_group.alb_targets_http[0].port
       }
     } : {},
-      var.create_nlb && var.create_https_target_group ? {
+      var.create_nlb ? {
       https = {
         arn  = aws_lb_target_group.alb_targets_https[0].arn
         name = aws_lb_target_group.alb_targets_https[0].name

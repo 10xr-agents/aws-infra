@@ -106,7 +106,7 @@ resource "aws_lb_target_group" "alb_targets_http" {
 
 # HTTPS Target Group
 resource "aws_lb_target_group" "alb_targets_https" {
-  count = var.create_nlb && var.create_https_target_group ? 1 : 0
+  count = var.create_nlb ? 1 : 0
 
   name        = "${local.name_prefix}-alb-tg-https"
   port        = var.https_port
@@ -184,7 +184,7 @@ resource "aws_lb_target_group_attachment" "alb_target_http" {
 
 # HTTPS Target Group Attachment
 resource "aws_lb_target_group_attachment" "alb_target_https" {
-  count = var.create_nlb && var.create_https_target_group ? 1 : 0
+  count = var.create_nlb ? 1 : 0
 
   target_group_arn = aws_lb_target_group.alb_targets_https[0].arn
   target_id        = var.alb_arn
