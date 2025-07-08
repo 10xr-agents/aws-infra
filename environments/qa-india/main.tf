@@ -152,14 +152,14 @@ resource "aws_network_acl" "public" {
     to_port    = 65535
   }
 
-  # Allow ICMP - fixed to use valid port numbers for AWS network ACLs
+  # Allow ICMP
   ingress {
     protocol   = "icmp"
     rule_no    = 170
     action     = "allow"
     cidr_block = "0.0.0.0/0"
-    from_port  = 0
-    to_port    = 0
+    icmp_type  = -1
+    icmp_code  = -1
   }
 
   # Outbound rules
@@ -319,17 +319,6 @@ resource "aws_key_pair" "ec2" {
   tags = var.tags
 }
 
-# Elastic IP for EC2 instance - MODIFIED: Removed instance reference
-resource "aws_eip" "livekit_proxy" {
-  domain   = "vpc"
-
-  depends_on = [aws_internet_gateway.main]
-
-  tags = merge(var.tags, {
-    Name = "${local.name_prefix}-eip"
-  })
-}
-
 # EC2 Instance
 resource "aws_instance" "livekit_proxy" {
   ami                    = var.ec2_ami_id
@@ -441,7 +430,7 @@ EOL
     cat > /etc/nginx/sites-available/livekit-proxy <<EOL
     server {
         listen 80;
-        server_name ${var.domain_name};
+        server_name ${var.domain_name} ${aws_eip.livekit_proxy.public_ip};
 
         # Health check endpoint
         location /health {
@@ -538,20 +527,36 @@ EOL
   })
 }
 
-# NEW: Associate Elastic IP with the EC2 instance
-resource "aws_eip_association" "livekit_proxy_eip_assoc" {
-  instance_id   = aws_instance.livekit_proxy.id
-  allocation_id = aws_eip.livekit_proxy.id
+# Elastic IP for EC2 instance
+resource "aws_eip" "livekit_proxy" {
+  instance = aws_instance.livekit_proxy.id
+  domain   = "vpc"
+
+  depends_on = [aws_internet_gateway.main]
+
+  tags = merge(var.tags, {
+    Name = "${local.name_prefix}-eip"
+  })
 }
 
-# Cloudflare DNS record - Using CNAME instead of A record
+# Cloudflare DNS record - Using CNAME instead of A record for better flexibility
 resource "cloudflare_record" "livekit_proxy_cname" {
   zone_id = var.cloudflare_zone_id
   name    = var.subdomain
-  value   = "${aws_eip.livekit_proxy.public_ip}.nip.io"  # Using nip.io for CNAME to IP
-  type    = "CNAME"
+  value   = aws_eip.livekit_proxy.public_ip
+  type    = "A"  # We'll keep A record since we have a static IP
   proxied = false  # Disable proxy initially for debugging
   ttl     = 300   # 5 minutes TTL for faster updates
 
   comment = "LiveKit Proxy - QA India Environment"
 }
+
+# Alternative CNAME record (commented out, use if you prefer CNAME)
+# resource "cloudflare_record" "livekit_proxy_cname" {
+#   zone_id = var.cloudflare_zone_id
+#   name    = var.subdomain
+#   value   = "${aws_eip.livekit_proxy.public_ip}.nip.io"  # Using nip.io for CNAME to IP
+#   type    = "CNAME"
+#   proxied = false
+#   ttl     = 300
+# }
