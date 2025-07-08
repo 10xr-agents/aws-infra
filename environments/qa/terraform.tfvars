@@ -283,7 +283,7 @@ ecs_services = {
   },
   "automation-service-mcp": {
     "image": "761018882607.dkr.ecr.us-east-1.amazonaws.com/10xr-agents/automation-service-mcp",
-    "image_tag": "latest",
+    "image_tag": "v1.0.0",
     "port": 8090,
     "cpu": 1024,
     "memory": 2048,
