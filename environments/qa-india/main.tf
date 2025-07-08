@@ -12,6 +12,10 @@ terraform {
       source  = "cloudflare/cloudflare"
       version = "~> 4.40.0"
     }
+    cloudinit = {
+      source  = "hashicorp/cloudinit"
+      version = "~> 2.3.0"
+    }
   }
 }
 
@@ -153,13 +157,13 @@ resource "aws_network_acl" "public" {
   }
 
   ingress {
-  protocol   = "icmp"
-  rule_no    = 170
-  action     = "allow"
-  cidr_block = "0.0.0.0/0"
-  from_port  = 0
-  to_port    = 0
-}
+    protocol   = "icmp"
+    rule_no    = 170
+    action     = "allow"
+    cidr_block = "0.0.0.0/0"
+    from_port  = 0
+    to_port    = 0
+  }
 
   # Outbound rules
   egress {
@@ -281,10 +285,42 @@ resource "aws_iam_policy" "ecr_cross_region_policy" {
       {
         Effect = "Allow"
         Action = [
+          # ECR permissions for cross-region access
+          "ecr:GetAuthorizationToken",
+          "ecr:BatchCheckLayerAvailability",
           "ecr:GetDownloadUrlForLayer",
           "ecr:BatchGetImage",
-          "ecr:BatchCheckLayerAvailability",
-          "ecr:GetAuthorizationToken"
+          "ecr:DescribeRepositories",
+          "ecr:DescribeImages",
+          "ecr:ListImages",
+
+          # CloudWatch Logs
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents",
+          "logs:DescribeLogStreams",
+          "logs:DescribeLogGroups",
+          "logs:GetLogEvents",
+
+          # CloudWatch Metrics
+          "cloudwatch:PutMetricData",
+          "cloudwatch:GetMetricStatistics",
+          "cloudwatch:ListMetrics",
+
+          # EC2 Describe Actions (for self-discovery and debugging)
+          "ec2:DescribeInstances",
+          "ec2:DescribeInstanceStatus",
+          "ec2:DescribeTags",
+
+          # Systems Manager (for remote management and debugging)
+          "ssm:UpdateInstanceInformation",
+          "ssm:SendCommand",
+          "ssm:GetCommandInvocation",
+          "ssm:DescribeInstanceInformation",
+          "ssm:DescribeInstanceAssociations",
+          "ssm:GetParameter",
+          "ssm:GetParameters",
+          "ssm:GetParametersByPath"
         ]
         Resource = "*"
       }
@@ -296,6 +332,12 @@ resource "aws_iam_policy" "ecr_cross_region_policy" {
 resource "aws_iam_role_policy_attachment" "ecr_policy_attachment" {
   role       = aws_iam_role.ec2_ecr_role.name
   policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
+}
+
+# Attach SSM policy for debugging
+resource "aws_iam_role_policy_attachment" "ssm_policy_attachment" {
+  role       = aws_iam_role.ec2_ecr_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
 }
 
 # Attach custom ECR policy to the IAM role
@@ -318,196 +360,42 @@ resource "aws_key_pair" "ec2" {
   tags = var.tags
 }
 
+# Elastic IP for EC2 instance (must be created before instance for cloud-init)
+resource "aws_eip" "livekit_proxy" {
+  domain = "vpc"
+
+  depends_on = [aws_internet_gateway.main]
+
+  tags = merge(var.tags, {
+    Name = "${local.name_prefix}-eip"
+  })
+}
+
+# Data source for cloud-init configuration
+data "cloudinit_config" "livekit_proxy" {
+  gzip          = true
+  base64_encode = true
+
+  part {
+    content_type = "text/cloud-config"
+    content = templatefile("${path.module}/cloud-init.yaml", {
+      domain_name = var.domain_name
+      elastic_ip  = aws_eip.livekit_proxy.public_ip
+    })
+  }
+}
+
 # EC2 Instance
 resource "aws_instance" "livekit_proxy" {
   ami                    = var.ec2_ami_id
   instance_type          = var.ec2_instance_type
   key_name               = aws_key_pair.ec2.key_name
-  subnet_id              = aws_subnet.public[0].id  # Use the first subnet
+  subnet_id              = aws_subnet.public[0].id
   vpc_security_group_ids = [aws_security_group.ec2.id]
   iam_instance_profile   = aws_iam_instance_profile.ec2_profile.name
 
-  # User data script to install Docker and run LiveKit proxy
-  user_data = base64encode(<<-EOF
-    #!/bin/bash
-    set -e
-
-    # Log everything
-    exec > >(tee /var/log/user-data.log) 2>&1
-    echo "Starting user data script at $(date)"
-
-    # Update the system
-    apt-get update
-    apt-get upgrade -y
-
-    # Install Docker
-    apt-get install -y apt-transport-https ca-certificates curl software-properties-common
-    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
-    add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
-    apt-get update
-    apt-get install -y docker-ce docker-ce-cli containerd.io
-    systemctl enable docker
-    systemctl start docker
-
-    # Add ubuntu user to docker group
-    usermod -aG docker ubuntu
-
-    # Install Docker Compose
-    curl -L "https://github.com/docker/compose/releases/download/v2.20.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-    chmod +x /usr/local/bin/docker-compose
-
-    # Install AWS CLI
-    apt-get install -y awscli
-
-    # Create directory for LiveKit proxy
-    mkdir -p /opt/livekit-proxy
-    chown ubuntu:ubuntu /opt/livekit-proxy
-
-    # Create docker-compose.yml file
-    cat > /opt/livekit-proxy/docker-compose.yml <<EOL
-    version: '3.8'
-    services:
-      livekit-proxy:
-        image: 761018882607.dkr.ecr.us-east-1.amazonaws.com/10xr-agents/livekit-proxy-service:0.1.0
-        ports:
-          - "9000:9000"
-          - "8080:8080"
-        environment:
-          - SERVICE_PORT=9000
-          - REGION=india
-        restart: always
-        healthcheck:
-          test: ["CMD", "curl", "-f", "http://localhost:9000/api/v1/management/health", "||", "curl", "-f", "http://localhost:9000/health", "||", "curl", "-f", "http://localhost:9000/"]
-          interval: 30s
-          timeout: 10s
-          retries: 5
-          start_period: 60s
-        logging:
-          driver: "json-file"
-          options:
-            max-size: "10m"
-            max-file: "3"
-    EOL
-
-    # Create startup script
-    cat > /opt/livekit-proxy/start.sh <<EOL
-    #!/bin/bash
-    set -e
-
-    # Authenticate with ECR
-    echo "Authenticating with ECR..."
-    aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 761018882607.dkr.ecr.us-east-1.amazonaws.com
-
-    # Pull the latest image
-    echo "Pulling Docker image..."
-    docker-compose pull
-
-    # Start the service
-    echo "Starting LiveKit proxy service..."
-    docker-compose up -d
-
-    # Show status
-    echo "Service status:"
-    docker-compose ps
-    docker-compose logs
-EOL
-
-    chmod +x /opt/livekit-proxy/start.sh
-    chown ubuntu:ubuntu /opt/livekit-proxy/start.sh
-
-    # Authenticate with ECR and start service
-    cd /opt/livekit-proxy
-    aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 761018882607.dkr.ecr.us-east-1.amazonaws.com
-
-    # Start the service
-    docker-compose up -d
-
-    # Install Nginx as a reverse proxy
-    apt-get install -y nginx certbot python3-certbot-nginx
-
-    # Configure Nginx
-    cat > /etc/nginx/sites-available/livekit-proxy <<EOL
-    server {
-        listen 80;
-        server_name ${var.domain_name} ${aws_eip.livekit_proxy.public_ip};
-
-        # Health check endpoint
-        location /health {
-            return 200 'OK';
-            add_header Content-Type text/plain;
-        }
-
-        # Proxy all requests to the application
-        location / {
-            proxy_pass http://localhost:9000;
-            proxy_set_header Host \$host;
-            proxy_set_header X-Real-IP \$remote_addr;
-            proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-            proxy_set_header X-Forwarded-Proto \$scheme;
-            proxy_connect_timeout 60s;
-            proxy_send_timeout 60s;
-            proxy_read_timeout 60s;
-        }
-
-        # Alternative port proxy
-        location /alt/ {
-            proxy_pass http://localhost:8080/;
-            proxy_set_header Host \$host;
-            proxy_set_header X-Real-IP \$remote_addr;
-            proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-            proxy_set_header X-Forwarded-Proto \$scheme;
-        }
-    }
-EOL
-
-    # Remove default nginx site
-    rm -f /etc/nginx/sites-enabled/default
-
-    # Enable the site
-    ln -s /etc/nginx/sites-available/livekit-proxy /etc/nginx/sites-enabled/
-
-    # Test nginx configuration
-    nginx -t
-
-    # Reload nginx
-    systemctl reload nginx
-    systemctl enable nginx
-
-    # Create a systemd service for the LiveKit proxy
-    cat > /etc/systemd/system/livekit-proxy.service <<EOL
-    [Unit]
-    Description=LiveKit Proxy Service
-    Requires=docker.service
-    After=docker.service
-
-    [Service]
-    Type=oneshot
-    RemainAfterExit=yes
-    WorkingDirectory=/opt/livekit-proxy
-    ExecStart=/opt/livekit-proxy/start.sh
-    ExecStop=/usr/local/bin/docker-compose down
-    TimeoutStartSec=300
-
-    [Install]
-    WantedBy=multi-user.target
-EOL
-
-    # Enable and start the service
-    systemctl daemon-reload
-    systemctl enable livekit-proxy.service
-
-    # Wait a bit for Docker to be ready
-    sleep 30
-
-    # Check if everything is running
-    echo "Final status check:"
-    systemctl status docker
-    systemctl status nginx
-    cd /opt/livekit-proxy && docker-compose ps
-
-    echo "User data script completed at $(date)"
-  EOF
-  )
+  # Use cloud-init configuration
+  user_data_base64 = data.cloudinit_config.livekit_proxy.rendered
 
   # EBS volume configuration
   root_block_device {
@@ -525,42 +413,23 @@ EOL
     Name = "${local.name_prefix}-livekit-proxy"
   })
 
-}
-
-# Elastic IP for EC2 instance
-resource "aws_eip" "livekit_proxy" {
-  domain   = "vpc"
-
-  depends_on = [aws_internet_gateway.main]
-
-  tags = merge(var.tags, {
-    Name = "${local.name_prefix}-eip"
-  })
+  # Ensure EIP is created first
+  depends_on = [aws_eip.livekit_proxy]
 }
 
 resource "aws_eip_association" "livekit_proxy_eip_association" {
-  instance_id = aws_instance.livekit_proxy.id
+  instance_id   = aws_instance.livekit_proxy.id
   allocation_id = aws_eip.livekit_proxy.id
 }
 
-# Cloudflare DNS record - Using CNAME instead of A record for better flexibility
+# Cloudflare DNS record
 resource "cloudflare_record" "livekit_proxy_cname" {
   zone_id = var.cloudflare_zone_id
   name    = var.subdomain
   value   = aws_eip.livekit_proxy.public_ip
-  type    = "A"  # We'll keep A record since we have a static IP
-  proxied = false  # Disable proxy initially for debugging
-  ttl     = 300   # 5 minutes TTL for faster updates
+  type    = "A"
+  proxied = false
+  ttl     = 300
 
   comment = "LiveKit Proxy - QA India Environment"
 }
-
-# Alternative CNAME record (commented out, use if you prefer CNAME)
-# resource "cloudflare_record" "livekit_proxy_cname" {
-#   zone_id = var.cloudflare_zone_id
-#   name    = var.subdomain
-#   value   = "${aws_eip.livekit_proxy.public_ip}.nip.io"  # Using nip.io for CNAME to IP
-#   type    = "CNAME"
-#   proxied = false
-#   ttl     = 300
-# }
