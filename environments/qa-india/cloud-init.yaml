@@ -1,0 +1,393 @@
+#cloud-config
+
+# LiveKit Proxy Cloud-Init Configuration
+# This replaces the bash user data script with a structured cloud-init approach
+
+# Set timezone
+timezone: UTC
+
+# Package updates and upgrades
+package_update: true
+package_upgrade: true
+
+# Install required packages
+packages:
+    - apt-transport-https
+    - ca-certificates
+    - curl
+    - gnupg
+    - lsb-release
+    - software-properties-common
+    - awscli
+    - unzip
+    - jq
+    - htop
+    - tree
+    - vim
+    - net-tools
+    - nginx
+    - python3-certbot-nginx
+
+# Create users (ubuntu user already exists, just ensure docker group)
+groups:
+    - docker
+
+# Add ubuntu user to docker group
+system_info:
+    default_user:
+        groups: [adm, audio, cdrom, dialout, dip, floppy, lxd, netdev, plugdev, sudo, video, docker]
+
+# Create directories
+runcmd:
+    # Set up logging for cloud-init
+    - echo "=== Cloud-Init Started ===" | tee -a /var/log/cloud-init-custom.log
+    - exec > >(tee -a /var/log/cloud-init-custom.log) 2>&1
+
+    # Wait for system to stabilize
+    - sleep 30
+
+    # Install Docker
+    - echo "Installing Docker..." | tee -a /var/log/cloud-init-custom.log
+    - curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+    - echo "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
+    - apt-get update
+    - apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+    - systemctl enable docker
+    - systemctl start docker
+    - usermod -aG docker ubuntu
+
+    # Install Docker Compose standalone
+    - echo "Installing Docker Compose..." | tee -a /var/log/cloud-init-custom.log
+    - curl -L "https://github.com/docker/compose/releases/download/v2.24.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+    - chmod +x /usr/local/bin/docker-compose
+    - ln -sf /usr/local/bin/docker-compose /usr/bin/docker-compose
+
+    # Verify Docker installation
+    - echo "Verifying Docker installation..." | tee -a /var/log/cloud-init-custom.log
+    - docker --version
+    - docker-compose --version
+    - docker run --rm hello-world
+
+    # Create application directories
+    - echo "Setting up application directories..." | tee -a /var/log/cloud-init-custom.log
+    - mkdir -p /opt/livekit-proxy/{logs,config}
+    - chown -R ubuntu:ubuntu /opt/livekit-proxy
+
+    # Wait for Docker to be fully ready
+    - sleep 60
+
+    # Configure and start services
+    - echo "Configuring services..." | tee -a /var/log/cloud-init-custom.log
+    - systemctl daemon-reload
+    - systemctl enable nginx
+    - systemctl start nginx
+    - systemctl enable livekit-proxy.service || true
+
+    # Start LiveKit proxy
+    - echo "Starting LiveKit proxy..." | tee -a /var/log/cloud-init-custom.log
+    - sleep 30
+    - systemctl start livekit-proxy.service || true
+
+    # Final verification
+    - echo "Running final verification..." | tee -a /var/log/cloud-init-custom.log
+    - sleep 30
+    - /opt/livekit-proxy/monitor.sh || true
+
+    # Mark completion
+    - echo "=== Cloud-Init Completed Successfully ===" | tee -a /var/log/cloud-init-custom.log
+    - echo "$(date): Cloud-init completed" > /var/log/cloud-init-complete
+
+# Write files to the system
+write_files:
+    # Docker Compose configuration
+    - path: /opt/livekit-proxy/docker-compose.yml
+      content: |
+          version: '3.8'
+          
+          services:
+            livekit-proxy:
+              image: 761018882607.dkr.ecr.us-east-1.amazonaws.com/10xr-agents/livekit-proxy-service:0.1.0
+              container_name: livekit-proxy
+              ports:
+                - "9000:9000"
+                - "8080:8080"
+              environment:
+                - SERVICE_PORT=9000
+                - REGION=india
+                - NODE_ENV=production
+              restart: unless-stopped
+              healthcheck:
+                test: |
+                  curl -f http://localhost:9000/health || 
+                  curl -f http://localhost:9000/api/v1/management/health || 
+                  curl -f http://localhost:9000/ || 
+                  exit 1
+                interval: 30s
+                timeout: 10s
+                retries: 5
+                start_period: 120s
+              logging:
+                driver: "json-file"
+                options:
+                  max-size: "10m"
+                  max-file: "5"
+              volumes:
+                - /opt/livekit-proxy/logs:/app/logs
+              networks:
+                - livekit-network
+          
+          networks:
+            livekit-network:
+              driver: bridge
+      owner: ubuntu:ubuntu
+      permissions: '0644'
+
+    # Enhanced startup script
+    - path: /opt/livekit-proxy/start.sh
+      content: |
+          #!/bin/bash
+          set -e
+          
+          cd /opt/livekit-proxy
+          
+          echo "$(date): Starting LiveKit proxy startup script..."
+          
+          # Function to log with timestamp
+          log() {
+              echo "$(date '+%Y-%m-%d %H:%M:%S'): $1" | tee -a logs/startup.log
+          }
+          
+          # Create logs directory if it doesn't exist
+          mkdir -p logs
+          
+          log "Authenticating with ECR..."
+          if ! aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 761018882607.dkr.ecr.us-east-1.amazonaws.com; then
+              log "ERROR: Failed to authenticate with ECR"
+              exit 1
+          fi
+          
+          log "Pulling latest Docker image..."
+          if ! docker-compose pull; then
+              log "ERROR: Failed to pull Docker image"
+              exit 1
+          fi
+          
+          log "Stopping existing containers..."
+          docker-compose down || log "No existing containers to stop"
+          
+          log "Starting LiveKit proxy service..."
+          if ! docker-compose up -d; then
+              log "ERROR: Failed to start Docker container"
+              exit 1
+          fi
+          
+          log "Waiting for service to be healthy..."
+          sleep 30
+          
+          log "Checking service status..."
+          docker-compose ps
+          docker-compose logs --tail=50
+          
+          log "Testing service endpoints..."
+          for endpoint in "http://localhost:9000/health" "http://localhost:9000/" "http://localhost:8080/"; do
+              if curl -f "$endpoint" >/dev/null 2>&1; then
+                  log "✓ $endpoint is responding"
+              else
+                  log "✗ $endpoint is not responding"
+              fi
+          done
+          
+          log "LiveKit proxy startup completed"
+      owner: ubuntu:ubuntu
+      permissions: '0755'
+
+    # Systemd service file
+    - path: /etc/systemd/system/livekit-proxy.service
+      content: |
+          [Unit]
+          Description=LiveKit Proxy Service
+          Requires=docker.service
+          After=docker.service network-online.target
+          Wants=network-online.target
+          
+          [Service]
+          Type=forking
+          RemainAfterExit=yes
+          User=ubuntu
+          Group=ubuntu
+          WorkingDirectory=/opt/livekit-proxy
+          ExecStart=/opt/livekit-proxy/start.sh
+          ExecStop=/usr/local/bin/docker-compose down
+          ExecReload=/usr/local/bin/docker-compose restart
+          TimeoutStartSec=300
+          Restart=on-failure
+          RestartSec=30
+          
+          [Install]
+          WantedBy=multi-user.target
+      owner: root:root
+      permissions: '0644'
+
+    # Nginx configuration
+    - path: /etc/nginx/sites-available/livekit-proxy
+      content: |
+          server {
+              listen 80;
+              server_name ${domain_name} ${elastic_ip};
+          
+              # Increase client max body size
+              client_max_body_size 100M;
+          
+              # Basic rate limiting
+              limit_req_zone $binary_remote_addr zone=api:10m rate=10r/s;
+          
+              # Health check endpoint
+              location /nginx-health {
+                  return 200 'Nginx OK';
+                  add_header Content-Type text/plain;
+                  access_log off;
+              }
+          
+              # Proxy all requests to the application
+              location / {
+                  limit_req zone=api burst=20 nodelay;
+          
+                  proxy_pass http://localhost:9000;
+                  proxy_set_header Host $host;
+                  proxy_set_header X-Real-IP $remote_addr;
+                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                  proxy_set_header X-Forwarded-Proto $scheme;
+                  proxy_set_header Connection '';
+                  proxy_http_version 1.1;
+          
+                  # Timeouts
+                  proxy_connect_timeout 60s;
+                  proxy_send_timeout 60s;
+                  proxy_read_timeout 60s;
+          
+                  # Buffering
+                  proxy_buffering on;
+                  proxy_buffer_size 4k;
+                  proxy_buffers 8 4k;
+              }
+          
+              # Alternative port proxy
+              location /alt/ {
+                  proxy_pass http://localhost:8080/;
+                  proxy_set_header Host $host;
+                  proxy_set_header X-Real-IP $remote_addr;
+                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                  proxy_set_header X-Forwarded-Proto $scheme;
+              }
+          
+              # Logs
+              access_log /var/log/nginx/livekit-proxy.access.log;
+              error_log /var/log/nginx/livekit-proxy.error.log;
+          }
+      owner: root:root
+      permissions: '0644'
+
+    # Monitoring script
+    - path: /opt/livekit-proxy/monitor.sh
+      content: |
+          #!/bin/bash
+          # Monitoring script for LiveKit proxy
+          
+          echo "=== LiveKit Proxy Status Check ==="
+          echo "Time: $(date)"
+          echo
+          
+          echo "--- Docker Status ---"
+          docker --version
+          echo "Docker daemon status: $(systemctl is-active docker)"
+          echo
+          
+          echo "--- Container Status ---"
+          cd /opt/livekit-proxy
+          docker-compose ps
+          echo
+          
+          echo "--- Container Logs (last 20 lines) ---"
+          docker-compose logs --tail=20
+          echo
+          
+          echo "--- Service Health Checks ---"
+          for endpoint in "http://localhost:9000/health" "http://localhost:9000/" "http://localhost:8080/"; do
+              if curl -f "$endpoint" >/dev/null 2>&1; then
+                  echo "✓ $endpoint is responding"
+              else
+                  echo "✗ $endpoint is not responding"
+              fi
+          done
+          echo
+          
+          echo "--- Nginx Status ---"
+          echo "Nginx status: $(systemctl is-active nginx)"
+          nginx -t
+          echo
+          
+          echo "--- System Resources ---"
+          df -h /
+          free -h
+          echo
+          
+          echo "--- Network Connections ---"
+          netstat -tlnp | grep -E ':(80|443|8080|9000)\s'
+          echo
+          
+          echo "--- Recent Logs ---"
+          echo "Cloud-init log (last 10 lines):"
+          tail -10 /var/log/cloud-init-custom.log 2>/dev/null || echo "No cloud-init log found"
+          echo
+          echo "LiveKit startup log (last 10 lines):"
+          tail -10 /opt/livekit-proxy/logs/startup.log 2>/dev/null || echo "No startup log found"
+      owner: ubuntu:ubuntu
+      permissions: '0755'
+
+    # Nginx site enablement script
+    - path: /opt/setup-nginx.sh
+      content: |
+          #!/bin/bash
+          # Remove default site and enable our site
+          rm -f /etc/nginx/sites-enabled/default
+          ln -sf /etc/nginx/sites-available/livekit-proxy /etc/nginx/sites-enabled/
+          
+          # Test nginx configuration
+          if nginx -t; then
+              echo "✓ Nginx configuration is valid"
+              systemctl reload nginx
+          else
+              echo "✗ Nginx configuration is invalid"
+              exit 1
+          fi
+      owner: root:root
+      permissions: '0755'
+
+# Run commands after files are written
+runcmd:
+    # Configure Nginx
+    - /opt/setup-nginx.sh
+
+# Final commands to run at the very end
+final_message: |
+    LiveKit Proxy cloud-init setup completed!
+    
+    Check status with:
+    - systemctl status docker nginx livekit-proxy
+    - /opt/livekit-proxy/monitor.sh
+    
+    View logs:
+    - /var/log/cloud-init-output.log
+    - /var/log/cloud-init-custom.log
+    - /opt/livekit-proxy/logs/startup.log
+
+# Enable logging
+output:
+    all: '| tee -a /var/log/cloud-init-output.log'
+
+# Set locale
+locale: en_US.UTF-8
+
+# Reboot if required (usually not needed)
+power_state:
+    mode: false
