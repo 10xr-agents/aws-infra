@@ -1,4 +1,10 @@
-# environments/qa-india/main.tf
+# SSH Key Pair
+resource "aws_key_pair" "ec2" {
+  key_name   = "${local.name_prefix}-key"
+  public_key = var.ssh_public_key
+  
+  tags = var.tags
+}# environments/qa-india/main.tf
 
 terraform {
   required_version = ">= 1.7.0"
@@ -32,7 +38,7 @@ resource "aws_vpc" "main" {
   cidr_block           = var.vpc_cidr
   enable_dns_support   = true
   enable_dns_hostnames = true
-
+  
   tags = merge(var.tags, {
     Name = "${local.name_prefix}-vpc"
   })
@@ -41,7 +47,7 @@ resource "aws_vpc" "main" {
 # Internet Gateway
 resource "aws_internet_gateway" "main" {
   vpc_id = aws_vpc.main.id
-
+  
   tags = merge(var.tags, {
     Name = "${local.name_prefix}-igw"
   })
@@ -54,7 +60,7 @@ resource "aws_subnet" "public" {
   cidr_block              = var.public_subnet_cidrs[count.index]
   availability_zone       = var.availability_zones[count.index]
   map_public_ip_on_launch = true
-
+  
   tags = merge(var.tags, {
     Name = "${local.name_prefix}-public-subnet-${count.index + 1}"
   })
@@ -63,12 +69,12 @@ resource "aws_subnet" "public" {
 # Route Table
 resource "aws_route_table" "public" {
   vpc_id = aws_vpc.main.id
-
+  
   route {
     cidr_block = "0.0.0.0/0"
     gateway_id = aws_internet_gateway.main.id
   }
-
+  
   tags = merge(var.tags, {
     Name = "${local.name_prefix}-public-rt"
   })
@@ -86,7 +92,7 @@ resource "aws_security_group" "ec2" {
   name        = "${local.name_prefix}-ec2-sg"
   description = "Security group for LiveKit proxy EC2 instance"
   vpc_id      = aws_vpc.main.id
-
+  
   # SSH access
   ingress {
     from_port   = 22
@@ -95,7 +101,7 @@ resource "aws_security_group" "ec2" {
     cidr_blocks = var.ssh_allowed_cidr_blocks
     description = "SSH access"
   }
-
+  
   # HTTP access
   ingress {
     from_port   = 80
@@ -104,7 +110,7 @@ resource "aws_security_group" "ec2" {
     cidr_blocks = ["0.0.0.0/0"]
     description = "HTTP access"
   }
-
+  
   # HTTPS access
   ingress {
     from_port   = 443
@@ -113,7 +119,7 @@ resource "aws_security_group" "ec2" {
     cidr_blocks = ["0.0.0.0/0"]
     description = "HTTPS access"
   }
-
+  
   # LiveKit proxy port
   ingress {
     from_port   = 9000
@@ -122,7 +128,7 @@ resource "aws_security_group" "ec2" {
     cidr_blocks = ["0.0.0.0/0"]
     description = "LiveKit proxy port"
   }
-
+  
   # All outbound traffic
   egress {
     from_port   = 0
@@ -131,18 +137,42 @@ resource "aws_security_group" "ec2" {
     cidr_blocks = ["0.0.0.0/0"]
     description = "All outbound traffic"
   }
-
+  
   tags = merge(var.tags, {
     Name = "${local.name_prefix}-ec2-sg"
   })
 }
 
-# SSH Key Pair
-resource "aws_key_pair" "ec2" {
-  key_name   = "${local.name_prefix}-key"
-  public_key = file(var.ssh_public_key_path)
-
+# IAM Role for EC2 to access ECR
+resource "aws_iam_role" "ec2_ecr_role" {
+  name = "${local.name_prefix}-ec2-ecr-role"
+  
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "ec2.amazonaws.com"
+        }
+      }
+    ]
+  })
+  
   tags = var.tags
+}
+
+# Attach ECR policy to the IAM role
+resource "aws_iam_role_policy_attachment" "ecr_policy_attachment" {
+  role       = aws_iam_role.ec2_ecr_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonECR-FullAccess"
+}
+
+# Create instance profile
+resource "aws_iam_instance_profile" "ec2_profile" {
+  name = "${local.name_prefix}-ec2-profile"
+  role = aws_iam_role.ec2_ecr_role.name
 }
 
 # EC2 Instance
@@ -152,15 +182,16 @@ resource "aws_instance" "livekit_proxy" {
   key_name               = aws_key_pair.ec2.key_name
   subnet_id              = aws_subnet.public[0].id  # Use the first subnet
   vpc_security_group_ids = [aws_security_group.ec2.id]
-
+  iam_instance_profile   = aws_iam_instance_profile.ec2_profile.name
+  
   # User data script to install Docker and run LiveKit proxy
   user_data = <<-EOF
     #!/bin/bash
-
+    
     # Update the system
     apt-get update
     apt-get upgrade -y
-
+    
     # Install Docker
     apt-get install -y apt-transport-https ca-certificates curl software-properties-common
     curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
@@ -169,15 +200,15 @@ resource "aws_instance" "livekit_proxy" {
     apt-get install -y docker-ce docker-ce-cli containerd.io
     systemctl enable docker
     systemctl start docker
-
+    
     # Install Docker Compose
     curl -L "https://github.com/docker/compose/releases/download/v2.20.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
     chmod +x /usr/local/bin/docker-compose
-
+    
     # Create directory for LiveKit proxy
     mkdir -p /opt/livekit-proxy
-
-    # Create docker-compose.yml file
+    
+    # Create docker-compose.yml file - OPTION 1: Pull from ECR
     cat > /opt/livekit-proxy/docker-compose.yml <<EOL
     version: '3'
     services:
@@ -195,24 +226,63 @@ resource "aws_instance" "livekit_proxy" {
           timeout: 10s
           retries: 3
     EOL
-
-    # Setup AWS CLI and ECR login
+    
+    # OPTION 2: Copy the Docker image to a local file
+    # This section is commented out. Uncomment to use this approach instead.
+    # cat > /opt/livekit-proxy/Dockerfile <<EOL
+    # FROM ubuntu:22.04
+    # 
+    # # Install dependencies
+    # RUN apt-get update && apt-get install -y \
+    #     curl \
+    #     net-tools \
+    #     && rm -rf /var/lib/apt/lists/*
+    # 
+    # # Set working directory
+    # WORKDIR /app
+    # 
+    # # Copy the LiveKit proxy binary
+    # COPY livekit-proxy /app/
+    # 
+    # # Set executable permissions
+    # RUN chmod +x /app/livekit-proxy
+    # 
+    # # Expose port
+    # EXPOSE 9000
+    # 
+    # # Set environment variables
+    # ENV SERVICE_PORT=9000
+    # ENV REGION=india
+    # 
+    # # Health check
+    # HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    #   CMD curl -f http://localhost:9000/api/v1/management/health || exit 1
+    # 
+    # # Run the proxy
+    # CMD ["/app/livekit-proxy"]
+    # EOL
+    
+    # Setup AWS CLI for ECR authentication
     apt-get install -y awscli
+    
+    # Configure AWS credentials using instance profile or add AWS credentials here
+    
+    # Authenticate with ECR
     aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 761018882607.dkr.ecr.us-east-1.amazonaws.com
-
+    
     # Start the service
     cd /opt/livekit-proxy
     docker-compose up -d
-
-    # Install Nginx as a reverse proxy with SSL
+    
+    # Install Nginx as a reverse proxy
     apt-get install -y nginx certbot python3-certbot-nginx
-
+    
     # Configure Nginx
     cat > /etc/nginx/sites-available/livekit-proxy <<EOL
     server {
         listen 80;
         server_name ${var.domain_name};
-
+        
         location / {
             proxy_pass http://localhost:9000;
             proxy_set_header Host \$host;
@@ -222,24 +292,24 @@ resource "aws_instance" "livekit_proxy" {
         }
     }
     EOL
-
+    
     # Enable the site
     ln -s /etc/nginx/sites-available/livekit-proxy /etc/nginx/sites-enabled/
     systemctl reload nginx
   EOF
-
+  
   # EBS volume configuration
   root_block_device {
     volume_type           = "gp3"
     volume_size           = var.ec2_root_volume_size
     delete_on_termination = true
     encrypted             = true
-
+    
     tags = merge(var.tags, {
       Name = "${local.name_prefix}-root-volume"
     })
   }
-
+  
   tags = merge(var.tags, {
     Name = "${local.name_prefix}-livekit-proxy"
   })
@@ -249,7 +319,7 @@ resource "aws_instance" "livekit_proxy" {
 resource "aws_eip" "livekit_proxy" {
   instance = aws_instance.livekit_proxy.id
   domain   = "vpc"
-
+  
   tags = merge(var.tags, {
     Name = "${local.name_prefix}-eip"
   })

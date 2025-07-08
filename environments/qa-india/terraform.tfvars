@@ -18,6 +18,8 @@ ec2_root_volume_size = 30
 
 # SSH Configuration
 ssh_allowed_cidr_blocks = ["0.0.0.0/0"]  # Replace with your office IP for better security
+# Use ssh_public_key to specify your actual public key 
+# ssh_public_key = "ssh-rsa AAAA..."
 
 # Domain Configuration
 subdomain = "proxy-india.qa"
