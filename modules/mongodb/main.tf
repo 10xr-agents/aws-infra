@@ -524,7 +524,7 @@ resource "aws_iam_role_policy_attachment" "backup" {
 # Local values for connection strings
 locals {
   connection_string = format(
-    "mongodb://%s:%s@%s/%s?replicaSet=%s&authSource=admin",
+    "mongodb://%s:%s@%s/%s?replicaSet=%s&authSource=admin&readPreference=primary",
     var.mongodb_admin_username,
     var.mongodb_admin_password,
     join(",", formatlist("%s:27017", aws_instance.mongodb[*].private_ip)),
@@ -533,7 +533,7 @@ locals {
   )
 
   srv_connection_string = var.create_dns_records ? format(
-    "mongodb+srv://%s:%s@%s/%s?replicaSet=%s&authSource=admin",
+    "mongodb+srv://%s:%s@%s/%s?replicaSet=%s&authSource=admin&readPreference=primary",
     var.mongodb_admin_username,
     var.mongodb_admin_password,
     replace(aws_route53_zone.mongodb[0].name, "/\\.$/", ""),
