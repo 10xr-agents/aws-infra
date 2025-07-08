@@ -319,6 +319,17 @@ resource "aws_key_pair" "ec2" {
   tags = var.tags
 }
 
+# Elastic IP for EC2 instance - MODIFIED: Removed instance reference
+resource "aws_eip" "livekit_proxy" {
+  domain   = "vpc"
+
+  depends_on = [aws_internet_gateway.main]
+
+  tags = merge(var.tags, {
+    Name = "${local.name_prefix}-eip"
+  })
+}
+
 # EC2 Instance
 resource "aws_instance" "livekit_proxy" {
   ami                    = var.ec2_ami_id
@@ -430,7 +441,7 @@ EOL
     cat > /etc/nginx/sites-available/livekit-proxy <<EOL
     server {
         listen 80;
-        server_name ${var.domain_name} ${aws_eip.livekit_proxy.public_ip};
+        server_name ${var.domain_name};
 
         # Health check endpoint
         location /health {
@@ -527,16 +538,10 @@ EOL
   })
 }
 
-# Elastic IP for EC2 instance
-resource "aws_eip" "livekit_proxy" {
-  instance = aws_instance.livekit_proxy.id
-  domain   = "vpc"
-
-  depends_on = [aws_internet_gateway.main]
-
-  tags = merge(var.tags, {
-    Name = "${local.name_prefix}-eip"
-  })
+# NEW: Associate Elastic IP with the EC2 instance
+resource "aws_eip_association" "livekit_proxy_eip_assoc" {
+  instance_id   = aws_instance.livekit_proxy.id
+  allocation_id = aws_eip.livekit_proxy.id
 }
 
 # Cloudflare DNS record - Using CNAME instead of A record for better flexibility

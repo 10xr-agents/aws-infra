@@ -62,12 +62,12 @@ output "proxy_url" {
 
 output "cloudflare_record_id" {
   description = "ID of the Cloudflare DNS record"
-  value       = cloudflare_record.livekit_proxy.id
+  value       = cloudflare_record.livekit_proxy_cname.id
 }
 
 output "cloudflare_record_name" {
   description = "Name of the Cloudflare DNS record"
-  value       = cloudflare_record.livekit_proxy.name
+  value       = cloudflare_record.livekit_proxy_cname.name
 }
 
 # Network Architecture Summary
