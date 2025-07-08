@@ -1,4 +1,30 @@
-# SSH Key Pair
+# Create IAM policy for cross-region ECR access
+resource "aws_iam_policy" "ecr_cross_region_policy" {
+  name        = "${local.name_prefix}-ecr-cross-region-policy"
+  description = "Policy for EC2 instance to access ECR in us-east-1"
+  
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "ecr:GetDownloadUrlForLayer",
+          "ecr:BatchGetImage",
+          "ecr:BatchCheckLayerAvailability",
+          "ecr:GetAuthorizationToken"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+# Attach custom ECR policy to the IAM role
+resource "aws_iam_role_policy_attachment" "ecr_custom_policy_attachment" {
+  role       = aws_iam_role.ec2_ecr_role.name
+  policy_arn = aws_iam_policy.ecr_cross_region_policy.arn
+}# SSH Key Pair
 resource "aws_key_pair" "ec2" {
   key_name   = "${local.name_prefix}-key"
   public_key = var.ssh_public_key
@@ -166,7 +192,7 @@ resource "aws_iam_role" "ec2_ecr_role" {
 # Attach ECR policy to the IAM role
 resource "aws_iam_role_policy_attachment" "ecr_policy_attachment" {
   role       = aws_iam_role.ec2_ecr_role.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonECR-FullAccess"
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
 }
 
 # Create instance profile
