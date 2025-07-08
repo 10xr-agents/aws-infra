@@ -18,7 +18,7 @@ locals {
 
   ecs_services = var.ecs_services
 
-  mongodb_connection_string = "mongodb+srv://doadmin:2wP6eJ810Sa573WI@db-mongodb-nyc3-50305-ea8e643e.mongo.ondigitalocean.com/ten_xr_app_qa?tls=true&authSource=admin&replicaSet=db-mongodb-nyc3-50305"
+  mongodb_connection_string = "mongodb+srv://doadmin:2wP6eJ810Sa573WI@db-mongodb-nyc3-50305-ea8e643e.mongo.ondigitalocean.com/ten_xr_agents_qa?tls=true&authSource=admin&replicaSet=db-mongodb-nyc3-50305"
 
   acm_certificate_arn = aws_acm_certificate.main.arn
 
