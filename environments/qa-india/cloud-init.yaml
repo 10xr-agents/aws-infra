@@ -37,67 +37,7 @@ system_info:
     default_user:
         groups: [adm, audio, cdrom, dialout, dip, floppy, lxd, netdev, plugdev, sudo, video, docker]
 
-# Create directories
-runcmd:
-    # Set up logging for cloud-init
-    - echo "=== Cloud-Init Started ===" | tee -a /var/log/cloud-init-custom.log
-    - exec > >(tee -a /var/log/cloud-init-custom.log) 2>&1
-
-    # Wait for system to stabilize
-    - sleep 30
-
-    # Install Docker
-    - echo "Installing Docker..." | tee -a /var/log/cloud-init-custom.log
-    - curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
-    - echo "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
-    - apt-get update
-    - apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-    - systemctl enable docker
-    - systemctl start docker
-    - usermod -aG docker ubuntu
-
-    # Install Docker Compose standalone
-    - echo "Installing Docker Compose..." | tee -a /var/log/cloud-init-custom.log
-    - curl -L "https://github.com/docker/compose/releases/download/v2.24.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-    - chmod +x /usr/local/bin/docker-compose
-    - ln -sf /usr/local/bin/docker-compose /usr/bin/docker-compose
-
-    # Verify Docker installation
-    - echo "Verifying Docker installation..." | tee -a /var/log/cloud-init-custom.log
-    - docker --version
-    - docker-compose --version
-    - docker run --rm hello-world
-
-    # Create application directories
-    - echo "Setting up application directories..." | tee -a /var/log/cloud-init-custom.log
-    - mkdir -p /opt/livekit-proxy/{logs,config}
-    - chown -R ubuntu:ubuntu /opt/livekit-proxy
-
-    # Wait for Docker to be fully ready
-    - sleep 60
-
-    # Configure and start services
-    - echo "Configuring services..." | tee -a /var/log/cloud-init-custom.log
-    - systemctl daemon-reload
-    - systemctl enable nginx
-    - systemctl start nginx
-    - systemctl enable livekit-proxy.service || true
-
-    # Start LiveKit proxy
-    - echo "Starting LiveKit proxy..." | tee -a /var/log/cloud-init-custom.log
-    - sleep 30
-    - systemctl start livekit-proxy.service || true
-
-    # Final verification
-    - echo "Running final verification..." | tee -a /var/log/cloud-init-custom.log
-    - sleep 30
-    - /opt/livekit-proxy/monitor.sh || true
-
-    # Mark completion
-    - echo "=== Cloud-Init Completed Successfully ===" | tee -a /var/log/cloud-init-custom.log
-    - echo "$(date): Cloud-init completed" > /var/log/cloud-init-complete
-
-# Write files to the system
+# Write files to the system (this runs before runcmd)
 write_files:
     # Docker Compose configuration
     - path: /opt/livekit-proxy/docker-compose.yml
@@ -363,12 +303,71 @@ write_files:
       owner: root:root
       permissions: '0755'
 
-# Run commands after files are written
+# Single runcmd section with all commands in proper order
 runcmd:
-    # Configure Nginx
+    # Set up logging for cloud-init
+    - echo "=== Cloud-Init Started ===" | tee -a /var/log/cloud-init-custom.log
+    - exec > >(tee -a /var/log/cloud-init-custom.log) 2>&1
+
+    # Wait for system to stabilize
+    - sleep 30
+
+    # Install Docker
+    - echo "Installing Docker..." | tee -a /var/log/cloud-init-custom.log
+    - curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+    - echo "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
+    - apt-get update
+    - apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+    - systemctl enable docker
+    - systemctl start docker
+    - usermod -aG docker ubuntu
+
+    # Install Docker Compose standalone
+    - echo "Installing Docker Compose..." | tee -a /var/log/cloud-init-custom.log
+    - curl -L "https://github.com/docker/compose/releases/download/v2.24.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+    - chmod +x /usr/local/bin/docker-compose
+    - ln -sf /usr/local/bin/docker-compose /usr/bin/docker-compose
+
+    # Verify Docker installation
+    - echo "Verifying Docker installation..." | tee -a /var/log/cloud-init-custom.log
+    - docker --version
+    - docker-compose --version
+    - docker run --rm hello-world
+
+    # Create application directories (ensure they exist with proper ownership)
+    - echo "Setting up application directories..." | tee -a /var/log/cloud-init-custom.log
+    - mkdir -p /opt/livekit-proxy/{logs,config}
+    - chown -R ubuntu:ubuntu /opt/livekit-proxy
+
+    # Configure Nginx (run after files are written)
+    - echo "Configuring Nginx..." | tee -a /var/log/cloud-init-custom.log
     - /opt/setup-nginx.sh
 
-# Final commands to run at the very end
+    # Wait for Docker to be fully ready
+    - sleep 60
+
+    # Configure and start services
+    - echo "Configuring services..." | tee -a /var/log/cloud-init-custom.log
+    - systemctl daemon-reload
+    - systemctl enable nginx
+    - systemctl start nginx
+    - systemctl enable livekit-proxy.service || true
+
+    # Start LiveKit proxy
+    - echo "Starting LiveKit proxy..." | tee -a /var/log/cloud-init-custom.log
+    - sleep 30
+    - systemctl start livekit-proxy.service || true
+
+    # Final verification
+    - echo "Running final verification..." | tee -a /var/log/cloud-init-custom.log
+    - sleep 30
+    - /opt/livekit-proxy/monitor.sh || true
+
+    # Mark completion
+    - echo "=== Cloud-Init Completed Successfully ===" | tee -a /var/log/cloud-init-custom.log
+    - echo "$(date): Cloud-init completed" > /var/log/cloud-init-complete
+
+# Final message
 final_message: |
     LiveKit Proxy cloud-init setup completed!
     
