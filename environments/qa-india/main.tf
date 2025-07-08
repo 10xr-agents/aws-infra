@@ -12,10 +12,6 @@ terraform {
       source  = "cloudflare/cloudflare"
       version = "~> 4.40.0"
     }
-    cloudinit = {
-      source  = "hashicorp/cloudinit"
-      version = "~> 2.3.0"
-    }
   }
 }
 
@@ -371,18 +367,12 @@ resource "aws_eip" "livekit_proxy" {
   })
 }
 
-# Data source for cloud-init configuration
-data "cloudinit_config" "livekit_proxy" {
-  gzip          = true
-  base64_encode = true
+# CloudWatch Log Group for LiveKit logs
+resource "aws_cloudwatch_log_group" "livekit" {
+  name              = "/aws/ec2/livekit/${var.cluster_name}-${var.environment}"
+  retention_in_days = 7
 
-  part {
-    content_type = "text/cloud-config"
-    content = templatefile("${path.module}/cloud-init.yaml", {
-      domain_name = var.domain_name
-      elastic_ip  = aws_eip.livekit_proxy.public_ip
-    })
-  }
+  tags = var.tags
 }
 
 # EC2 Instance
@@ -394,8 +384,11 @@ resource "aws_instance" "livekit_proxy" {
   vpc_security_group_ids = [aws_security_group.ec2.id]
   iam_instance_profile   = aws_iam_instance_profile.ec2_profile.name
 
-  # Use cloud-init configuration
-  user_data_base64 = data.cloudinit_config.livekit_proxy.rendered
+  # Use cloud-init configuration with improved template
+  user_data_base64 = base64gzip(templatefile("${path.module}/livekit-cloud-init.yml", {
+    domain_name = var.domain_name
+    elastic_ip  = aws_eip.livekit_proxy.public_ip
+  }))
 
   # EBS volume configuration
   root_block_device {
@@ -409,12 +402,32 @@ resource "aws_instance" "livekit_proxy" {
     })
   }
 
+  # Enhanced metadata options for better security
+  metadata_options {
+    http_endpoint               = "enabled"
+    http_tokens                 = "required"
+    http_put_response_hop_limit = 2
+    instance_metadata_tags      = "enabled"
+  }
+
+  monitoring = true
+
   tags = merge(var.tags, {
     Name = "${local.name_prefix}-livekit-proxy"
   })
 
   # Ensure EIP is created first
-  depends_on = [aws_eip.livekit_proxy]
+  depends_on = [
+    aws_eip.livekit_proxy,
+    aws_cloudwatch_log_group.livekit
+  ]
+
+  lifecycle {
+    ignore_changes = [
+      ami,
+      user_data_base64
+    ]
+  }
 }
 
 resource "aws_eip_association" "livekit_proxy_eip_association" {
