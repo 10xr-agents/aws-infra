@@ -152,17 +152,14 @@ resource "aws_network_acl" "public" {
     to_port    = 65535
   }
 
-  # Allow ICMP
   ingress {
-    protocol   = "icmp"
-    rule_no    = 170
-    action     = "allow"
-    cidr_block = "0.0.0.0/0"
-    from_port  = -1  # For ICMP, -1 means all codes
-    to_port    = -1  # For ICMP, -1 means all types
-    icmp_type  = -1
-    icmp_code  = -1
-  }
+  protocol   = "icmp"
+  rule_no    = 170
+  action     = "allow"
+  cidr_block = "0.0.0.0/0"
+  from_port  = 0
+  to_port    = 0
+}
 
   # Outbound rules
   egress {
