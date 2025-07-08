@@ -203,13 +203,20 @@ write_files:
           # PHASE 2: Service Configuration
           log "=== PHASE 2: Service Configuration ==="
           
-          # Configure Nginx
+         # Configure Nginx
           log "Configuring Nginx..."
           
           # Remove default site
           rm -f /etc/nginx/sites-enabled/default
           
-          # Create Nginx configuration
+          # Add rate limiting configuration to main nginx.conf
+          # First, backup the original nginx.conf
+          cp /etc/nginx/nginx.conf /etc/nginx/nginx.conf.backup
+          
+          # Add rate limiting zone to http block in nginx.conf
+          sed -i '/http {/a\\n\t# Rate limiting configuration\n\tlimit_req_zone $binary_remote_addr zone=api:10m rate=10r/s;\n' /etc/nginx/nginx.conf
+          
+          # Create Nginx configuration for the site (without limit_req_zone)
           cat > /etc/nginx/sites-available/livekit-proxy <<EOF
           server {
               listen 80;
@@ -217,9 +224,6 @@ write_files:
           
               # Increase client max body size
               client_max_body_size 100M;
-          
-              # Basic rate limiting
-              limit_req_zone \$binary_remote_addr zone=api:10m rate=10r/s;
           
               # Health check endpoint
               location /nginx-health {
