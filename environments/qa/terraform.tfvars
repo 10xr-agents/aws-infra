@@ -28,7 +28,7 @@ enable_fargate_spot      = true
 # SSL Configuration (add your certificate ARN here if you have one)
 ssl_policy          = "ELBSecurityPolicy-TLS-1-2-2017-01"
 
-# ECS Services Configuration (keeping your existing services)
+# ECS Services Configuration (keeping your existing services + new automation-service-mcp)
 ecs_services = {
   "voice-agent": {
     "image": "761018882607.dkr.ecr.us-east-1.amazonaws.com/10xr-agents/voice-agent",
@@ -280,6 +280,56 @@ ecs_services = {
       "enabled": false,
       "mount_path": "/app/storage"
     }
+  },
+  "automation-service-mcp": {
+    "image": "761018882607.dkr.ecr.us-east-1.amazonaws.com/10xr-agents/automation-service-mcp",
+    "image_tag": "latest",
+    "port": 8090,
+    "cpu": 1024,
+    "memory": 2048,
+    "desired_count": 2,
+    "environment": {
+      "LOG_LEVEL": "INFO",
+      "SERVICE_PORT": "8090"
+    },
+    "secrets": [],
+    "capacity_provider_strategy": [
+      {
+        "capacity_provider": "FARGATE",
+        "weight": 1,
+        "base": 1
+      },
+      {
+        "capacity_provider": "FARGATE_SPOT",
+        "weight": 2,
+        "base": 0
+      }
+    ],
+    "container_health_check": {
+      "command": "curl -f http://localhost:8090/health || exit 1",
+      "interval": 30,
+      "timeout": 20,
+      "start_period": 90,
+      "retries": 3
+    },
+    "health_check": {
+      "path": "/health",
+      "interval": 30,
+      "timeout": 20,
+      "healthy_threshold": 2,
+      "unhealthy_threshold": 3,
+      "matcher": "200"
+    },
+    "enable_auto_scaling": true,
+    "auto_scaling_min_capacity": 1,
+    "auto_scaling_max_capacity": 8,
+    "auto_scaling_cpu_target": 70,
+    "auto_scaling_memory_target": 80,
+    "enable_default_routing": false,
+    "alb_host_headers": ["automation.qa.10xr.co"],
+    "enable_load_balancer": true,
+    "enable_service_discovery": true,
+    "deregistration_delay": 30
   }
 }
 
@@ -441,6 +491,15 @@ app_dns_records = {
     ttl      = 300
     comment  = "QA LiveKit Proxy environment - routes to LiveKit proxy"
     tags     = ["qa", "livekit", "proxy"]
+  },
+  "qa-automation" = {
+    name     = "automation.qa"
+    content  = "" # Will be set by module to Global Accelerator DNS name
+    type     = "CNAME"
+    proxied  = false
+    ttl      = 300
+    comment  = "QA Automation Service environment - routes to automation MCP service"
+    tags     = ["qa", "automation", "mcp"]
   }
 }
 # Zone Settings (optional)

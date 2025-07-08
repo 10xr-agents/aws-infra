@@ -307,3 +307,63 @@ resource "aws_lb_listener_rule" "ui_console_https_host_rule" {
     aws_lb_target_group.service
   ]
 }
+
+# HTTP Host-based routing rule for automation-service-mcp
+resource "aws_lb_listener_rule" "automation_service_mcp_http_host_rule" {
+  count = var.create_alb ? 1 : 0
+
+  listener_arn = aws_lb_listener.http[0].arn
+  priority     = 106
+
+  action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.service["automation-service-mcp"].arn
+  }
+
+  condition {
+    host_header {
+      values = ["automation.qa.10xr.co"]
+    }
+  }
+
+  tags = merge(local.common_tags, {
+    Name      = "${local.name_prefix}-automation-service-mcp-http-host-rule"
+    Service   = "automation-service-mcp"
+    Component = "ListenerRule"
+  })
+
+  depends_on = [
+    aws_lb_listener.http,
+    aws_lb_target_group.service
+  ]
+}
+
+# HTTPS Host-based routing rule for automation-service-mcp (if SSL certificate provided)
+resource "aws_lb_listener_rule" "automation_service_mcp_https_host_rule" {
+  count = var.create_alb ? 1 : 0
+
+  listener_arn = aws_lb_listener.https[0].arn
+  priority     = 106
+
+  action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.service["automation-service-mcp"].arn
+  }
+
+  condition {
+    host_header {
+      values = ["automation.qa.10xr.co"]
+    }
+  }
+
+  tags = merge(local.common_tags, {
+    Name      = "${local.name_prefix}-automation-service-mcp-https-host-rule"
+    Service   = "automation-service-mcp"
+    Component = "ListenerRule"
+  })
+
+  depends_on = [
+    aws_lb_listener.https,
+    aws_lb_target_group.service
+  ]
+}
