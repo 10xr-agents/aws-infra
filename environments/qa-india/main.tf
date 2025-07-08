@@ -525,11 +525,11 @@ EOL
   tags = merge(var.tags, {
     Name = "${local.name_prefix}-livekit-proxy"
   })
+
 }
 
 # Elastic IP for EC2 instance
 resource "aws_eip" "livekit_proxy" {
-  instance = aws_instance.livekit_proxy.id
   domain   = "vpc"
 
   depends_on = [aws_internet_gateway.main]
@@ -537,6 +537,11 @@ resource "aws_eip" "livekit_proxy" {
   tags = merge(var.tags, {
     Name = "${local.name_prefix}-eip"
   })
+}
+
+resource "aws_eip_association" "livekit_proxy_eip_association" {
+  instance_id = aws_instance.livekit_proxy.id
+  allocation_id = aws_eip.livekit_proxy.id
 }
 
 # Cloudflare DNS record - Using CNAME instead of A record for better flexibility
