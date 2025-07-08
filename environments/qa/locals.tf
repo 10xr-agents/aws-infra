@@ -43,6 +43,7 @@ locals {
             REDIS_TLS_ENABLED      = tostring(var.redis_transit_encryption_enabled)
 
             SPRING_DATA_MONGODB_URI = local.mongodb_connection_string
+            MONGO_DB_URL            = local.mongodb_connection_string
             MONGO_DB_URI            = local.mongodb_connection_string
             MONGODB_DATABASE        = var.mongodb_default_database
             DATABASE_NAME           = var.mongodb_default_database
