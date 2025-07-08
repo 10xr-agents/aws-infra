@@ -385,7 +385,7 @@ resource "aws_instance" "livekit_proxy" {
   iam_instance_profile   = aws_iam_instance_profile.ec2_profile.name
 
   # Use cloud-init configuration with improved template
-  user_data_base64 = base64gzip(templatefile("${path.module}/livekit-cloud-init.yml", {
+  user_data_base64 = base64gzip(templatefile("${path.module}/cloud-init.yml", {
     domain_name = var.domain_name
     elastic_ip  = aws_eip.livekit_proxy.public_ip
   }))
