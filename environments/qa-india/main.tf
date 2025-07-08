@@ -544,24 +544,14 @@ resource "aws_eip_association" "livekit_proxy_eip_assoc" {
   allocation_id = aws_eip.livekit_proxy.id
 }
 
-# Cloudflare DNS record - Using CNAME instead of A record for better flexibility
+# Cloudflare DNS record - Using CNAME instead of A record
 resource "cloudflare_record" "livekit_proxy_cname" {
   zone_id = var.cloudflare_zone_id
   name    = var.subdomain
-  value   = aws_eip.livekit_proxy.public_ip
-  type    = "A"  # We'll keep A record since we have a static IP
+  value   = "${aws_eip.livekit_proxy.public_ip}.nip.io"  # Using nip.io for CNAME to IP
+  type    = "CNAME"
   proxied = false  # Disable proxy initially for debugging
   ttl     = 300   # 5 minutes TTL for faster updates
 
   comment = "LiveKit Proxy - QA India Environment"
 }
-
-# Alternative CNAME record (commented out, use if you prefer CNAME)
-# resource "cloudflare_record" "livekit_proxy_cname" {
-#   zone_id = var.cloudflare_zone_id
-#   name    = var.subdomain
-#   value   = "${aws_eip.livekit_proxy.public_ip}.nip.io"  # Using nip.io for CNAME to IP
-#   type    = "CNAME"
-#   proxied = false
-#   ttl     = 300
-# }
