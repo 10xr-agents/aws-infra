@@ -158,6 +158,8 @@ resource "aws_network_acl" "public" {
     rule_no    = 170
     action     = "allow"
     cidr_block = "0.0.0.0/0"
+    from_port  = -1  # For ICMP, -1 means all codes
+    to_port    = -1  # For ICMP, -1 means all types
     icmp_type  = -1
     icmp_code  = -1
   }
