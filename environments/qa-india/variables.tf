@@ -39,31 +39,51 @@ variable "availability_zones" {
 variable "ec2_ami_id" {
   description = "AMI ID for the EC2 instance"
   type        = string
-  default     = "ami-0caf778a172362f1c"  # Ubuntu 22.04 LTS in ap-south-1 (update if needed)
+  default     = "ami-0caf778a172362f1c"  # Ubuntu 22.04 LTS in ap-south-1 (verify this is current)
+
+  validation {
+    condition = can(regex("^ami-[0-9a-f]{8,17}$", var.ec2_ami_id))
+    error_message = "The AMI ID must be a valid AMI identifier."
+  }
 }
 
 variable "ec2_instance_type" {
   description = "Instance type for the EC2 instance"
   type        = string
-  default     = "t3.medium"  # Adjust based on your needs
+  default     = "t3.medium"
+
+  validation {
+    condition = contains([
+      "t3.micro", "t3.small", "t3.medium", "t3.large", "t3.xlarge",
+      "t2.micro", "t2.small", "t2.medium", "t2.large",
+      "m5.large", "m5.xlarge", "m5.2xlarge"
+    ], var.ec2_instance_type)
+    error_message = "Instance type must be a valid EC2 instance type."
+  }
 }
 
 variable "ec2_root_volume_size" {
   description = "Size of the root volume in GB"
   type        = number
   default     = 30
+
+  validation {
+    condition = var.ec2_root_volume_size >= 20 && var.ec2_root_volume_size <= 500
+    error_message = "Root volume size must be between 20 and 500 GB."
+  }
 }
 
 variable "ssh_public_key" {
   description = "Public SSH key content for EC2 access"
   type        = string
-  default     = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQD3F6tyPEFEzV0LX3X8BsXdMsQz1x2cEikKDEY0aIj41qgxMCP/iteneqXSIFZBp5vizPvaoIR3Um9xK7PGoW8giupGn+EPuxIA4cDM4vzOqOkiMPhz5XK0whEjkVzTo4+S0puvDZuwIsdiW9mxhJc7tgBNL0cYlWSYVkz4G/fslNfRPW5mYAM49f4fhtxPb5ok4Q2Lg9dPKVHO/Bgeu5woMc7RY0p1ej6D4CKFE6lymSDJpW0YHX/wqE9+cfEauh7xZcG0q9t2ta6F6fmX0agvpFyZo8aFbXeUBr7osSCJNgvavWbM/06niWrOvYX2xwWdhXmXSrbX8ZbabVohBK41"  # Replace with your actual public key
+  default     = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQD3F6tyPEFEzV0LX3X8BsXdMsQz1x2cEikKDEY0aIj41qgxMCP/iteneqXSIFZBp5vizPvaoIR3Um9xK7PGoW8giupGn+EPuxIA4cDM4vzOqOkiMPhz5XK0whEjkVzTo4+S0puvDZuwIsdiW9mxhJc7tgBNL0cYlWSYVkz4G/fslNfRPW5mYAM49f4fhtxPb5ok4Q2Lg9dPKVHO/Bgeu5woMc7RY0p1ej6D4CKFE6lymSDJpW0YHX/wqE9+cfEauh7xZcG0q9t2ta6F6fmX0agvpFyZo8aFbXeUBr7osSCJNgvavWbM/06niWrOvYX2xwWdhXmXSrbX8ZbabVohBK41"
+  sensitive   = false
 }
 
 variable "ssh_allowed_cidr_blocks" {
   description = "CIDR blocks allowed to SSH to the EC2 instance"
   type        = list(string)
-  default     = ["0.0.0.0/0"]  # Consider restricting this to your office IP
+  default     = ["0.0.0.0/0"]  # Consider restricting this to your office IP for security
 }
 
 variable "cloudflare_zone_id" {
@@ -73,7 +93,7 @@ variable "cloudflare_zone_id" {
 }
 
 variable "cloudflare_api_token" {
-  description = "Cloudflare API token"
+  description = "Cloudflare API token with Zone:Edit permissions"
   type        = string
   sensitive   = true
 }
@@ -92,7 +112,7 @@ variable "cloudflare_api_key" {
 }
 
 variable "subdomain" {
-  description = "Subdomain for the LiveKit proxy"
+  description = "Subdomain for the LiveKit proxy (without the main domain)"
   type        = string
   default     = "proxy-india.qa"
 }
@@ -101,6 +121,23 @@ variable "domain_name" {
   description = "Full domain name for the LiveKit proxy"
   type        = string
   default     = "proxy-india.qa.10xr.co"
+}
+
+variable "enable_cloudflare_proxy" {
+  description = "Whether to enable Cloudflare proxy (orange cloud)"
+  type        = bool
+  default     = false  # Disabled for initial testing
+}
+
+variable "dns_ttl" {
+  description = "TTL for DNS records in seconds"
+  type        = number
+  default     = 300
+
+  validation {
+    condition = var.dns_ttl >= 120 && var.dns_ttl <= 86400
+    error_message = "DNS TTL must be between 120 and 86400 seconds."
+  }
 }
 
 variable "tags" {
@@ -112,5 +149,6 @@ variable "tags" {
     Component   = "LiveKit-Proxy"
     Platform    = "AWS"
     Terraform   = "true"
+    ManagedBy   = "Terraform"
   }
 }
