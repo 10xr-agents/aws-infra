@@ -85,7 +85,7 @@ ecs_services = {
   },
   "livekit-proxy": {
     "image": "761018882607.dkr.ecr.us-east-1.amazonaws.com/10xr-agents/livekit-proxy-service",
-    "image_tag": "0.1.0",
+    "image_tag": "1.0.0",
     "port": 9000,
     "cpu": 1024,
     "memory": 2048,
