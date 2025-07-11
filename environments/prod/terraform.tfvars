@@ -460,7 +460,7 @@ domain = "10xr.co"
 base_domain_name = "10xr.co"
 create_cloudflare_dns_records = true
 dns_proxied = true  # Enabled for production (better security and performance)
-manage_cloudflare_zone_settings = true
+manage_cloudflare_zone_settings = false  # Disable for now to avoid conflicts
 
 # Production DNS records
 app_dns_records = {
