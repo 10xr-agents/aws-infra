@@ -225,8 +225,8 @@ module "ecs" {
   alb_internal = true
 
   # Security group connections
-  redis_security_group_id = module.redis.redis_security_group_id
-  mongodb_security_group_id = module.mongodb.security_group_id
+  # redis_security_group_id = module.redis.redis_security_group_id
+  # mongodb_security_group_id = module.mongodb.security_group_id
 
   # Pass the entire services configuration from variables
   services = local.ecs_services_with_overrides
