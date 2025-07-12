@@ -93,58 +93,6 @@ output "ecs_service_urls" {
   }
 }
 
-# MongoDB outputs
-output "mongodb_instance_ids" {
-  description = "IDs of the MongoDB EC2 instances"
-  value       = module.mongodb.instance_ids
-}
-
-output "mongodb_endpoints" {
-  description = "List of MongoDB endpoints (ip:port)"
-  value       = module.mongodb.endpoints
-}
-
-output "mongodb_connection_string" {
-  description = "MongoDB connection string"
-  value       = module.mongodb.connection_string
-  sensitive   = true
-}
-
-output "mongodb_srv_connection_string" {
-  description = "MongoDB SRV connection string (if DNS is enabled)"
-  value       = module.mongodb.srv_connection_string
-  sensitive   = true
-}
-
-output "mongodb_replica_set_name" {
-  description = "Name of the MongoDB replica set"
-  value       = module.mongodb.replica_set_name
-}
-
-output "mongodb_primary_endpoint" {
-  description = "Primary MongoDB endpoint"
-  value       = module.mongodb.primary_endpoint
-}
-
-output "mongodb_security_group_id" {
-  description = "ID of the MongoDB security group"
-  value       = module.mongodb.security_group_id
-}
-
-output "mongodb_ssm_parameter_name" {
-  description = "Name of the SSM parameter containing the MongoDB connection string"
-  value       = module.mongodb.ssm_parameter_name
-}
-
-output "mongodb_dns_records" {
-  description = "Map of DNS records for MongoDB nodes"
-  value       = module.mongodb.dns_records
-}
-
-output "mongodb_cluster_details" {
-  description = "Detailed information about the MongoDB cluster"
-  value       = module.mongodb.cluster_details
-}
 
 # Redis outputs
 output "redis_port" {
@@ -287,6 +235,22 @@ output "network_architecture" {
     }
   }
 }
+
+
+
+    # MongoDB VPC Peering
+    mongodb_vpc_peering = {
+      peering_id = aws_vpc_peering_connection.mongodb_peering.id
+      mongodb_vpc_cidr = local.mongodb_vpc_info.vpc_cidr
+      status = aws_vpc_peering_connection.mongodb_peering.accept_status
+    }
+
+    # Update traffic_flow to include MongoDB traffic
+    traffic_flow = {
+      external_requests = var.create_global_accelerator ? "Internet -> Global Accelerator -> NLB -> ALB -> ECS Services" : "Internet -> NLB -> ALB -> ECS Services"
+      internal_requests = "ECS Services -> Service Discovery -> ECS Services"
+      mongodb_traffic = "ECS Services -> VPC Peering -> MongoDB VPC -> MongoDB Cluster"
+    }
 
 ################################################################################
 # Global Accelerator Outputs
