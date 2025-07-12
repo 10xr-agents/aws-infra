@@ -225,6 +225,7 @@ output "network_architecture" {
     traffic_flow = {
       external_requests = var.create_global_accelerator ? "Internet -> Global Accelerator -> NLB -> ALB -> ECS Services" : "Internet -> NLB -> ALB -> ECS Services"
       internal_requests = "ECS Services -> Service Discovery -> ECS Services"
+      mongodb_traffic = "ECS Services -> VPC Peering -> MongoDB VPC -> MongoDB Cluster"
     }
 
     # SSL/TLS Configuration
@@ -233,24 +234,15 @@ output "network_architecture" {
       nlb_https_protocol = var.https_listener_protocol
       ssl_termination_point = var.https_listener_protocol == "TLS" ? "NLB" : (local.acm_certificate_arn != "" ? "ALB" : "None")
     }
-  }
-}
-
-
-
+    
     # MongoDB VPC Peering
     mongodb_vpc_peering = {
       peering_id = aws_vpc_peering_connection.mongodb_peering.id
       mongodb_vpc_cidr = local.mongodb_vpc_info.vpc_cidr
       status = aws_vpc_peering_connection.mongodb_peering.accept_status
     }
-
-    # Update traffic_flow to include MongoDB traffic
-    traffic_flow = {
-      external_requests = var.create_global_accelerator ? "Internet -> Global Accelerator -> NLB -> ALB -> ECS Services" : "Internet -> NLB -> ALB -> ECS Services"
-      internal_requests = "ECS Services -> Service Discovery -> ECS Services"
-      mongodb_traffic = "ECS Services -> VPC Peering -> MongoDB VPC -> MongoDB Cluster"
-    }
+  }
+}
 
 ################################################################################
 # Global Accelerator Outputs

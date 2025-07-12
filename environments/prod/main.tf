@@ -1,7 +1,6 @@
 # environments/prod/main.tf
 
 locals {
-  cluster_name = "${var.cluster_name}-${var.environment}"
   vpc_name     = "${var.cluster_name}-${var.environment}-${var.region}"
   
   # Shortened name prefix for AWS resource name limits (32 chars)
