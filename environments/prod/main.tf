@@ -179,6 +179,38 @@ resource "aws_iam_policy" "ecs_mongodb_policy" {
   })
 }
 
+# IAM Policy for ElastiCache (Redis) access - add this to main.tf
+resource "aws_iam_policy" "ecs_elasticache_policy" {
+  name        = "${local.cluster_name}-ecs-elasticache-policy"
+  description = "IAM policy for ECS tasks to access ElastiCache resources"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          # ElastiCache permissions
+          "elasticache:DescribeCacheClusters",
+          "elasticache:DescribeReplicationGroups",
+          # SSM permissions for connection details
+          "ssm:GetParameter",
+          "ssm:GetParameters",
+          "ssm:GetParametersByPath",
+          # KMS permissions for decryption
+          "kms:Decrypt",
+          "kms:DescribeKey"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+
+  tags = merge(var.tags, {
+    Name = "${local.cluster_name}-ecs-elasticache-policy"
+  })
+}
+
 # ECS Cluster Module
 module "ecs" {
   source = "../../modules/ecs"

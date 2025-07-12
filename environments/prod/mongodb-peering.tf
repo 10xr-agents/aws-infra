@@ -12,8 +12,7 @@ data "aws_ssm_parameter" "mongodb_connection_info" {
 
 locals {
   # Parse MongoDB VPC information from SSM Parameter Store
-  mongodb_vpc_info       = jsondecode(data.aws_ssm_parameter.mongodb_vpc_info.value)
-  mongodb_connection_info = jsondecode(data.aws_ssm_parameter.mongodb_connection_info.value)
+  mongodb_vpc_info = jsondecode(data.aws_ssm_parameter.mongodb_vpc_info.value)
 }
 
 # Create a VPC peering connection request to MongoDB VPC
@@ -61,11 +60,5 @@ resource "aws_security_group_rule" "ecs_to_mongodb" {
   description       = "Allow outbound traffic to MongoDB"
 }
 
-# Store MongoDB connection information in SSM Parameter Store for application use
-resource "aws_ssm_parameter" "app_mongodb_connection" {
-  name  = "/${var.environment}/${var.cluster_name}/mongodb/connection-string"
-  type  = "SecureString"
-  value = local.mongodb_connection_info.connection_string
-
-  tags = var.tags
-}
+# Note: This resource has been removed to avoid circular dependency
+# Instead, we'll directly use the SSM parameter from the MongoDB infrastructure
