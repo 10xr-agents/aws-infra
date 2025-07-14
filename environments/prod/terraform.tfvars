@@ -516,7 +516,7 @@ cloudflare_security_level = "high"  # Higher security for production
 
 # TFE Configuration (replace with your actual values)
 tfe_organization_name = "10xr"
-github_oauth_token_id = "ot-your-actual-token-id"  # UPDATE THIS
+# github_oauth_token_id = "ot-your-actual-token-id"  # UPDATE THIS
 documentdb_github_repo = "10xr-agents/ten_xr_storage_infra"
 
 # DocumentDB Configuration
