@@ -5,7 +5,6 @@
 
 # TFE Provider configuration
 provider "tfe" {
-  # Token will be set via TFC_TOKEN environment variable or terraform login
 }
 
 # Data source to get the current organization
@@ -233,32 +232,6 @@ resource "tfe_variable" "documentdb_tags" {
   workspace_id = tfe_workspace.documentdb.id
   description  = "Tags for DocumentDB resources"
   hcl          = true
-}
-
-################################################################################
-# AWS Environment Variables
-################################################################################
-
-# AWS Access Key ID (if not using IAM roles)
-resource "tfe_variable" "documentdb_aws_access_key_id" {
-  count        = var.use_aws_credentials ? 1 : 0
-  key          = "AWS_ACCESS_KEY_ID"
-  value        = var.aws_access_key_id
-  category     = "env"
-  workspace_id = tfe_workspace.documentdb.id
-  description  = "AWS Access Key ID"
-  sensitive    = true
-}
-
-# AWS Secret Access Key (if not using IAM roles)
-resource "tfe_variable" "documentdb_aws_secret_access_key" {
-  count        = var.use_aws_credentials ? 1 : 0
-  key          = "AWS_SECRET_ACCESS_KEY"
-  value        = var.aws_secret_access_key
-  category     = "env"
-  workspace_id = tfe_workspace.documentdb.id
-  description  = "AWS Secret Access Key"
-  sensitive    = true
 }
 
 # AWS Default Region
