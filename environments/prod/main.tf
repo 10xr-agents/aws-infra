@@ -13,30 +13,32 @@ data "aws_region" "current" {}
 
 data "aws_caller_identity" "current" {}
 
-# Data sources to get DocumentDB information from separate repository
-data "aws_ssm_parameter" "documentdb_connection_string" {
-  name = "/documentdb/${var.environment}/connection_string"
-}
+# TEMPORARILY COMMENT OUT DocumentDB data sources from separate repository
+# Uncomment these after DocumentDB workspace has run and created the SSM parameters
 
-data "aws_ssm_parameter" "documentdb_endpoint" {
-  name = "/documentdb/${var.environment}/endpoint"
-}
+# data "aws_ssm_parameter" "documentdb_connection_string" {
+#   name = "/documentdb/${var.environment}/connection_string"
+# }
 
-data "aws_ssm_parameter" "documentdb_port" {
-  name = "/documentdb/${var.environment}/port"
-}
+# data "aws_ssm_parameter" "documentdb_endpoint" {
+#   name = "/documentdb/${var.environment}/endpoint"
+# }
 
-data "aws_ssm_parameter" "documentdb_username" {
-  name = "/documentdb/${var.environment}/master_username"
-}
+# data "aws_ssm_parameter" "documentdb_port" {
+#   name = "/documentdb/${var.environment}/port"
+# }
 
-data "aws_ssm_parameter" "documentdb_password" {
-  name = "/documentdb/${var.environment}/master_password"
-}
+# data "aws_ssm_parameter" "documentdb_username" {
+#   name = "/documentdb/${var.environment}/master_username"
+# }
 
-data "aws_ssm_parameter" "documentdb_security_group_id" {
-  name = "/documentdb/${var.environment}/security_group_id"
-}
+# data "aws_ssm_parameter" "documentdb_password" {
+#   name = "/documentdb/${var.environment}/master_password"
+# }
+
+# data "aws_ssm_parameter" "documentdb_security_group_id" {
+#   name = "/documentdb/${var.environment}/security_group_id"
+# }
 
 resource "aws_acm_certificate" "main" {
   domain_name       = var.domain
@@ -387,17 +389,19 @@ resource "aws_security_group_rule" "redis_from_ecs_ingress" {
   depends_on = [module.ecs, module.redis]
 }
 
-# Security Group Rule to allow ECS access to DocumentDB
-resource "aws_security_group_rule" "documentdb_from_ecs" {
-  for_each = module.ecs.security_group_ids
+# TEMPORARILY COMMENT OUT Security Group Rule to allow ECS access to DocumentDB
+# Uncomment this after DocumentDB workspace has run and created the SSM parameters
 
-  type                     = "ingress"
-  from_port                = 27017
-  to_port                  = 27017
-  protocol                 = "tcp"
-  source_security_group_id = each.value
-  security_group_id        = data.aws_ssm_parameter.documentdb_security_group_id.value
-  description              = "Allow ECS services to access DocumentDB"
+# resource "aws_security_group_rule" "documentdb_from_ecs" {
+#   for_each = module.ecs.security_group_ids
 
-  depends_on = [module.ecs]
-}
+#   type                     = "ingress"
+#   from_port                = 27017
+#   to_port                  = 27017
+#   protocol                 = "tcp"
+#   source_security_group_id = each.value
+#   security_group_id        = data.aws_ssm_parameter.documentdb_security_group_id.value
+#   description              = "Allow ECS services to access DocumentDB"
+
+#   depends_on = [module.ecs]
+# }
