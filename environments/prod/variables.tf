@@ -956,6 +956,7 @@ variable "tfe_main_workspace_name" {
 variable "github_oauth_token_id" {
   description = "GitHub OAuth token ID"
   type        = string
+  default     = ""  
 }
 
 variable "documentdb_github_repo" {
