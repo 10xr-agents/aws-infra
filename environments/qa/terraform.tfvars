@@ -132,8 +132,8 @@ ecs_services = {
     "image": "761018882607.dkr.ecr.us-east-1.amazonaws.com/10xr-agents/agent-analytics-service",
     "image_tag": "latest",
     "port": 9800,
-    "cpu": 1024,
-    "memory": 2048,
+    "cpu": 2048,
+    "memory": 4096,
     "desired_count": 2,
     "environment": {
       "LOG_LEVEL": "INFO",
