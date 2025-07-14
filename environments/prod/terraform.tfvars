@@ -38,7 +38,7 @@ ecs_services = {
     "port": 9600,
     "cpu": 8192,      # Doubled for production
     "memory": 16384,  # Doubled for production
-    "desired_count": 5, # Increased for production
+    "desired_count": 2, # Increased for production
     "environment": {
       "SERVICE_PORT": "9600"
     },
@@ -90,7 +90,7 @@ ecs_services = {
     "port": 9000,
     "cpu": 2048,      # Doubled for production
     "memory": 4096,   # Doubled for production
-    "desired_count": 4, # Increased for production
+    "desired_count": 2, # Increased for production
     "environment": {
       "SERVICE_PORT": "9000"
     },
@@ -139,7 +139,7 @@ ecs_services = {
     "port": 9800,
     "cpu": 2048,      # Doubled for production
     "memory": 4096,   # Doubled for production
-    "desired_count": 4, # Increased for production
+    "desired_count": 2, # Increased for production
     "environment": {
       "LOG_LEVEL": "INFO",
       "SERVICE_PORT": "9800"
@@ -189,7 +189,7 @@ ecs_services = {
     "port": 3000,
     "cpu": 1024,
     "memory": 2048,
-    "desired_count": 4,  # Increased for production
+    "desired_count": 2,  # Increased for production
     "environment": {
       "LOG_LEVEL": "INFO",
       "REACT_APP_API_URL": "https://services.10xr.co",
@@ -235,7 +235,7 @@ ecs_services = {
     "port": 8080,
     "cpu": 2048,      # Doubled for production
     "memory": 4096,   # Doubled for production
-    "desired_count": 4, # Increased for production
+    "desired_count": 2, # Increased for production
     "environment": {
       "LOG_LEVEL": "INFO",
       "SERVICE_PORT": "8080"
@@ -289,7 +289,7 @@ ecs_services = {
     "port": 8090,
     "cpu": 2048,      # Doubled for production
     "memory": 4096,   # Doubled for production
-    "desired_count": 3, # Increased for production
+    "desired_count": 2, # Increased for production
     "environment": {
       "LOG_LEVEL": "INFO",
       "SERVICE_PORT": "8090"
