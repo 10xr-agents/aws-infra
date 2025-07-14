@@ -1,6 +1,7 @@
 # environments/prod/main.tf
 
 locals {
+  cluster_name = "${var.cluster_name}-${var.environment}"
   vpc_name     = "${var.cluster_name}-${var.environment}-${var.region}"
   
   # Shortened name prefix for AWS resource name limits (32 chars)
@@ -139,76 +140,71 @@ module "redis" {
   depends_on = [module.vpc]
 }
 
-# IAM Policy for MongoDB access
-resource "aws_iam_policy" "ecs_mongodb_policy" {
-  name        = "${local.cluster_name}-ecs-mongodb-policy"
-  description = "IAM policy for ECS tasks to access MongoDB resources"
+# MongoDB Cluster Module
+module "mongodb" {
+  source = "../../modules/mongodb"
 
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Action = [
-          # EC2 permissions for MongoDB instances
-          "ec2:DescribeInstances",
-          "ec2:DescribeInstanceStatus",
-          "ec2:DescribeVolumes",
-          "ec2:DescribeSnapshots",
-          # SSM permissions for connection details
-          "ssm:GetParameter",
-          "ssm:GetParameters",
-          "ssm:GetParametersByPath",
-          # Secrets Manager permissions
-          "secretsmanager:GetSecretValue",
-          # KMS permissions for decryption
-          "kms:Decrypt",
-          "kms:DescribeKey",
-          # Route53 permissions for DNS resolution
-          "route53:ListHostedZones",
-          "route53:GetHostedZone",
-          "route53:ListResourceRecordSets"
-        ]
-        Resource = "*"
-      }
-    ]
-  })
+  cluster_name = local.cluster_name
+  environment  = var.environment
 
-  tags = merge(var.tags, {
-    Name = "${local.cluster_name}-ecs-mongodb-policy"
-  })
-}
+  vpc_id     = module.vpc.vpc_id
+  subnet_ids = module.vpc.database_subnets  # Using database subnets for MongoDB
 
-# IAM Policy for ElastiCache (Redis) access - add this to main.tf
-resource "aws_iam_policy" "ecs_elasticache_policy" {
-  name        = "${local.cluster_name}-ecs-elasticache-policy"
-  description = "IAM policy for ECS tasks to access ElastiCache resources"
+  # Instance configuration - Production settings
+  replica_count = var.mongodb_replica_count
+  instance_type = var.mongodb_instance_type
+  ami_id        = var.mongodb_ami_id
 
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Action = [
-          # ElastiCache permissions
-          "elasticache:DescribeCacheClusters",
-          "elasticache:DescribeReplicationGroups",
-          # SSM permissions for connection details
-          "ssm:GetParameter",
-          "ssm:GetParameters",
-          "ssm:GetParametersByPath",
-          # KMS permissions for decryption
-          "kms:Decrypt",
-          "kms:DescribeKey"
-        ]
-        Resource = "*"
-      }
-    ]
-  })
+  # MongoDB configuration
+  mongodb_version         = var.mongodb_version
+  mongodb_admin_username  = var.mongodb_admin_username
+  mongodb_admin_password  = random_password.mongo_auth_token.result
+  mongodb_keyfile_content = random_password.mongodb_keyfile.result
+  default_database = var.mongodb_default_database
 
-  tags = merge(var.tags, {
-    Name = "${local.cluster_name}-ecs-elasticache-policy"
-  })
+  # Storage configuration - Production settings
+  root_volume_size = var.mongodb_root_volume_size
+  data_volume_size = var.mongodb_data_volume_size
+  data_volume_type = var.mongodb_data_volume_type
+  data_volume_iops = var.mongodb_data_volume_iops
+  data_volume_throughput = var.mongodb_data_volume_throughput
+
+  # Security configuration
+  create_security_group = true
+  allowed_cidr_blocks = [module.vpc.vpc_cidr_block]
+  allow_ssh             = var.mongodb_allow_ssh
+  ssh_cidr_blocks = var.mongodb_ssh_cidr_blocks
+
+  # Monitoring and logging
+  enable_monitoring = var.mongodb_enable_monitoring
+  log_retention_days = var.mongodb_log_retention_days
+
+  # DNS configuration
+  create_dns_records = var.mongodb_create_dns_records
+  private_domain = var.mongodb_private_domain
+
+  # Backup configuration - Production settings
+  backup_enabled  = var.mongodb_backup_enabled
+  backup_schedule = var.mongodb_backup_schedule
+  backup_retention_days = var.mongodb_backup_retention_days
+
+  # Additional features
+  store_connection_string_in_ssm = var.mongodb_store_connection_string_in_ssm
+  enable_encryption_at_rest      = var.mongodb_enable_encryption_at_rest
+  enable_audit_logging           = var.mongodb_enable_audit_logging
+
+  tags = merge(
+    var.tags,
+    {
+      "Environment" = var.environment
+      "Project"     = "10xR-Agents"
+      "Component"   = "MongoDB"
+      "Platform"    = "AWS"
+      "Terraform"   = "true"
+    }
+  )
+
+  depends_on = [module.vpc]
 }
 
 # ECS Cluster Module
@@ -233,6 +229,7 @@ module "ecs" {
 
   # Security group connections
   # redis_security_group_id = module.redis.redis_security_group_id
+  # mongodb_security_group_id = module.mongodb.security_group_id
 
   # Pass the entire services configuration from variables
   services = local.ecs_services_with_overrides
@@ -248,7 +245,7 @@ module "ecs" {
     }
   )
 
-  depends_on = [module.redis]
+  depends_on = [module.mongodb, module.redis]
 }
 
 # Networking Module
@@ -275,6 +272,30 @@ module "networking" {
 
   # Target Configuration
   alb_arn = module.ecs.alb_arn
+
+  custom_target_groups = {
+    mongodb = {
+      port        = 27017
+      protocol    = "TCP"
+      target_type = "ip"
+      health_check = {
+        enabled             = true
+        healthy_threshold   = 2
+        interval            = 30
+        port                = "27017"
+        protocol            = "TCP"
+        timeout             = 6
+        unhealthy_threshold = 2
+      }
+    }
+  }
+
+  custom_listeners = {
+    mongodb = {
+      port     = 27017
+      protocol = "TCP"
+    }
+  }
 
   # Health Check Configuration
   health_check_enabled             = var.health_check_enabled
@@ -431,4 +452,38 @@ resource "aws_security_group_rule" "redis_from_ecs_ingress" {
   description              = "Allow ECS services to access Redis"
 
   depends_on = [module.ecs, module.redis]
+}
+
+# Security Group Rule to allow ECS access to MongoDB
+resource "aws_security_group_rule" "mongodb_from_ecs" {
+  for_each = module.ecs.security_group_ids
+
+  type                     = "ingress"
+  from_port                = 27017
+  to_port                  = 27017
+  protocol                 = "tcp"
+  source_security_group_id = each.value
+  security_group_id        = module.mongodb.security_group_id
+
+  depends_on = [module.ecs, module.mongodb]
+}
+
+resource "aws_security_group_rule" "mongodb_external_access" {
+  type              = "ingress"
+  from_port         = 27017
+  to_port           = 27017
+  protocol          = "tcp"
+  cidr_blocks       = ["0.0.0.0/0"]  # Adjust for production security
+  security_group_id = module.mongodb.security_group_id
+  description       = "Allow external access to MongoDB via NLB"
+
+  depends_on = [module.mongodb]
+}
+
+resource "aws_lb_target_group_attachment" "mongodb_targets" {
+  target_group_arn = module.networking.custom_target_group_arns.mongodb
+  target_id        = module.mongodb.primary_ip_address
+  port             = 27017
+
+  depends_on = [module.networking, module.mongodb]
 }
