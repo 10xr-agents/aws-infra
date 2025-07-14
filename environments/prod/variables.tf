@@ -978,7 +978,7 @@ variable "documentdb_github_branch" {
 variable "documentdb_workspace_auto_apply" {
   description = "Whether to auto-apply changes in DocumentDB workspace"
   type        = bool
-  default     = false  # Set to true if you want auto-apply
+  default     = true  # Set to true if you want auto-apply
 }
 
 ################################################################################

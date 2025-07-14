@@ -534,7 +534,7 @@ documentdb_github_repo = "10xr-agents/ten_xr_storage_infra"
 documentdb_github_branch = "main"
 
 # Auto-apply setting for DocumentDB workspace
-documentdb_workspace_auto_apply = false  # Set to true for auto-apply
+documentdb_workspace_auto_apply = true  # Set to true for auto-apply
 
 ################################################################################
 # DocumentDB Sub-Workspace Configuration
