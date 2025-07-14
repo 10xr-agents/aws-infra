@@ -93,58 +93,7 @@ output "ecs_service_urls" {
   }
 }
 
-# MongoDB outputs
-output "mongodb_instance_ids" {
-  description = "IDs of the MongoDB EC2 instances"
-  value       = module.mongodb.instance_ids
-}
 
-output "mongodb_endpoints" {
-  description = "List of MongoDB endpoints (ip:port)"
-  value       = module.mongodb.endpoints
-}
-
-output "mongodb_connection_string" {
-  description = "MongoDB connection string"
-  value       = module.mongodb.connection_string
-  sensitive   = true
-}
-
-output "mongodb_srv_connection_string" {
-  description = "MongoDB SRV connection string (if DNS is enabled)"
-  value       = module.mongodb.srv_connection_string
-  sensitive   = true
-}
-
-output "mongodb_replica_set_name" {
-  description = "Name of the MongoDB replica set"
-  value       = module.mongodb.replica_set_name
-}
-
-output "mongodb_primary_endpoint" {
-  description = "Primary MongoDB endpoint"
-  value       = module.mongodb.primary_endpoint
-}
-
-output "mongodb_security_group_id" {
-  description = "ID of the MongoDB security group"
-  value       = module.mongodb.security_group_id
-}
-
-output "mongodb_ssm_parameter_name" {
-  description = "Name of the SSM parameter containing the MongoDB connection string"
-  value       = module.mongodb.ssm_parameter_name
-}
-
-output "mongodb_dns_records" {
-  description = "Map of DNS records for MongoDB nodes"
-  value       = module.mongodb.dns_records
-}
-
-output "mongodb_cluster_details" {
-  description = "Detailed information about the MongoDB cluster"
-  value       = module.mongodb.cluster_details
-}
 
 # Redis outputs
 output "redis_port" {
@@ -410,52 +359,25 @@ output "redis_parameters_check" {
   value = var.redis_parameters
 }
 
-# Production specific outputs
-output "production_summary" {
-  description = "Production environment summary"
-  value = {
-    environment = "prod"
-    region = var.region
-    cluster_name = local.cluster_name
-    
-    # High availability configuration
-    high_availability = {
-      redis_multi_az = var.redis_multi_az_enabled
-      mongodb_replica_count = var.mongodb_replica_count
-      ecs_services_min_count = {
-        for name, config in var.ecs_services : name => config.auto_scaling_min_capacity
-      }
-    }
-    
-    # Security configuration
-    security = {
-      mongodb_ssh_disabled = !var.mongodb_allow_ssh
-      cloudflare_proxied = var.dns_proxied
-      ssl_mode = var.cloudflare_ssl_mode
-      always_https = var.cloudflare_always_use_https
-      encryption_at_rest = {
-        mongodb = var.mongodb_enable_encryption_at_rest
-        redis = var.redis_at_rest_encryption_enabled
-      }
-      encryption_in_transit = {
-        redis = var.redis_transit_encryption_enabled
-      }
-    }
-    
-    # Monitoring and logging
-    monitoring = {
-      container_insights = var.enable_container_insights
-      mongodb_monitoring = var.mongodb_enable_monitoring
-      redis_logging = var.redis_create_cloudwatch_log_group
-      nlb_access_logs = var.nlb_access_logs_enabled
-      global_accelerator_flow_logs = var.global_accelerator_flow_logs_enabled
-    }
-    
-    # Backup configuration
-    backup = {
-      mongodb_enabled = var.mongodb_backup_enabled
-      mongodb_retention_days = var.mongodb_backup_retention_days
-      redis_snapshots = var.redis_snapshot_retention_limit
-    }
-  }
+output "documentdb_endpoint" {
+  description = "DocumentDB cluster endpoint from separate repository"
+  value       = data.aws_ssm_parameter.documentdb_endpoint.value
 }
+
+output "documentdb_security_group_id" {
+  description = "DocumentDB security group ID from separate repository"
+  value       = data.aws_ssm_parameter.documentdb_security_group_id.value
+}
+
+output "documentdb_connection_info" {
+  description = "DocumentDB connection information"
+  value = {
+    endpoint          = data.aws_ssm_parameter.documentdb_endpoint.value
+    port             = data.aws_ssm_parameter.documentdb_port.value
+    database         = var.documentdb_default_database
+    security_group_id = data.aws_ssm_parameter.documentdb_security_group_id.value
+  }
+  sensitive = true
+}
+
+

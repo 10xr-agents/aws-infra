@@ -8,11 +8,35 @@ locals {
   short_name_prefix = "10xr-${var.environment}"
 }
 
-# Add this data source to the top of environments/prod/main.tf after the locals block
-
+# Data sources for AWS information
 data "aws_region" "current" {}
 
 data "aws_caller_identity" "current" {}
+
+# Data sources to get DocumentDB information from separate repository
+data "aws_ssm_parameter" "documentdb_connection_string" {
+  name = "/documentdb/${var.environment}/connection_string"
+}
+
+data "aws_ssm_parameter" "documentdb_endpoint" {
+  name = "/documentdb/${var.environment}/endpoint"
+}
+
+data "aws_ssm_parameter" "documentdb_port" {
+  name = "/documentdb/${var.environment}/port"
+}
+
+data "aws_ssm_parameter" "documentdb_username" {
+  name = "/documentdb/${var.environment}/master_username"
+}
+
+data "aws_ssm_parameter" "documentdb_password" {
+  name = "/documentdb/${var.environment}/master_password"
+}
+
+data "aws_ssm_parameter" "documentdb_security_group_id" {
+  name = "/documentdb/${var.environment}/security_group_id"
+}
 
 resource "aws_acm_certificate" "main" {
   domain_name       = var.domain
@@ -140,73 +164,6 @@ module "redis" {
   depends_on = [module.vpc]
 }
 
-# MongoDB Cluster Module
-module "mongodb" {
-  source = "../../modules/mongodb"
-
-  cluster_name = local.cluster_name
-  environment  = var.environment
-
-  vpc_id     = module.vpc.vpc_id
-  subnet_ids = module.vpc.database_subnets  # Using database subnets for MongoDB
-
-  # Instance configuration - Production settings
-  replica_count = var.mongodb_replica_count
-  instance_type = var.mongodb_instance_type
-  ami_id        = var.mongodb_ami_id
-
-  # MongoDB configuration
-  mongodb_version         = var.mongodb_version
-  mongodb_admin_username  = var.mongodb_admin_username
-  mongodb_admin_password  = random_password.mongo_auth_token.result
-  mongodb_keyfile_content = random_password.mongodb_keyfile.result
-  default_database = var.mongodb_default_database
-
-  # Storage configuration - Production settings
-  root_volume_size = var.mongodb_root_volume_size
-  data_volume_size = var.mongodb_data_volume_size
-  data_volume_type = var.mongodb_data_volume_type
-  data_volume_iops = var.mongodb_data_volume_iops
-  data_volume_throughput = var.mongodb_data_volume_throughput
-
-  # Security configuration
-  create_security_group = true
-  allowed_cidr_blocks = [module.vpc.vpc_cidr_block]
-  allow_ssh             = var.mongodb_allow_ssh
-  ssh_cidr_blocks = var.mongodb_ssh_cidr_blocks
-
-  # Monitoring and logging
-  enable_monitoring = var.mongodb_enable_monitoring
-  log_retention_days = var.mongodb_log_retention_days
-
-  # DNS configuration
-  create_dns_records = var.mongodb_create_dns_records
-  private_domain = var.mongodb_private_domain
-
-  # Backup configuration - Production settings
-  backup_enabled  = var.mongodb_backup_enabled
-  backup_schedule = var.mongodb_backup_schedule
-  backup_retention_days = var.mongodb_backup_retention_days
-
-  # Additional features
-  store_connection_string_in_ssm = var.mongodb_store_connection_string_in_ssm
-  enable_encryption_at_rest      = var.mongodb_enable_encryption_at_rest
-  enable_audit_logging           = var.mongodb_enable_audit_logging
-
-  tags = merge(
-    var.tags,
-    {
-      "Environment" = var.environment
-      "Project"     = "10xR-Agents"
-      "Component"   = "MongoDB"
-      "Platform"    = "AWS"
-      "Terraform"   = "true"
-    }
-  )
-
-  depends_on = [module.vpc]
-}
-
 # ECS Cluster Module
 module "ecs" {
   source = "../../modules/ecs"
@@ -218,7 +175,7 @@ module "ecs" {
   private_subnet_ids = module.vpc.private_subnets
   public_subnet_ids  = module.vpc.public_subnets
 
-  acm_certificate_arn = local.acm_certificate_arn
+  acm_certificate_arn = aws_acm_certificate.main.arn
   create_alb_rules    = true
 
   enable_container_insights = var.enable_container_insights
@@ -226,10 +183,6 @@ module "ecs" {
   enable_service_discovery  = true
   create_alb                = true
   alb_internal = true
-
-  # Security group connections
-  # redis_security_group_id = module.redis.redis_security_group_id
-  # mongodb_security_group_id = module.mongodb.security_group_id
 
   # Pass the entire services configuration from variables
   services = local.ecs_services_with_overrides
@@ -245,7 +198,7 @@ module "ecs" {
     }
   )
 
-  depends_on = [module.mongodb, module.redis]
+  depends_on = [module.redis]
 }
 
 # Networking Module
@@ -273,29 +226,9 @@ module "networking" {
   # Target Configuration
   alb_arn = module.ecs.alb_arn
 
-  custom_target_groups = {
-    mongodb = {
-      port        = 27017
-      protocol    = "TCP"
-      target_type = "ip"
-      health_check = {
-        enabled             = true
-        healthy_threshold   = 2
-        interval            = 30
-        port                = "27017"
-        protocol            = "TCP"
-        timeout             = 6
-        unhealthy_threshold = 2
-      }
-    }
-  }
-
-  custom_listeners = {
-    mongodb = {
-      port     = 27017
-      protocol = "TCP"
-    }
-  }
+  # Removed MongoDB custom target groups and listeners since using DocumentDB now
+  custom_target_groups = {}
+  custom_listeners = {}
 
   # Health Check Configuration
   health_check_enabled             = var.health_check_enabled
@@ -312,7 +245,7 @@ module "networking" {
   # Listener Configuration
   https_listener_protocol = var.https_listener_protocol
   ssl_policy              = var.ssl_policy
-  certificate_arn = local.acm_certificate_arn
+  certificate_arn = aws_acm_certificate.main.arn
 
   # Access Logs
   nlb_access_logs_enabled = var.nlb_access_logs_enabled
@@ -454,8 +387,8 @@ resource "aws_security_group_rule" "redis_from_ecs_ingress" {
   depends_on = [module.ecs, module.redis]
 }
 
-# Security Group Rule to allow ECS access to MongoDB
-resource "aws_security_group_rule" "mongodb_from_ecs" {
+# Security Group Rule to allow ECS access to DocumentDB
+resource "aws_security_group_rule" "documentdb_from_ecs" {
   for_each = module.ecs.security_group_ids
 
   type                     = "ingress"
@@ -463,27 +396,8 @@ resource "aws_security_group_rule" "mongodb_from_ecs" {
   to_port                  = 27017
   protocol                 = "tcp"
   source_security_group_id = each.value
-  security_group_id        = module.mongodb.security_group_id
+  security_group_id        = data.aws_ssm_parameter.documentdb_security_group_id.value
+  description              = "Allow ECS services to access DocumentDB"
 
-  depends_on = [module.ecs, module.mongodb]
-}
-
-resource "aws_security_group_rule" "mongodb_external_access" {
-  type              = "ingress"
-  from_port         = 27017
-  to_port           = 27017
-  protocol          = "tcp"
-  cidr_blocks       = ["0.0.0.0/0"]  # Adjust for production security
-  security_group_id = module.mongodb.security_group_id
-  description       = "Allow external access to MongoDB via NLB"
-
-  depends_on = [module.mongodb]
-}
-
-resource "aws_lb_target_group_attachment" "mongodb_targets" {
-  target_group_arn = module.networking.custom_target_group_arns.mongodb
-  target_id        = module.mongodb.primary_ip_address
-  port             = 27017
-
-  depends_on = [module.networking, module.mongodb]
+  depends_on = [module.ecs]
 }

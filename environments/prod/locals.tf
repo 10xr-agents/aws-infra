@@ -5,9 +5,9 @@ resource "random_password" "mongo_auth_token" {
   special = false
 }
 
-# Generate MongoDB keyfile content for replica set authentication
-resource "random_password" "mongodb_keyfile" {
-  length = 756  # MongoDB keyfile should be between 6-1024 characters
+# Generate DocumentDB keyfile content for replica set authentication (if needed for compatibility)
+resource "random_password" "documentdb_keyfile" {
+  length = 756  # DocumentDB keyfile should be between 6-1024 characters
   special = false
   upper   = true
   lower   = true
@@ -18,11 +18,15 @@ locals {
 
   ecs_services = var.ecs_services
 
-  mongodb_connection_string = module.mongodb.connection_string
+  # DocumentDB connection details from separate repository via SSM
+  documentdb_connection_string = data.aws_ssm_parameter.documentdb_connection_string.value
+  documentdb_endpoint          = data.aws_ssm_parameter.documentdb_endpoint.value
+  documentdb_port             = data.aws_ssm_parameter.documentdb_port.value
+  documentdb_username         = data.aws_ssm_parameter.documentdb_username.value
 
   acm_certificate_arn = aws_acm_certificate.main.arn
 
-  # You can also merge with environment-specific overrides
+  # Updated ECS services configuration with DocumentDB instead of MongoDB
   ecs_services_with_overrides = {
     for name, config in local.ecs_services : name => merge(
       config,
@@ -42,14 +46,21 @@ locals {
             REDIS_USERNAME         = module.redis.redis_username
             REDIS_TLS_ENABLED      = tostring(var.redis_transit_encryption_enabled)
 
-            SPRING_DATA_MONGODB_URI = local.mongodb_connection_string
-            MONGO_DB_URL            = local.mongodb_connection_string
-            MONGO_DB_URI            = local.mongodb_connection_string
-            MONGODB_DATABASE        = var.mongodb_default_database
-            DATABASE_NAME           = var.mongodb_default_database
+            # DocumentDB connection details (replaces MongoDB)
+            DOCUMENTDB_URI         = local.documentdb_connection_string
+            DOCUMENTDB_HOST        = local.documentdb_endpoint
+            DOCUMENTDB_PORT        = local.documentdb_port
+            DOCUMENTDB_DATABASE    = var.documentdb_default_database
+            DATABASE_NAME          = var.documentdb_default_database
+            
+            # For backward compatibility with existing code
+            SPRING_DATA_MONGODB_URI = local.documentdb_connection_string
+            MONGO_DB_URL            = local.documentdb_connection_string
+            MONGO_DB_URI            = local.documentdb_connection_string
+            MONGODB_DATABASE        = var.documentdb_default_database
           }
         )
-        # Add Redis auth token as a secret for all services that need it
+        # Add DocumentDB auth token as a secret for all services that need it
         secrets = concat(
           lookup(config, "secrets", []),
           [
@@ -58,18 +69,22 @@ locals {
               value_from = module.redis.ssm_parameter_redis_auth_token
             },
             {
-              name       = "MONGODB_PASSWORD"
-              value_from = module.mongodb.ssm_parameter_name
+              name       = "DOCUMENTDB_PASSWORD"
+              value_from = data.aws_ssm_parameter.documentdb_password.name
+            },
+            {
+              name       = "DOCUMENTDB_USERNAME"
+              value_from = data.aws_ssm_parameter.documentdb_username.name
             }
           ]
         )
 
-        # ADD IAM permissions for Redis/ElastiCache
+        # ADD IAM permissions for Redis/ElastiCache and DocumentDB
         additional_task_policies = merge(
           lookup(config, "additional_task_policies", {}),
           {
             "ElastiCacheAccess" = aws_iam_policy.ecs_elasticache_policy.arn
-            "MongoDBAccess"     = aws_iam_policy.ecs_mongodb_policy.arn
+            "DocumentDBAccess"  = aws_iam_policy.ecs_documentdb_policy.arn
           }
         )
       }
@@ -111,10 +126,10 @@ resource "aws_iam_policy" "ecs_elasticache_policy" {
   tags = var.tags
 }
 
-# IAM Policy for MongoDB access
-resource "aws_iam_policy" "ecs_mongodb_policy" {
-  name        = "${local.cluster_name}-ecs-mongodb-policy"
-  description = "IAM policy for ECS tasks to access MongoDB resources"
+# IAM Policy for DocumentDB access (replaces MongoDB policy)
+resource "aws_iam_policy" "ecs_documentdb_policy" {
+  name        = "${local.cluster_name}-ecs-documentdb-policy"
+  description = "IAM policy for ECS tasks to access DocumentDB"
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -122,11 +137,11 @@ resource "aws_iam_policy" "ecs_mongodb_policy" {
       {
         Effect = "Allow"
         Action = [
-          # EC2 permissions for MongoDB instances
-          "ec2:DescribeInstances",
-          "ec2:DescribeInstanceStatus",
-          "ec2:DescribeVolumes",
-          "ec2:DescribeSnapshots",
+          # DocumentDB permissions
+          "rds:DescribeDBClusters",
+          "rds:DescribeDBInstances",
+          "rds:DescribeDBSubnetGroups",
+          "rds:ListTagsForResource",
           # SSM permissions for connection details
           "ssm:GetParameter",
           "ssm:GetParameters",
@@ -135,11 +150,7 @@ resource "aws_iam_policy" "ecs_mongodb_policy" {
           "secretsmanager:GetSecretValue",
           # KMS permissions for decryption
           "kms:Decrypt",
-          "kms:DescribeKey",
-          # Route53 permissions for DNS resolution
-          "route53:ListHostedZones",
-          "route53:GetHostedZone",
-          "route53:ListResourceRecordSets"
+          "kms:DescribeKey"
         ]
         Resource = "*"
       }

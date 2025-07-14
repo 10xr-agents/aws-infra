@@ -932,6 +932,12 @@ variable "cloudflare_account_id" {
   default     = ""
 }
 
+variable "documentdb_default_database" {
+  description = "Default DocumentDB database name"
+  type        = string
+  default     = "ten_xr_agents_prod"
+}
+
 # Tags
 variable "tags" {
   description = "A map of tags to add to all resources"
