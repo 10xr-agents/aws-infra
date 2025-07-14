@@ -67,7 +67,7 @@ locals {
             {
               name       = "REDIS_PASSWORD"
               value_from = module.redis.ssm_parameter_redis_auth_token
-            }
+            },
             # DocumentDB secrets - COMMENTED OUT
             {
               name       = "DOCUMENTDB_PASSWORD"
