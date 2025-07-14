@@ -1,14 +1,7 @@
 # environments/prod/tfe-documentdb.tf
 # TFE Provider configuration for managing DocumentDB sub-workspace
 
-terraform {
-  required_providers {
-    tfe = {
-      source  = "hashicorp/tfe"
-      version = "~> 0.51.0"
-    }
-  }
-}
+
 
 # TFE Provider configuration
 provider "tfe" {
