@@ -18,11 +18,11 @@ locals {
 
   ecs_services = var.ecs_services
 
-  # DocumentDB connection details from separate repository via SSM
-  # documentdb_connection_string = data.aws_ssm_parameter.documentdb_connection_string.value
-  # documentdb_endpoint          = data.aws_ssm_parameter.documentdb_endpoint.value
-  # documentdb_port             = data.aws_ssm_parameter.documentdb_port.value
-  # documentdb_username         = data.aws_ssm_parameter.documentdb_username.value
+  #DocumentDB connection details from separate repository via SSM
+  documentdb_connection_string = data.aws_ssm_parameter.documentdb_connection_string.value
+  documentdb_endpoint          = data.aws_ssm_parameter.documentdb_endpoint.value
+  documentdb_port             = data.aws_ssm_parameter.documentdb_port.value
+  documentdb_username         = data.aws_ssm_parameter.documentdb_username.value
 
   acm_certificate_arn = aws_acm_certificate.main.arn
 
@@ -46,18 +46,18 @@ locals {
             REDIS_USERNAME         = module.redis.redis_username
             REDIS_TLS_ENABLED      = tostring(var.redis_transit_encryption_enabled)
 
-            # DocumentDB connection details (replaces MongoDB) - COMMENTED OUT
-            # DOCUMENTDB_URI         = local.documentdb_connection_string
-            # DOCUMENTDB_HOST        = local.documentdb_endpoint
-            # DOCUMENTDB_PORT        = local.documentdb_port
-            # DOCUMENTDB_DATABASE    = var.documentdb_default_database
-            # DATABASE_NAME          = var.documentdb_default_database
+            #DocumentDB connection details (replaces MongoDB) - COMMENTED OUT
+            DOCUMENTDB_URI         = local.documentdb_connection_string
+            DOCUMENTDB_HOST        = local.documentdb_endpoint
+            DOCUMENTDB_PORT        = local.documentdb_port
+            DOCUMENTDB_DATABASE    = var.documentdb_default_database
+            DATABASE_NAME          = var.documentdb_default_database
 
-            # For backward compatibility with existing code - COMMENTED OUT
-            # SPRING_DATA_MONGODB_URI = local.documentdb_connection_string
-            # MONGO_DB_URL            = local.documentdb_connection_string
-            # MONGO_DB_URI            = local.documentdb_connection_string
-            # MONGODB_DATABASE        = var.documentdb_default_database
+            #For backward compatibility with existing code - COMMENTED OUT
+            SPRING_DATA_MONGODB_URI = local.documentdb_connection_string
+            MONGO_DB_URL            = local.documentdb_connection_string
+            MONGO_DB_URI            = local.documentdb_connection_string
+            MONGODB_DATABASE        = var.documentdb_default_database
           }
         )
         # Add DocumentDB auth token as a secret for all services that need it
@@ -69,14 +69,14 @@ locals {
               value_from = module.redis.ssm_parameter_redis_auth_token
             }
             # DocumentDB secrets - COMMENTED OUT
-            # {
-            #   name       = "DOCUMENTDB_PASSWORD"
-            #   value_from = data.aws_ssm_parameter.documentdb_password.name
-            # },
-            # {
-            #   name       = "DOCUMENTDB_USERNAME"
-            #   value_from = data.aws_ssm_parameter.documentdb_username.name
-            # }
+            {
+              name       = "DOCUMENTDB_PASSWORD"
+              value_from = data.aws_ssm_parameter.documentdb_password.name
+            },
+            {
+              name       = "DOCUMENTDB_USERNAME"
+              value_from = data.aws_ssm_parameter.documentdb_username.name
+            }
           ]
         )
 
@@ -86,7 +86,7 @@ locals {
           {
             "ElastiCacheAccess" = aws_iam_policy.ecs_elasticache_policy.arn
             # DocumentDB IAM policy - COMMENTED OUT
-            # "DocumentDBAccess"  = aws_iam_policy.ecs_documentdb_policy.arn
+            "DocumentDBAccess"  = aws_iam_policy.ecs_documentdb_policy.arn
           }
         )
       }
@@ -129,35 +129,35 @@ resource "aws_iam_policy" "ecs_elasticache_policy" {
 }
 
 # IAM Policy for DocumentDB access (replaces MongoDB policy) - COMMENTED OUT
-# resource "aws_iam_policy" "ecs_documentdb_policy" {
-#   name        = "${local.cluster_name}-ecs-documentdb-policy"
-#   description = "IAM policy for ECS tasks to access DocumentDB"
-#
-#   policy = jsonencode({
-#     Version = "2012-10-17"
-#     Statement = [
-#       {
-#         Effect = "Allow"
-#         Action = [
-#           # DocumentDB permissions
-#           "rds:DescribeDBClusters",
-#           "rds:DescribeDBInstances",
-#           "rds:DescribeDBSubnetGroups",
-#           "rds:ListTagsForResource",
-#           # SSM permissions for connection details
-#           "ssm:GetParameter",
-#           "ssm:GetParameters",
-#           "ssm:GetParametersByPath",
-#           # Secrets Manager permissions
-#           "secretsmanager:GetSecretValue",
-#           # KMS permissions for decryption
-#           "kms:Decrypt",
-#           "kms:DescribeKey"
-#         ]
-#         Resource = "*"
-#       }
-#     ]
-#   })
-#
-#   tags = var.tags
-# }
+resource "aws_iam_policy" "ecs_documentdb_policy" {
+  name        = "${local.cluster_name}-ecs-documentdb-policy"
+  description = "IAM policy for ECS tasks to access DocumentDB"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          # DocumentDB permissions
+          "rds:DescribeDBClusters",
+          "rds:DescribeDBInstances",
+          "rds:DescribeDBSubnetGroups",
+          "rds:ListTagsForResource",
+          # SSM permissions for connection details
+          "ssm:GetParameter",
+          "ssm:GetParameters",
+          "ssm:GetParametersByPath",
+          # Secrets Manager permissions
+          "secretsmanager:GetSecretValue",
+          # KMS permissions for decryption
+          "kms:Decrypt",
+          "kms:DescribeKey"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+
+  tags = var.tags
+}

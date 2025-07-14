@@ -359,25 +359,25 @@ output "redis_parameters_check" {
   value = var.redis_parameters
 }
 
-# output "documentdb_endpoint" {
-#   description = "DocumentDB cluster endpoint from separate repository"
-#   value       = data.aws_ssm_parameter.documentdb_endpoint.value
-# }
-#
-# output "documentdb_security_group_id" {
-#   description = "DocumentDB security group ID from separate repository"
-#   value       = data.aws_ssm_parameter.documentdb_security_group_id.value
-# }
-#
-# output "documentdb_connection_info" {
-#   description = "DocumentDB connection information"
-#   value = {
-#     endpoint          = data.aws_ssm_parameter.documentdb_endpoint.value
-#     port             = data.aws_ssm_parameter.documentdb_port.value
-#     database         = var.documentdb_default_database
-#     security_group_id = data.aws_ssm_parameter.documentdb_security_group_id.value
-#   }
-#   sensitive = true
-# }
+output "documentdb_endpoint" {
+  description = "DocumentDB cluster endpoint from separate repository"
+  value       = data.aws_ssm_parameter.documentdb_endpoint.value
+}
+
+output "documentdb_security_group_id" {
+  description = "DocumentDB security group ID from separate repository"
+  value       = data.aws_ssm_parameter.documentdb_security_group_id.value
+}
+
+output "documentdb_connection_info" {
+  description = "DocumentDB connection information"
+  value = {
+    endpoint          = data.aws_ssm_parameter.documentdb_endpoint.value
+    port             = data.aws_ssm_parameter.documentdb_port.value
+    database         = var.documentdb_default_database
+    security_group_id = data.aws_ssm_parameter.documentdb_security_group_id.value
+  }
+  sensitive = true
+}
 
 
