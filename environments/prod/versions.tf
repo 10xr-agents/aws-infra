@@ -27,7 +27,7 @@ terraform {
     # Add TFE provider for managing sub-workspaces
     tfe = {
       source  = "hashicorp/tfe"
-      version = "~> 0.51.0"
+      version = "~> 0.67.1"
     }
   }
 }
