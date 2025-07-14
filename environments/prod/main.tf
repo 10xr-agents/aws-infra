@@ -17,28 +17,29 @@ data "aws_caller_identity" "current" {}
 # Uncomment these after DocumentDB workspace has run and created the SSM parameters
 
 # data "aws_ssm_parameter" "documentdb_connection_string" {
-#   name = "/documentdb/${var.environment}/connection_string"
+#   name = "/ten_xr_storage_infra/${var.environment}/connection_string"
 # }
 
 # data "aws_ssm_parameter" "documentdb_endpoint" {
-#   name = "/documentdb/${var.environment}/endpoint"
+#   name = "/ten_xr_storage_infra/${var.environment}/endpoint"
 # }
 
 # data "aws_ssm_parameter" "documentdb_port" {
-#   name = "/documentdb/${var.environment}/port"
+#   name = "/ten_xr_storage_infra/${var.environment}/port"
 # }
 
 # data "aws_ssm_parameter" "documentdb_username" {
-#   name = "/documentdb/${var.environment}/master_username"
+#   name = "/ten_xr_storage_infra/${var.environment}/master_username"
 # }
 
 # data "aws_ssm_parameter" "documentdb_password" {
-#   name = "/documentdb/${var.environment}/master_password"
+#   name = "/ten_xr_storage_infra/${var.environment}/master_password"
 # }
 
 # data "aws_ssm_parameter" "documentdb_security_group_id" {
-#   name = "/documentdb/${var.environment}/security_group_id"
+#   name = "/ten_xr_storage_infra/${var.environment}/security_group_id"
 # }
+
 
 resource "aws_acm_certificate" "main" {
   domain_name       = var.domain
@@ -110,6 +111,75 @@ module "vpc" {
     }
   )
 }
+
+
+################################################################################
+# DocumentDB Sub-Workspace via TFE Module
+################################################################################
+
+module "documentdb_workspace" {
+  source = "../../modules/tfe-workspace"
+
+  # Organization and parent workspace
+  tfe_organization_name   = var.tfe_organization_name
+  parent_workspace_name   = var.tfe_main_workspace_name
+
+  # Workspace configuration
+  environment        = var.environment
+  region            = var.region
+  workspace_suffix  = "storage"
+  workspace_description = "DocumentDB infrastructure for ${var.environment}"
+  auto_apply        = var.documentdb_workspace_auto_apply
+
+  # VCS configuration
+  github_repo           = var.documentdb_github_repo
+  github_branch         = var.documentdb_github_branch
+  github_oauth_token_id = var.github_oauth_token_id
+  working_directory     = "environments/${var.environment}"
+
+  # Variables to pass to DocumentDB workspace
+  workspace_variables = {
+    aws_region = {
+      value       = var.region
+      category    = "terraform"
+      description = "AWS region"
+    }
+    environment = {
+      value       = var.environment
+      category    = "terraform"
+      description = "Environment name"
+    }
+    vpc_name = {
+      value       = "${var.cluster_name}-${var.environment}-${var.region}"
+      category    = "terraform"
+      description = "VPC name to find via data source"
+    }
+    instance_count = {
+      value       = tostring(var.documentdb_instance_count)
+      category    = "terraform"
+      description = "Number of DocumentDB instances"
+    }
+    instance_class = {
+      value       = var.documentdb_instance_class
+      category    = "terraform"
+      description = "DocumentDB instance class"
+    }
+    allowed_cidr_blocks = {
+      value       = jsonencode([var.vpc_cidr])
+      category    = "terraform"
+      description = "CIDR blocks allowed to access DocumentDB"
+      hcl         = true
+    }
+    AWS_DEFAULT_REGION = {
+      value       = var.region
+      category    = "env"
+      description = "AWS Default Region"
+    }
+  }
+
+  enable_run_trigger = true
+}
+
 
 # Redis Module
 module "redis" {
@@ -389,8 +459,7 @@ resource "aws_security_group_rule" "redis_from_ecs_ingress" {
   depends_on = [module.ecs, module.redis]
 }
 
-# TEMPORARILY COMMENT OUT Security Group Rule to allow ECS access to DocumentDB
-# Uncomment this after DocumentDB workspace has run and created the SSM parameters
+
 
 # resource "aws_security_group_rule" "documentdb_from_ecs" {
 #   for_each = module.ecs.security_group_ids

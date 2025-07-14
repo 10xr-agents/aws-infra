@@ -510,53 +510,19 @@ cloudflare_always_use_https = "on"  # Always HTTPS for production
 cloudflare_min_tls_version = "1.2"
 cloudflare_security_level = "high"  # Higher security for production
 
-
-
-# Add these to your environments/prod/terraform.tfvars file
-
 ################################################################################
-# TFE (Terraform Cloud) Configuration
+# TFE Configuration - UPDATE THESE WITH YOUR ACTUAL VALUES
 ################################################################################
 
-# Replace with your actual Terraform Cloud organization name
-tfe_organization_name = "10xR"
-
-# Your actual main workspace name
-tfe_main_workspace_name = "prod-us-east-1-ten-xr-app"
-
-# Get this from Terraform Cloud -> Settings -> VCS Providers
-github_oauth_token_id = "ot-xxxxxxxxxxxxxxxxxx"
-
-# Replace with your actual DocumentDB repository
+# TFE Configuration (replace with your actual values)
+tfe_organization_name = "10xr"
+github_oauth_token_id = "ot-your-actual-token-id"  # UPDATE THIS
 documentdb_github_repo = "10xr-agents/ten_xr_storage_infra"
 
-# GitHub branch for DocumentDB workspace
-documentdb_github_branch = "main"
-
-# Auto-apply setting for DocumentDB workspace
-documentdb_workspace_auto_apply = true  # Set to true for auto-apply
-
-################################################################################
-# DocumentDB Sub-Workspace Configuration
-################################################################################
-
-# DocumentDB instance configuration for production
+# DocumentDB Configuration
+documentdb_workspace_auto_apply = true
 documentdb_instance_count = 3
 documentdb_instance_class = "db.r6g.large"
-documentdb_master_username = "docdbadmin"
-
-# Backup and maintenance windows
-documentdb_backup_retention_period = 30
-documentdb_preferred_backup_window = "03:00-04:00"
-documentdb_preferred_maintenance_window = "sun:04:00-sun:05:00"
-
-################################################################################
-# AWS Credentials (if not using IAM roles)
-################################################################################
-
-# Set to true if you need to pass AWS credentials to sub-workspace
-use_aws_credentials = false
-
 
 # Tags
 tags = {
