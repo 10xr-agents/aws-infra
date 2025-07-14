@@ -938,6 +938,171 @@ variable "documentdb_default_database" {
   default     = "ten_xr_agents_prod"
 }
 
+
+# Add these variables to your environments/prod/variables.tf file
+
+################################################################################
+# TFE (Terraform Cloud) Configuration Variables
+################################################################################
+
+variable "tfe_organization_name" {
+  description = "Terraform Cloud organization name"
+  type        = string
+  default     = "your-tfc-org-name"  # Replace with your actual TFC organization name
+}
+
+variable "tfe_main_workspace_name" {
+  description = "Name of the main workspace in Terraform Cloud"
+  type        = string
+  default     = "prod-us-east-1-ten-xr-app"  # Your actual main workspace name
+}
+
+variable "github_oauth_token_id" {
+  description = "GitHub OAuth token ID for VCS connection"
+  type        = string
+  # Get this from Terraform Cloud -> Settings -> VCS Providers
+}
+
+variable "documentdb_github_repo" {
+  description = "GitHub repository for DocumentDB infrastructure"
+  type        = string
+  default     = "your-org/ten_xr_storage_infra"  # Replace with your actual repo
+}
+
+variable "documentdb_github_branch" {
+  description = "GitHub branch for DocumentDB workspace"
+  type        = string
+  default     = "main"
+}
+
+variable "documentdb_workspace_auto_apply" {
+  description = "Whether to auto-apply changes in DocumentDB workspace"
+  type        = bool
+  default     = false  # Set to true if you want auto-apply
+}
+
+################################################################################
+# DocumentDB Configuration Variables
+################################################################################
+
+variable "documentdb_instance_count" {
+  description = "Number of DocumentDB instances for sub-workspace"
+  type        = number
+  default     = 3
+}
+
+variable "documentdb_instance_class" {
+  description = "DocumentDB instance class for sub-workspace"
+  type        = string
+  default     = "db.r6g.large"
+}
+
+variable "documentdb_master_username" {
+  description = "DocumentDB master username"
+  type        = string
+  default     = "docdbadmin"
+  sensitive   = true
+}
+
+variable "documentdb_backup_retention_period" {
+  description = "DocumentDB backup retention period in days"
+  type        = number
+  default     = 30
+}
+
+variable "documentdb_preferred_backup_window" {
+  description = "DocumentDB preferred backup window"
+  type        = string
+  default     = "03:00-04:00"
+}
+
+variable "documentdb_preferred_maintenance_window" {
+  description = "DocumentDB preferred maintenance window"
+  type        = string
+  default     = "sun:04:00-sun:05:00"
+}
+
+################################################################################
+# AWS Credentials Configuration (if not using IAM roles)
+################################################################################
+
+variable "use_aws_credentials" {
+  description = "Whether to use AWS credentials for sub-workspace (false if using IAM roles)"
+  type        = bool
+  default     = false  # Set to true if you need to pass AWS credentials
+}
+
+variable "aws_access_key_id" {
+  description = "AWS Access Key ID for sub-workspace"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "aws_secret_access_key" {
+  description = "AWS Secret Access Key for sub-workspace"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+################################################################################
+# Team Access Configuration
+################################################################################
+
+variable "grant_admin_team_access" {
+  description = "Whether to grant admin access to a team"
+  type        = bool
+  default     = false
+}
+
+variable "admin_team_id" {
+  description = "Team ID for admin access to DocumentDB workspace"
+  type        = string
+  default     = ""
+}
+
+variable "grant_write_team_access" {
+  description = "Whether to grant write access to a team"
+  type        = bool
+  default     = false
+}
+
+variable "write_team_id" {
+  description = "Team ID for write access to DocumentDB workspace"
+  type        = string
+  default     = ""
+}
+
+variable "grant_read_team_access" {
+  description = "Whether to grant read access to a team"
+  type        = bool
+  default     = false
+}
+
+variable "read_team_id" {
+  description = "Team ID for read access to DocumentDB workspace"
+  type        = string
+  default     = ""
+}
+
+################################################################################
+# Notification Configuration
+################################################################################
+
+variable "enable_slack_notifications" {
+  description = "Whether to enable Slack notifications for DocumentDB workspace"
+  type        = bool
+  default     = false
+}
+
+variable "slack_webhook_url" {
+  description = "Slack webhook URL for notifications"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
 # Tags
 variable "tags" {
   description = "A map of tags to add to all resources"

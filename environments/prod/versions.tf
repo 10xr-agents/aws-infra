@@ -1,4 +1,4 @@
-# environments/prod/versions.tf
+# Update your environments/prod/versions.tf file to include the TFE provider
 
 terraform {
   required_version = ">= 1.7.0"
@@ -23,6 +23,11 @@ terraform {
     cloudflare = {
       source  = "cloudflare/cloudflare"
       version = "~> 4.40.0"
+    }
+    # Add TFE provider for managing sub-workspaces
+    tfe = {
+      source  = "hashicorp/tfe"
+      version = "~> 0.51.0"
     }
   }
 }
