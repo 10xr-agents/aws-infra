@@ -46,19 +46,19 @@ locals {
             REDIS_USERNAME         = module.redis.redis_username
             REDIS_TLS_ENABLED      = tostring(var.redis_transit_encryption_enabled)
 
-          #   # DocumentDB connection details (replaces MongoDB)
-          #   DOCUMENTDB_URI         = local.documentdb_connection_string
-          #   DOCUMENTDB_HOST        = local.documentdb_endpoint
-          #   DOCUMENTDB_PORT        = local.documentdb_port
-          #   DOCUMENTDB_DATABASE    = var.documentdb_default_database
-          #   DATABASE_NAME          = var.documentdb_default_database
-          #
-          #   # For backward compatibility with existing code
-          #   SPRING_DATA_MONGODB_URI = local.documentdb_connection_string
-          #   MONGO_DB_URL            = local.documentdb_connection_string
-          #   MONGO_DB_URI            = local.documentdb_connection_string
-          #   MONGODB_DATABASE        = var.documentdb_default_database
-          # }
+            # DocumentDB connection details (replaces MongoDB) - COMMENTED OUT
+            # DOCUMENTDB_URI         = local.documentdb_connection_string
+            # DOCUMENTDB_HOST        = local.documentdb_endpoint
+            # DOCUMENTDB_PORT        = local.documentdb_port
+            # DOCUMENTDB_DATABASE    = var.documentdb_default_database
+            # DATABASE_NAME          = var.documentdb_default_database
+
+            # For backward compatibility with existing code - COMMENTED OUT
+            # SPRING_DATA_MONGODB_URI = local.documentdb_connection_string
+            # MONGO_DB_URL            = local.documentdb_connection_string
+            # MONGO_DB_URI            = local.documentdb_connection_string
+            # MONGODB_DATABASE        = var.documentdb_default_database
+          }
         )
         # Add DocumentDB auth token as a secret for all services that need it
         secrets = concat(
@@ -68,6 +68,7 @@ locals {
               name       = "REDIS_PASSWORD"
               value_from = module.redis.ssm_parameter_redis_auth_token
             }
+            # DocumentDB secrets - COMMENTED OUT
             # {
             #   name       = "DOCUMENTDB_PASSWORD"
             #   value_from = data.aws_ssm_parameter.documentdb_password.name
@@ -84,6 +85,7 @@ locals {
           lookup(config, "additional_task_policies", {}),
           {
             "ElastiCacheAccess" = aws_iam_policy.ecs_elasticache_policy.arn
+            # DocumentDB IAM policy - COMMENTED OUT
             # "DocumentDBAccess"  = aws_iam_policy.ecs_documentdb_policy.arn
           }
         )
@@ -126,7 +128,7 @@ resource "aws_iam_policy" "ecs_elasticache_policy" {
   tags = var.tags
 }
 
-# IAM Policy for DocumentDB access (replaces MongoDB policy)
+# IAM Policy for DocumentDB access (replaces MongoDB policy) - COMMENTED OUT
 # resource "aws_iam_policy" "ecs_documentdb_policy" {
 #   name        = "${local.cluster_name}-ecs-documentdb-policy"
 #   description = "IAM policy for ECS tasks to access DocumentDB"
