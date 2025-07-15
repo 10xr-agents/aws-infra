@@ -64,13 +64,13 @@ variable "enable_nat_gateway" {
 variable "single_nat_gateway" {
   description = "Whether to use a single NAT Gateway for all private subnets"
   type        = bool
-  default     = false
+  default     = true
 }
 
 variable "one_nat_gateway_per_az" {
   description = "Whether to use one NAT Gateway per availability zone"
   type        = bool
-  default     = true
+  default     = false
 }
 
 variable "map_public_ip_on_launch" {
