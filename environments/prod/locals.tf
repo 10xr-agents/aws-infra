@@ -20,10 +20,10 @@ locals {
 
   # TEMPORARILY COMMENT OUT DocumentDB connection details from separate repository via SSM
   # Uncomment these after DocumentDB workspace has run and created the SSM parameters
-  # documentdb_connection_string = data.aws_ssm_parameter.documentdb_connection_string.value
-  # documentdb_endpoint          = data.aws_ssm_parameter.documentdb_endpoint.value
-  # documentdb_port             = data.aws_ssm_parameter.documentdb_port.value
-  # documentdb_username         = data.aws_ssm_parameter.documentdb_username.value
+  documentdb_connection_string = data.aws_ssm_parameter.documentdb_connection_string.value
+  documentdb_endpoint          = data.aws_ssm_parameter.documentdb_endpoint.value
+  documentdb_port             = data.aws_ssm_parameter.documentdb_port.value
+  documentdb_username         = data.aws_ssm_parameter.documentdb_username.value
 
   acm_certificate_arn = aws_acm_certificate.main.arn
 
@@ -49,18 +49,18 @@ locals {
 
             # TEMPORARILY COMMENT OUT DocumentDB connection details (replaces MongoDB)
             # Uncomment these after DocumentDB workspace has run and created the SSM parameters
-            # DOCUMENTDB_URI         = local.documentdb_connection_string
-            # DOCUMENTDB_HOST        = local.documentdb_endpoint
-            # DOCUMENTDB_PORT        = local.documentdb_port
-            # DOCUMENTDB_DATABASE    = var.documentdb_default_database
-            # DATABASE_NAME          = var.documentdb_default_database
+            DOCUMENTDB_URI         = local.documentdb_connection_string
+            DOCUMENTDB_HOST        = local.documentdb_endpoint
+            DOCUMENTDB_PORT        = local.documentdb_port
+            DOCUMENTDB_DATABASE    = var.documentdb_default_database
+            DATABASE_NAME          = var.documentdb_default_database
 
             # TEMPORARILY COMMENT OUT - For backward compatibility with existing code
             # Uncomment these after DocumentDB workspace has run
-            # SPRING_DATA_MONGODB_URI = local.documentdb_connection_string
-            # MONGO_DB_URL            = local.documentdb_connection_string
-            # MONGO_DB_URI            = local.documentdb_connection_string
-            # MONGODB_DATABASE        = var.documentdb_default_database
+            SPRING_DATA_MONGODB_URI = local.documentdb_connection_string
+            MONGO_DB_URL            = local.documentdb_connection_string
+            MONGO_DB_URI            = local.documentdb_connection_string
+            MONGODB_DATABASE        = var.documentdb_default_database
           }
         )
         # Add DocumentDB auth token as a secret for all services that need it
@@ -70,17 +70,17 @@ locals {
             {
               name       = "REDIS_PASSWORD"
               value_from = module.redis.ssm_parameter_redis_auth_token
-            }
+            },
             # TEMPORARILY COMMENT OUT DocumentDB secrets
             # Uncomment these after DocumentDB workspace has run and created the SSM parameters
-            # {
-            #   name       = "DOCUMENTDB_PASSWORD"
-            #   value_from = data.aws_ssm_parameter.documentdb_password.name
-            # },
-            # {
-            #   name       = "DOCUMENTDB_USERNAME"
-            #   value_from = data.aws_ssm_parameter.documentdb_username.name
-            # }
+            {
+              name       = "DOCUMENTDB_PASSWORD"
+              value_from = data.aws_ssm_parameter.documentdb_password.name
+            },
+            {
+              name       = "DOCUMENTDB_USERNAME"
+              value_from = data.aws_ssm_parameter.documentdb_username.name
+            }
           ]
         )
 
@@ -91,7 +91,7 @@ locals {
             "ElastiCacheAccess" = aws_iam_policy.ecs_elasticache_policy.arn
             # TEMPORARILY COMMENT OUT DocumentDB IAM policy
             # Uncomment this after DocumentDB workspace has run
-            # "DocumentDBAccess"  = aws_iam_policy.ecs_documentdb_policy.arn
+            "DocumentDBAccess"  = aws_iam_policy.ecs_documentdb_policy.arn
           }
         )
       }

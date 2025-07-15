@@ -16,29 +16,29 @@ data "aws_caller_identity" "current" {}
 # TEMPORARILY COMMENT OUT DocumentDB data sources from separate repository
 # Uncomment these after DocumentDB workspace has run and created the SSM parameters
 
-# data "aws_ssm_parameter" "documentdb_connection_string" {
-#   name = "/ten_xr_storage_infra/${var.environment}/connection_string"
-# }
+data "aws_ssm_parameter" "documentdb_connection_string" {
+  name = "/ten_xr_storage_infra/${var.environment}/connection_string"
+}
 
-# data "aws_ssm_parameter" "documentdb_endpoint" {
-#   name = "/ten_xr_storage_infra/${var.environment}/endpoint"
-# }
+data "aws_ssm_parameter" "documentdb_endpoint" {
+  name = "/ten_xr_storage_infra/${var.environment}/endpoint"
+}
 
-# data "aws_ssm_parameter" "documentdb_port" {
-#   name = "/ten_xr_storage_infra/${var.environment}/port"
-# }
+data "aws_ssm_parameter" "documentdb_port" {
+  name = "/ten_xr_storage_infra/${var.environment}/port"
+}
 
-# data "aws_ssm_parameter" "documentdb_username" {
-#   name = "/ten_xr_storage_infra/${var.environment}/master_username"
-# }
+data "aws_ssm_parameter" "documentdb_username" {
+  name = "/ten_xr_storage_infra/${var.environment}/master_username"
+}
 
-# data "aws_ssm_parameter" "documentdb_password" {
-#   name = "/ten_xr_storage_infra/${var.environment}/master_password"
-# }
+data "aws_ssm_parameter" "documentdb_password" {
+  name = "/ten_xr_storage_infra/${var.environment}/master_password"
+}
 
-# data "aws_ssm_parameter" "documentdb_security_group_id" {
-#   name = "/ten_xr_storage_infra/${var.environment}/security_group_id"
-# }
+data "aws_ssm_parameter" "documentdb_security_group_id" {
+  name = "/ten_xr_storage_infra/${var.environment}/security_group_id"
+}
 
 
 resource "aws_acm_certificate" "main" {
@@ -461,16 +461,16 @@ resource "aws_security_group_rule" "redis_from_ecs_ingress" {
 
 
 
-# resource "aws_security_group_rule" "documentdb_from_ecs" {
-#   for_each = module.ecs.security_group_ids
+resource "aws_security_group_rule" "documentdb_from_ecs" {
+  for_each = module.ecs.security_group_ids
 
-#   type                     = "ingress"
-#   from_port                = 27017
-#   to_port                  = 27017
-#   protocol                 = "tcp"
-#   source_security_group_id = each.value
-#   security_group_id        = data.aws_ssm_parameter.documentdb_security_group_id.value
-#   description              = "Allow ECS services to access DocumentDB"
+  type                     = "ingress"
+  from_port                = 27017
+  to_port                  = 27017
+  protocol                 = "tcp"
+  source_security_group_id = each.value
+  security_group_id        = data.aws_ssm_parameter.documentdb_security_group_id.value
+  description              = "Allow ECS services to access DocumentDB"
 
-#   depends_on = [module.ecs]
-# }
+  depends_on = [module.ecs]
+}
