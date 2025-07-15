@@ -362,11 +362,13 @@ output "redis_parameters_check" {
 output "documentdb_endpoint" {
   description = "DocumentDB cluster endpoint from separate repository"
   value       = data.aws_ssm_parameter.documentdb_endpoint.value
+  sensitive   = true  # Added this line
 }
 
 output "documentdb_security_group_id" {
   description = "DocumentDB security group ID from separate repository"
   value       = data.aws_ssm_parameter.documentdb_security_group_id.value
+  sensitive   = true  # Added this line
 }
 
 output "documentdb_connection_info" {
@@ -377,7 +379,7 @@ output "documentdb_connection_info" {
     database         = var.documentdb_default_database
     security_group_id = data.aws_ssm_parameter.documentdb_security_group_id.value
   }
-  sensitive = true
+  sensitive = true  # This one is already marked as sensitive
 }
 
 

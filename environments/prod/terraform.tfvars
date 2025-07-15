@@ -467,7 +467,7 @@ manage_cloudflare_zone_settings = false  # Disable for now to avoid conflicts
 # Production DNS records
 app_dns_records = {
   "prod-main" = {
-    name     = ""  # Root domain
+    name     = "@"  # Root domain
     content  = "" # Will be set by module to Global Accelerator DNS name
     type     = "CNAME"
     proxied  = true
