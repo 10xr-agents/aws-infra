@@ -117,8 +117,8 @@ module "vpc" {
 # DocumentDB Sub-Workspace via TFE Module
 ################################################################################
 
-module "documentdb_workspace" {
-  source = "../../modules/tfe-workspace"
+module "storage" {
+  source = "../../modules/storage"
 
   # Organization and parent workspace
   tfe_organization_name   = var.tfe_organization_name
