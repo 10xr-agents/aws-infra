@@ -1,11 +1,8 @@
 # environments/prod/main.tf
 
 locals {
-  cluster_name = "${var.cluster_name}-${var.environment}"
+  cluster_name = "${var.cluster_name}-prod"
   vpc_name     = "${var.cluster_name}-${var.environment}-${var.region}"
-  
-  # Shortened name prefix for AWS resource name limits (32 chars)
-  short_name_prefix = "10xr-${var.environment}"
 }
 
 # Data sources for AWS information
@@ -277,7 +274,7 @@ module "ecs" {
 module "networking" {
   source = "../../modules/networking"
 
-  cluster_name = local.short_name_prefix  # Use shortened name
+  cluster_name = local.cluster_name  # Use shortened name
   environment  = "prod"
   vpc_id       = module.vpc.vpc_id
 
@@ -345,7 +342,7 @@ module "global_accelerator" {
 
   source = "../../modules/global-accelerator"
 
-  cluster_name = local.short_name_prefix  # Use shortened name
+  cluster_name = local.cluster_name  # Use shortened name
   environment = var.environment
 
   # Global Accelerator Configuration
@@ -405,7 +402,7 @@ module "cloudflare" {
 
   source = "../../modules/cloudflare"
 
-  cluster_name = local.short_name_prefix  # Use shortened name
+  cluster_name = local.cluster_name  # Use shortened name
   environment = var.environment
 
   # Cloudflare Configuration
