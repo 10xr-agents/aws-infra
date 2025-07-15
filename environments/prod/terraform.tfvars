@@ -18,8 +18,8 @@ database_subnets = ["10.1.21.0/24", "10.1.22.0/24", "10.1.23.0/24"]
 documentdb_default_database = "ten_xr_agents_prod"
 
 enable_nat_gateway     = true
-single_nat_gateway     = false
-one_nat_gateway_per_az = true
+single_nat_gateway     = true
+one_nat_gateway_per_az = flase
 map_public_ip_on_launch = true
 
 # ECS Configuration
