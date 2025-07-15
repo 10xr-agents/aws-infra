@@ -22,7 +22,7 @@ locals {
       task_exec_role_name  = "${local.name_prefix}-${name}-exec-role"
       log_group_name       = "/ecs/${local.name_prefix}/${name}"
       security_group_name  = "${local.name_prefix}-${name}-sg"
-      target_group_name    = "${name}-tg"
+      target_group_name    = "${local.name_prefix}-${name}-tg" 
     }
   )}
 
@@ -461,13 +461,16 @@ resource "aws_ecs_task_definition" "service" {
 # ALB Target Groups - ONLY CREATE IF ALB IS ENABLED
 ################################################################################
 
+# In modules/ecs/main.tf - Update the target group resource (around line 464)
+
 resource "aws_lb_target_group" "service" {
   for_each = {
     for name, config in local.services_config : name => config
     if lookup(config, "enable_load_balancer", true) && var.create_alb
   }
 
-  name        = each.value.target_group_name
+  # FIX: Add environment prefix to make target group names unique
+  name        = "${local.name_prefix}-${each.key}-tg"  # Changed from each.value.target_group_name
   port        = each.value.port
   protocol    = "HTTP"
   vpc_id      = var.vpc_id
@@ -488,7 +491,7 @@ resource "aws_lb_target_group" "service" {
   deregistration_delay = lookup(each.value, "deregistration_delay", 30)
 
   tags = merge(local.common_tags, {
-    Name    = each.value.target_group_name
+    Name    = "${local.name_prefix}-${each.key}-tg"  # Also update the tag
     Service = each.key
   })
 
