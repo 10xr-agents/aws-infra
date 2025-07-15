@@ -96,6 +96,11 @@ ecs_services = {
     "secrets": [],
     "capacity_provider_strategy": [
       {
+        "capacity_provider": "FARGATE",
+        "weight": 1,
+        "base": 2
+      },
+      {
         "capacity_provider": "FARGATE_SPOT",
         "weight": 1,
         "base": 0
@@ -332,43 +337,6 @@ ecs_services = {
     "deregistration_delay": 30
   }
 }
-
-# MongoDB Configuration
-mongodb_replica_count    = 3
-mongodb_instance_type    = "t3.medium"
-
-mongodb_version          = "8.0"
-mongodb_admin_username   = "admin"
-mongodb_default_database = "ten_xr_agents_qa"
-
-# Storage Configuration
-mongodb_root_volume_size       = 30
-mongodb_data_volume_size       = 200
-mongodb_data_volume_type       = "gp3"
-mongodb_data_volume_iops       = 3000
-mongodb_data_volume_throughput = 125
-
-# Security Configuration
-mongodb_allow_ssh       = true
-mongodb_ssh_cidr_blocks = ["10.0.0.0/16"]  # Allow SSH from within VPC
-
-# Monitoring and Logging
-mongodb_enable_monitoring  = true
-mongodb_log_retention_days = 7
-
-# DNS Configuration
-mongodb_create_dns_records = true
-mongodb_private_domain     = "mongodb.qa.10xr.local"
-
-# Backup Configuration
-mongodb_backup_enabled        = true
-mongodb_backup_schedule       = "cron(0 2 * * ? *)"  # Daily at 2 AM
-mongodb_backup_retention_days = 7
-
-# Additional Features
-mongodb_store_connection_string_in_ssm = true
-mongodb_enable_encryption_at_rest      = true
-mongodb_enable_audit_logging          = true
 
 # Redis Configuration
 redis_node_type                    = "cache.t3.micro"

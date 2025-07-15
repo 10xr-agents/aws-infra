@@ -36,9 +36,9 @@ ecs_services = {
     "image": "761018882607.dkr.ecr.us-east-1.amazonaws.com/10xr-agents/voice-agent",
     "image_tag": "v1.0.0",
     "port": 9600,
-    "cpu": 8192,      # Doubled for production
-    "memory": 16384,  # Doubled for production
-    "desired_count": 2, # Increased for production
+    "cpu": 4096,
+    "memory": 8192,
+    "desired_count": 2,
     "environment": {
       "SERVICE_PORT": "9600"
     },
@@ -47,11 +47,11 @@ ecs_services = {
       {
         "capacity_provider": "FARGATE",
         "weight": 1,
-        "base": 3  # Higher base for production
+        "base": 1
       },
       {
         "capacity_provider": "FARGATE_SPOT",
-        "weight": 2,  # Reduced spot usage for production
+        "weight": 3,
         "base": 0
       }
     ],
@@ -59,7 +59,7 @@ ecs_services = {
       "command": "curl -f http://localhost:9600/health || exit 1",
       "interval": 30,
       "timeout": 20,
-      "start_period": 120,  # Longer start period for production
+      "start_period": 90,
       "retries": 3
     },
     "health_check": {
@@ -71,15 +71,15 @@ ecs_services = {
       "matcher": "200"
     },
     "enable_auto_scaling": true,
-    "auto_scaling_min_capacity": 3,  # Higher minimum for production
-    "auto_scaling_max_capacity": 20, # Higher maximum for production
-    "auto_scaling_cpu_target": 60,   # Lower target for production
-    "auto_scaling_memory_target": 70,
+    "auto_scaling_min_capacity": 1,
+    "auto_scaling_max_capacity": 10,
+    "auto_scaling_cpu_target": 40,
+    "auto_scaling_memory_target": 50,
     "enable_default_routing": false,
     "alb_host_headers": ["agents.prod.10xr.co"],
     "enable_load_balancer": true,
     "enable_service_discovery": true,
-    "deregistration_delay": 60,  # Longer delay for production
+    "deregistration_delay": 30,
     "additional_task_policies": {
       "S3Access": "arn:aws:iam::aws:policy/AmazonS3FullAccess"
     }
@@ -88,9 +88,9 @@ ecs_services = {
     "image": "761018882607.dkr.ecr.us-east-1.amazonaws.com/10xr-agents/livekit-proxy-service",
     "image_tag": "1.0.0",
     "port": 9000,
-    "cpu": 2048,      # Doubled for production
-    "memory": 4096,   # Doubled for production
-    "desired_count": 2, # Increased for production
+    "cpu": 1024,
+    "memory": 2048,
+    "desired_count": 2,
     "environment": {
       "SERVICE_PORT": "9000"
     },
@@ -111,7 +111,7 @@ ecs_services = {
       "command": "curl -f http://localhost:9000/api/v1/management/health || exit 1",
       "interval": 30,
       "timeout": 20,
-      "start_period": 90,
+      "start_period": 60,
       "retries": 3
     },
     "health_check": {
@@ -123,23 +123,23 @@ ecs_services = {
       "matcher": "200"
     },
     "enable_auto_scaling": true,
-    "auto_scaling_min_capacity": 2,
-    "auto_scaling_max_capacity": 12,
-    "auto_scaling_cpu_target": 60,
-    "auto_scaling_memory_target": 70,
+    "auto_scaling_min_capacity": 1,
+    "auto_scaling_max_capacity": 8,
+    "auto_scaling_cpu_target": 70,
+    "auto_scaling_memory_target": 80,
     "enable_default_routing": false,
     "alb_host_headers": ["proxy.prod.10xr.co"],
     "enable_load_balancer": true,
     "enable_service_discovery": true,
-    "deregistration_delay": 60
+    "deregistration_delay": 30
   },
   "agent-analytics": {
     "image": "761018882607.dkr.ecr.us-east-1.amazonaws.com/10xr-agents/agent-analytics-service",
     "image_tag": "latest",
     "port": 9800,
-    "cpu": 2048,      # Doubled for production
-    "memory": 4096,   # Doubled for production
-    "desired_count": 2, # Increased for production
+    "cpu": 2048,
+    "memory": 4096,
+    "desired_count": 2,
     "environment": {
       "LOG_LEVEL": "INFO",
       "SERVICE_PORT": "9800"
@@ -149,11 +149,11 @@ ecs_services = {
       {
         "capacity_provider": "FARGATE",
         "weight": 1,
-        "base": 2
+        "base": 1
       },
       {
         "capacity_provider": "FARGATE_SPOT",
-        "weight": 1,
+        "weight": 2,
         "base": 0
       }
     ],
@@ -161,7 +161,7 @@ ecs_services = {
       "command": "curl -f http://localhost:9800/management/health || exit 1",
       "interval": 30,
       "timeout": 20,
-      "start_period": 120,
+      "start_period": 90,
       "retries": 3
     },
     "health_check": {
@@ -173,23 +173,23 @@ ecs_services = {
       "matcher": "200"
     },
     "enable_auto_scaling": true,
-    "auto_scaling_min_capacity": 2,
-    "auto_scaling_max_capacity": 12,
-    "auto_scaling_cpu_target": 60,
-    "auto_scaling_memory_target": 70,
+    "auto_scaling_min_capacity": 1,
+    "auto_scaling_max_capacity": 8,
+    "auto_scaling_cpu_target": 70,
+    "auto_scaling_memory_target": 80,
     "enable_default_routing": false,
     "alb_host_headers": ["analytics.prod.10xr.co"],
     "enable_load_balancer": true,
     "enable_service_discovery": true,
-    "deregistration_delay": 60
+    "deregistration_delay": 30
   },
   "ui-console": {
     "image": "761018882607.dkr.ecr.us-east-1.amazonaws.com/10xr-agents/ui-console",
-    "image_tag": "qa-0.1.0",  # Production tag
+    "image_tag": "production-0.1.0",  # Production tag
     "port": 3000,
-    "cpu": 1024,
-    "memory": 2048,
-    "desired_count": 2,  # Increased for production
+    "cpu": 512,
+    "memory": 1024,
+    "desired_count": 2,
     "environment": {
       "LOG_LEVEL": "INFO",
       "REACT_APP_API_URL": "https://api.prod.10xr.co",
@@ -200,14 +200,14 @@ ecs_services = {
       {
         "capacity_provider": "FARGATE",
         "weight": 1,
-        "base": 4  # Higher base for production
+        "base": 2
       }
     ],
     "container_health_check": {
       "command": "curl -f http://localhost:3000/api/management/health || exit 1",
       "interval": 30,
       "timeout": 20,
-      "start_period": 90,
+      "start_period": 60,
       "retries": 3
     },
     "health_check": {
@@ -219,23 +219,23 @@ ecs_services = {
       "matcher": "200"
     },
     "enable_auto_scaling": true,
-    "auto_scaling_min_capacity": 4,
-    "auto_scaling_max_capacity": 12,
-    "auto_scaling_cpu_target": 60,
-    "auto_scaling_memory_target": 70,
+    "auto_scaling_min_capacity": 2,
+    "auto_scaling_max_capacity": 6,
+    "auto_scaling_cpu_target": 70,
+    "auto_scaling_memory_target": 80,
     "enable_default_routing": true,
-    "alb_host_headers": ["prod.10xr.co", "ui.prod.10xr.co"],
+    "alb_host_headers": ["app.10xr.co", "prod.10xr.co", "ui.prod.10xr.co"],
     "enable_load_balancer": true,
     "enable_service_discovery": true,
-    "deregistration_delay": 60
+    "deregistration_delay": 30
   },
   "agentic-services": {
     "image": "761018882607.dkr.ecr.us-east-1.amazonaws.com/10xr-agents/agentic-framework-service",
     "image_tag": "latest",
     "port": 8080,
-    "cpu": 2048,      # Doubled for production
-    "memory": 4096,   # Doubled for production
-    "desired_count": 2, # Increased for production
+    "cpu": 1024,
+    "memory": 2048,
+    "desired_count": 2,
     "environment": {
       "LOG_LEVEL": "INFO",
       "SERVICE_PORT": "8080"
@@ -245,11 +245,11 @@ ecs_services = {
       {
         "capacity_provider": "FARGATE",
         "weight": 1,
-        "base": 2
+        "base": 1
       },
       {
         "capacity_provider": "FARGATE_SPOT",
-        "weight": 1,
+        "weight": 2,
         "base": 0
       }
     ],
@@ -257,7 +257,7 @@ ecs_services = {
       "command": "curl -f http://localhost:8080/actuator/health || exit 1",
       "interval": 30,
       "timeout": 20,
-      "start_period": 120,
+      "start_period": 90,
       "retries": 3
     },
     "health_check": {
@@ -269,15 +269,15 @@ ecs_services = {
       "matcher": "200"
     },
     "enable_auto_scaling": true,
-    "auto_scaling_min_capacity": 2,
-    "auto_scaling_max_capacity": 12,
-    "auto_scaling_cpu_target": 60,
-    "auto_scaling_memory_target": 70,
+    "auto_scaling_min_capacity": 1,
+    "auto_scaling_max_capacity": 8,
+    "auto_scaling_cpu_target": 70,
+    "auto_scaling_memory_target": 80,
     "enable_default_routing": false,
     "alb_host_headers": ["api.prod.10xr.co"],
     "enable_load_balancer": true,
     "enable_service_discovery": true,
-    "deregistration_delay": 60,
+    "deregistration_delay": 30,
     "efs_config": {
       "enabled": false,
       "mount_path": "/app/storage"
@@ -287,9 +287,9 @@ ecs_services = {
     "image": "761018882607.dkr.ecr.us-east-1.amazonaws.com/10xr-agents/automation-service-mcp",
     "image_tag": "v1.0.0",
     "port": 8090,
-    "cpu": 2048,      # Doubled for production
-    "memory": 4096,   # Doubled for production
-    "desired_count": 2, # Increased for production
+    "cpu": 1024,
+    "memory": 2048,
+    "desired_count": 2,
     "environment": {
       "LOG_LEVEL": "INFO",
       "SERVICE_PORT": "8090"
@@ -299,11 +299,11 @@ ecs_services = {
       {
         "capacity_provider": "FARGATE",
         "weight": 1,
-        "base": 2
+        "base": 1
       },
       {
         "capacity_provider": "FARGATE_SPOT",
-        "weight": 1,
+        "weight": 2,
         "base": 0
       }
     ],
@@ -311,7 +311,7 @@ ecs_services = {
       "command": "curl -f http://localhost:8090/health || exit 1",
       "interval": 30,
       "timeout": 20,
-      "start_period": 120,
+      "start_period": 90,
       "retries": 3
     },
     "health_check": {
@@ -323,54 +323,17 @@ ecs_services = {
       "matcher": "200"
     },
     "enable_auto_scaling": true,
-    "auto_scaling_min_capacity": 2,
-    "auto_scaling_max_capacity": 10,
-    "auto_scaling_cpu_target": 60,
-    "auto_scaling_memory_target": 70,
+    "auto_scaling_min_capacity": 1,
+    "auto_scaling_max_capacity": 8,
+    "auto_scaling_cpu_target": 70,
+    "auto_scaling_memory_target": 80,
     "enable_default_routing": false,
     "alb_host_headers": ["automation.prod.10xr.co"],
     "enable_load_balancer": true,
     "enable_service_discovery": true,
-    "deregistration_delay": 60
+    "deregistration_delay": 30
   }
 }
-
-# MongoDB Configuration - Production settings
-mongodb_replica_count    = 5         # Increased for production
-mongodb_instance_type    = "m5.xlarge"  # Larger instance for production
-
-mongodb_version          = "8.0"
-mongodb_admin_username   = "admin"
-mongodb_default_database = "ten_xr_agents_prod"
-
-# Storage Configuration - Production settings
-mongodb_root_volume_size       = 50   # Increased for production
-mongodb_data_volume_size       = 500  # Increased for production
-mongodb_data_volume_type       = "gp3"
-mongodb_data_volume_iops       = 6000  # Increased for production
-mongodb_data_volume_throughput = 250   # Increased for production
-
-# Security Configuration
-mongodb_allow_ssh       = false  # Disabled for production
-mongodb_ssh_cidr_blocks = []
-
-# Monitoring and Logging
-mongodb_enable_monitoring  = true
-mongodb_log_retention_days = 30  # Longer retention for production
-
-# DNS Configuration
-mongodb_create_dns_records = true
-mongodb_private_domain     = "mongodb.prod.10xr.local"
-
-# Backup Configuration - Production settings
-mongodb_backup_enabled        = true
-mongodb_backup_schedule       = "cron(0 2 * * ? *)"  # Daily at 2 AM
-mongodb_backup_retention_days = 30  # Longer retention for production
-
-# Additional Features
-mongodb_store_connection_string_in_ssm = true
-mongodb_enable_encryption_at_rest      = true
-mongodb_enable_audit_logging          = true
 
 # Redis Configuration - Production settings
 redis_node_type                    = "cache.r6g.large"  # Larger instance for production
@@ -407,7 +370,7 @@ redis_cloudwatch_log_retention_days   = 30  # Longer retention for production
 # NLB Configuration
 create_nlb = true
 nlb_internal = false
-nlb_enable_deletion_protection = true  # Enabled for production
+nlb_enable_deletion_protection = false
 nlb_enable_cross_zone_load_balancing = true
 
 # Target Group Configuration
@@ -415,7 +378,7 @@ create_http_target_group = true
 http_port = 80
 https_port = 443
 target_type = "alb"
-deregistration_delay = 300
+deregistration_delay = 30
 
 # Health Check Configuration
 health_check_enabled = true
@@ -466,6 +429,15 @@ manage_cloudflare_zone_settings = false  # Disable for now to avoid conflicts
 
 # Production DNS records
 app_dns_records = {
+  "app-main" = {
+    name     = "app"  # Root domain
+    content  = "" # Will be set by module to Global Accelerator DNS name
+    type     = "CNAME"
+    proxied  = false  # Changed from true to false
+    ttl      = 300
+    comment  = "Main production environment - routes to UI console"
+    tags     = ["app", "prod", "ui", "main"]
+  },
   "prod-main" = {
     name     = "prod"  # Root domain
     content  = "" # Will be set by module to Global Accelerator DNS name

@@ -36,9 +36,9 @@ locals {
         environment = merge(
           config.environment,
           {
-            ENVIRONMENT            = var.environment
-            ECS_ENVIRONMENT        = var.environment
-            SPRING_PROFILES_ACTIVE = var.environment
+            ENVIRONMENT            = "production"
+            ECS_ENVIRONMENT        = "production"
+            SPRING_PROFILES_ACTIVE = "production"
             CLUSTER_NAME = var.cluster_name
             # Add Redis connection details to all services
             REDIS_URL              = module.redis.redis_connection_string
@@ -47,20 +47,13 @@ locals {
             REDIS_USERNAME         = module.redis.redis_username
             REDIS_TLS_ENABLED      = tostring(var.redis_transit_encryption_enabled)
 
-            # TEMPORARILY COMMENT OUT DocumentDB connection details (replaces MongoDB)
-            # Uncomment these after DocumentDB workspace has run and created the SSM parameters
-            DOCUMENTDB_URI         = local.documentdb_connection_string
-            DOCUMENTDB_HOST        = local.documentdb_endpoint
-            DOCUMENTDB_PORT        = local.documentdb_port
-            DOCUMENTDB_DATABASE    = var.documentdb_default_database
-            DATABASE_NAME          = var.documentdb_default_database
-
             # TEMPORARILY COMMENT OUT - For backward compatibility with existing code
             # Uncomment these after DocumentDB workspace has run
             SPRING_DATA_MONGODB_URI = local.documentdb_connection_string
             MONGO_DB_URL            = local.documentdb_connection_string
             MONGO_DB_URI            = local.documentdb_connection_string
             MONGODB_DATABASE        = var.documentdb_default_database
+            DATABASE_NAME           = var.documentdb_default_database
           }
         )
         # Add DocumentDB auth token as a secret for all services that need it
@@ -150,6 +143,11 @@ resource "aws_iam_policy" "ecs_documentdb_policy" {
           "rds:DescribeDBInstances",
           "rds:DescribeDBSubnetGroups",
           "rds:ListTagsForResource",
+          # EC2 permissions for MongoDB instances
+          "ec2:DescribeInstances",
+          "ec2:DescribeInstanceStatus",
+          "ec2:DescribeVolumes",
+          "ec2:DescribeSnapshots",
           # SSM permissions for connection details
           "ssm:GetParameter",
           "ssm:GetParameters",
@@ -158,7 +156,11 @@ resource "aws_iam_policy" "ecs_documentdb_policy" {
           "secretsmanager:GetSecretValue",
           # KMS permissions for decryption
           "kms:Decrypt",
-          "kms:DescribeKey"
+          "kms:DescribeKey",
+          # Route53 permissions for DNS resolution
+          "route53:ListHostedZones",
+          "route53:GetHostedZone",
+          "route53:ListResourceRecordSets"
         ]
         Resource = "*"
       }

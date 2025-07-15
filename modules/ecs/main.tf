@@ -2,7 +2,7 @@
 
 locals {
   # Environment-specific naming
-  name_prefix = "${substr(var.cluster_name, 0, 8)}-${var.environment}"
+  name_prefix = "${var.cluster_name}-${var.environment}"
 
   # Common tags
   common_tags = merge(

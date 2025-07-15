@@ -241,7 +241,7 @@ module "ecs" {
   source = "../../modules/ecs"
 
   cluster_name = var.cluster_name
-  environment  = var.environment
+  environment  = "prod"
 
   vpc_id             = module.vpc.vpc_id
   private_subnet_ids = module.vpc.private_subnets
@@ -278,7 +278,7 @@ module "networking" {
   source = "../../modules/networking"
 
   cluster_name = local.short_name_prefix  # Use shortened name
-  environment  = var.environment
+  environment  = "prod"
   vpc_id       = module.vpc.vpc_id
 
   public_subnet_ids = module.vpc.public_subnets
