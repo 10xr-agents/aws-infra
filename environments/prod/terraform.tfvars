@@ -458,7 +458,7 @@ cloudflare_account_id = "929c1d893cb7bb8455e151ae08f3b538"
 cloudflare_api_key    = "ef7027a662a457c814bfc30e81fcf49baa969"
 
 # Domain Configuration
-domain = "app.10xr.co"
+domain = "prod.10xr.co"
 base_domain_name = "10xr.co"
 create_cloudflare_dns_records = true
 dns_proxied = false  # Changed from true to false to match QA
