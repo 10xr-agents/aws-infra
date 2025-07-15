@@ -1,7 +1,7 @@
 # modules/networking/main.tf
 
 locals {
-  name_prefix = "${var.cluster_name}-${var.environment}"
+  name_prefix = var.cluster_name
 
   common_tags = merge(
     var.tags,
