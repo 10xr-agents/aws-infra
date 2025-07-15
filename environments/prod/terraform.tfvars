@@ -76,7 +76,7 @@ ecs_services = {
     "auto_scaling_cpu_target": 60,   # Lower target for production
     "auto_scaling_memory_target": 70,
     "enable_default_routing": false,
-    "alb_host_headers": ["agents.10xr.co"],
+    "alb_host_headers": ["agents.prod.10xr.co"],
     "enable_load_balancer": true,
     "enable_service_discovery": true,
     "deregistration_delay": 60,  # Longer delay for production
@@ -128,7 +128,7 @@ ecs_services = {
     "auto_scaling_cpu_target": 60,
     "auto_scaling_memory_target": 70,
     "enable_default_routing": false,
-    "alb_host_headers": ["proxy.10xr.co"],
+    "alb_host_headers": ["proxy.prod.10xr.co"],
     "enable_load_balancer": true,
     "enable_service_discovery": true,
     "deregistration_delay": 60
@@ -178,7 +178,7 @@ ecs_services = {
     "auto_scaling_cpu_target": 60,
     "auto_scaling_memory_target": 70,
     "enable_default_routing": false,
-    "alb_host_headers": ["analytics.10xr.co"],
+    "alb_host_headers": ["analytics.prod.10xr.co"],
     "enable_load_balancer": true,
     "enable_service_discovery": true,
     "deregistration_delay": 60
@@ -192,7 +192,7 @@ ecs_services = {
     "desired_count": 2,  # Increased for production
     "environment": {
       "LOG_LEVEL": "INFO",
-      "REACT_APP_API_URL": "https://services.10xr.co",
+      "REACT_APP_API_URL": "https://api.prod.10xr.co",
       "SERVICE_PORT": "3000"
     },
     "secrets": [],
@@ -224,7 +224,7 @@ ecs_services = {
     "auto_scaling_cpu_target": 60,
     "auto_scaling_memory_target": 70,
     "enable_default_routing": true,
-    "alb_host_headers": ["10xr.co", "ui.10xr.co"],
+    "alb_host_headers": ["prod.10xr.co", "ui.prod.10xr.co"],
     "enable_load_balancer": true,
     "enable_service_discovery": true,
     "deregistration_delay": 60
@@ -274,7 +274,7 @@ ecs_services = {
     "auto_scaling_cpu_target": 60,
     "auto_scaling_memory_target": 70,
     "enable_default_routing": false,
-    "alb_host_headers": ["api.10xr.co"],
+    "alb_host_headers": ["api.prod.10xr.co"],
     "enable_load_balancer": true,
     "enable_service_discovery": true,
     "deregistration_delay": 60,
@@ -328,7 +328,7 @@ ecs_services = {
     "auto_scaling_cpu_target": 60,
     "auto_scaling_memory_target": 70,
     "enable_default_routing": false,
-    "alb_host_headers": ["automation.10xr.co"],
+    "alb_host_headers": ["automation.prod.10xr.co"],
     "enable_load_balancer": true,
     "enable_service_discovery": true,
     "deregistration_delay": 60
@@ -461,7 +461,7 @@ cloudflare_api_key    = "ef7027a662a457c814bfc30e81fcf49baa969"
 domain = "app.10xr.co"
 base_domain_name = "10xr.co"
 create_cloudflare_dns_records = true
-dns_proxied = true  # Enabled for production (better security and performance)
+dns_proxied = false  # Changed from true to false to match QA
 manage_cloudflare_zone_settings = false  # Disable for now to avoid conflicts
 
 # Production DNS records
@@ -470,7 +470,7 @@ app_dns_records = {
     name     = "prod"  # Root domain
     content  = "" # Will be set by module to Global Accelerator DNS name
     type     = "CNAME"
-    proxied  = true
+    proxied  = false  # Changed from true to false
     ttl      = 300
     comment  = "Main production environment - routes to UI console"
     tags     = ["prod", "ui", "main"]
@@ -479,7 +479,7 @@ app_dns_records = {
     name     = "api.prod"
     content  = "" # Will be set by module to Global Accelerator DNS name
     type     = "CNAME"
-    proxied  = true
+    proxied  = false  # Changed from true to false
     ttl      = 300
     comment  = "Production Service environment - routes to backend services"
     tags     = ["prod", "service", "api"]
@@ -488,7 +488,7 @@ app_dns_records = {
     name     = "proxy.prod"
     content  = "" # Will be set by module to Global Accelerator DNS name
     type     = "CNAME"
-    proxied  = true
+    proxied  = false  # Changed from true to false
     ttl      = 300
     comment  = "Production LiveKit Proxy environment - routes to LiveKit proxy"
     tags     = ["prod", "livekit", "proxy"]
@@ -497,18 +497,18 @@ app_dns_records = {
     name     = "automation.prod"
     content  = "" # Will be set by module to Global Accelerator DNS name
     type     = "CNAME"
-    proxied  = true
+    proxied  = false  # Changed from true to false
     ttl      = 300
     comment  = "Production Automation Service environment - routes to automation MCP service"
     tags     = ["prod", "automation", "mcp"]
   }
 }
 
-# Zone Settings - Enabled for production
-cloudflare_ssl_mode = "strict"  # Strict SSL for production
-cloudflare_always_use_https = "on"  # Always HTTPS for production
+# Zone Settings - Updated to match QA working configuration
+cloudflare_ssl_mode = "flexible"  # Changed from "strict" to "flexible"
+cloudflare_always_use_https = "off"  # Changed from "on" to "off"
 cloudflare_min_tls_version = "1.2"
-cloudflare_security_level = "high"  # Higher security for production
+cloudflare_security_level = "medium"  # Changed from "high" to "medium"
 
 ################################################################################
 # TFE Configuration - UPDATE THESE WITH YOUR ACTUAL VALUES
