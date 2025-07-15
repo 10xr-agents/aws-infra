@@ -2,7 +2,7 @@
 
 locals {
   # Environment-specific naming
-  name_prefix = "${var.cluster_name}-${var.environment}"
+  name_prefix = "${substr(var.cluster_name, 0, 8)}-${var.environment}
 
   # Common tags
   common_tags = merge(
@@ -22,7 +22,8 @@ locals {
       task_exec_role_name  = "${local.name_prefix}-${name}-exec-role"
       log_group_name       = "/ecs/${local.name_prefix}/${name}"
       security_group_name  = "${local.name_prefix}-${name}-sg"
-      target_group_name    = "${local.name_prefix}-${name}-tg" 
+      target_group_name    = "${substr(local.name_prefix, 0, 15)}-${substr(name, 0, 10)}-tg"
+
     }
   )}
 
@@ -470,7 +471,7 @@ resource "aws_lb_target_group" "service" {
   }
 
   # FIX: Add environment prefix to make target group names unique
-  name        = "${local.name_prefix}-${each.key}-tg"  # Changed from each.value.target_group_name
+  name        = "${substr(local.name_prefix, 0, 15)}-${substr(each.key, 0, 10)}-tg"
   port        = each.value.port
   protocol    = "HTTP"
   vpc_id      = var.vpc_id
@@ -491,7 +492,7 @@ resource "aws_lb_target_group" "service" {
   deregistration_delay = lookup(each.value, "deregistration_delay", 30)
 
   tags = merge(local.common_tags, {
-    Name    = "${local.name_prefix}-${each.key}-tg"  # Also update the tag
+    Name    = "${substr(local.name_prefix, 0, 15)}-${substr(each.key, 0, 10)}-tg"
     Service = each.key
   })
 
