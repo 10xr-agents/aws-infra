@@ -461,9 +461,8 @@ cloudflare_api_key    = "ef7027a662a457c814bfc30e81fcf49baa969"
 domain = "app.10xr.co"
 base_domain_name = "10xr.co"
 create_cloudflare_dns_records = true
-# Change these settings for HTTP access
-dns_proxied = false  # Disable proxying to allow direct HTTP access
-manage_cloudflare_zone_settings = false  # Don't manage zone settings for now
+dns_proxied = true  # Enabled for production (better security and performance)
+manage_cloudflare_zone_settings = false  # Disable for now to avoid conflicts
 
 # Production DNS records
 app_dns_records = {
@@ -471,7 +470,7 @@ app_dns_records = {
     name     = "prod"  # Root domain
     content  = "" # Will be set by module to Global Accelerator DNS name
     type     = "CNAME"
-    proxied  = false  # Changed from true to false
+    proxied  = true
     ttl      = 300
     comment  = "Main production environment - routes to UI console"
     tags     = ["prod", "ui", "main"]
@@ -480,7 +479,7 @@ app_dns_records = {
     name     = "api.prod"
     content  = "" # Will be set by module to Global Accelerator DNS name
     type     = "CNAME"
-    proxied  = false  # Changed from true to false
+    proxied  = true
     ttl      = 300
     comment  = "Production Service environment - routes to backend services"
     tags     = ["prod", "service", "api"]
@@ -489,7 +488,7 @@ app_dns_records = {
     name     = "proxy.prod"
     content  = "" # Will be set by module to Global Accelerator DNS name
     type     = "CNAME"
-    proxied  = false
+    proxied  = true
     ttl      = 300
     comment  = "Production LiveKit Proxy environment - routes to LiveKit proxy"
     tags     = ["prod", "livekit", "proxy"]
@@ -498,7 +497,7 @@ app_dns_records = {
     name     = "automation.prod"
     content  = "" # Will be set by module to Global Accelerator DNS name
     type     = "CNAME"
-    proxied  = false
+    proxied  = true
     ttl      = 300
     comment  = "Production Automation Service environment - routes to automation MCP service"
     tags     = ["prod", "automation", "mcp"]
@@ -506,10 +505,10 @@ app_dns_records = {
 }
 
 # Zone Settings - Enabled for production
-cloudflare_ssl_mode = "flexible"  # Strict SSL for production
-cloudflare_always_use_https = "off"  # Always HTTPS for production
+cloudflare_ssl_mode = "strict"  # Strict SSL for production
+cloudflare_always_use_https = "on"  # Always HTTPS for production
 cloudflare_min_tls_version = "1.2"
-cloudflare_security_level = "medium"  # Higher security for production
+cloudflare_security_level = "high"  # Higher security for production
 
 ################################################################################
 # TFE Configuration - UPDATE THESE WITH YOUR ACTUAL VALUES
