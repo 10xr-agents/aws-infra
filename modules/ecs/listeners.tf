@@ -1,4 +1,29 @@
-# modules/ecs/voice-agent-listener-rules.tf
+# modules/ecs/listeners.tf - Dynamic Environment-Aware Version
+
+locals {
+  # Define environment-specific domains
+  environment_domains = {
+    qa = {
+      voice_agent        = "agents.qa.10xr.co"
+      livekit_proxy     = "proxy.qa.10xr.co"
+      agent_analytics   = "analytics.qa.10xr.co"
+      agentic_services  = "api.qa.10xr.co"
+      ui_console        = ["qa.10xr.co", "ui.qa.10xr.co"]
+      automation_service = "automation.qa.10xr.co"
+    }
+    prod = {
+      voice_agent        = "agents.prod.10xr.co"
+      livekit_proxy     = "proxy.prod.10xr.co"
+      agent_analytics   = "analytics.prod.10xr.co"
+      agentic_services  = "api.prod.10xr.co"
+      ui_console        = ["prod.10xr.co", "ui.prod.10xr.co", "app.10xr.co"]
+      automation_service = "automation.prod.10xr.co"
+    }
+  }
+
+  # Get current environment domains
+  current_domains = local.environment_domains[var.environment]
+}
 
 # HTTP Host-based routing rule for voice-agent
 resource "aws_lb_listener_rule" "voice_agent_http_host_rule" {
@@ -14,7 +39,7 @@ resource "aws_lb_listener_rule" "voice_agent_http_host_rule" {
 
   condition {
     host_header {
-      values = ["agents.qa.10xr.co"]
+      values = [local.current_domains.voice_agent]
     }
   }
 
@@ -30,7 +55,7 @@ resource "aws_lb_listener_rule" "voice_agent_http_host_rule" {
   ]
 }
 
-# HTTPS Host-based routing rule for voice-agent (if SSL certificate provided)
+# HTTPS Host-based routing rule for voice-agent
 resource "aws_lb_listener_rule" "voice_agent_https_host_rule" {
   count = var.create_alb ? 1 : 0
 
@@ -44,7 +69,7 @@ resource "aws_lb_listener_rule" "voice_agent_https_host_rule" {
 
   condition {
     host_header {
-      values = ["agents.qa.10xr.co"]
+      values = [local.current_domains.voice_agent]
     }
   }
 
@@ -60,8 +85,6 @@ resource "aws_lb_listener_rule" "voice_agent_https_host_rule" {
   ]
 }
 
-# modules/ecs/livekit-proxy-listener-rules.tf
-
 # HTTP Host-based routing rule for livekit-proxy
 resource "aws_lb_listener_rule" "livekit_proxy_http_host_rule" {
   count = var.create_alb ? 1 : 0
@@ -76,7 +99,7 @@ resource "aws_lb_listener_rule" "livekit_proxy_http_host_rule" {
 
   condition {
     host_header {
-      values = ["proxy.qa.10xr.co"]
+      values = [local.current_domains.livekit_proxy]
     }
   }
 
@@ -92,7 +115,7 @@ resource "aws_lb_listener_rule" "livekit_proxy_http_host_rule" {
   ]
 }
 
-# HTTPS Host-based routing rule for livekit-proxy (if SSL certificate provided)
+# HTTPS Host-based routing rule for livekit-proxy
 resource "aws_lb_listener_rule" "livekit_proxy_https_host_rule" {
   count = var.create_alb ? 1 : 0
 
@@ -106,7 +129,7 @@ resource "aws_lb_listener_rule" "livekit_proxy_https_host_rule" {
 
   condition {
     host_header {
-      values = ["proxy.qa.10xr.co"]
+      values = [local.current_domains.livekit_proxy]
     }
   }
 
@@ -122,8 +145,6 @@ resource "aws_lb_listener_rule" "livekit_proxy_https_host_rule" {
   ]
 }
 
-# modules/ecs/agent-analytics-listener-rules.tf
-
 # HTTP Host-based routing rule for agent-analytics
 resource "aws_lb_listener_rule" "agent_analytics_http_host_rule" {
   count = var.create_alb ? 1 : 0
@@ -138,7 +159,7 @@ resource "aws_lb_listener_rule" "agent_analytics_http_host_rule" {
 
   condition {
     host_header {
-      values = ["analytics.qa.10xr.co"]
+      values = [local.current_domains.agent_analytics]
     }
   }
 
@@ -154,7 +175,7 @@ resource "aws_lb_listener_rule" "agent_analytics_http_host_rule" {
   ]
 }
 
-# HTTPS Host-based routing rule for agent-analytics (if SSL certificate provided)
+# HTTPS Host-based routing rule for agent-analytics
 resource "aws_lb_listener_rule" "agent_analytics_https_host_rule" {
   count = var.create_alb ? 1 : 0
 
@@ -168,7 +189,7 @@ resource "aws_lb_listener_rule" "agent_analytics_https_host_rule" {
 
   condition {
     host_header {
-      values = ["analytics.qa.10xr.co"]
+      values = [local.current_domains.agent_analytics]
     }
   }
 
@@ -184,9 +205,7 @@ resource "aws_lb_listener_rule" "agent_analytics_https_host_rule" {
   ]
 }
 
-# modules/ecs/agentic-services-listener-rules.tf
-
-# HTTP Host-based routing rule for agentic-services
+# HTTP Host-based routing rule for agentic-services (THE IMPORTANT ONE)
 resource "aws_lb_listener_rule" "agentic_services_http_host_rule" {
   count = var.create_alb ? 1 : 0
 
@@ -200,7 +219,7 @@ resource "aws_lb_listener_rule" "agentic_services_http_host_rule" {
 
   condition {
     host_header {
-      values = ["api.qa.10xr.co"]
+      values = [local.current_domains.agentic_services]
     }
   }
 
@@ -216,7 +235,7 @@ resource "aws_lb_listener_rule" "agentic_services_http_host_rule" {
   ]
 }
 
-# HTTPS Host-based routing rule for agentic-services (if SSL certificate provided)
+# HTTPS Host-based routing rule for agentic-services (THE IMPORTANT ONE)
 resource "aws_lb_listener_rule" "agentic_services_https_host_rule" {
   count = var.create_alb ? 1 : 0
 
@@ -230,7 +249,7 @@ resource "aws_lb_listener_rule" "agentic_services_https_host_rule" {
 
   condition {
     host_header {
-      values = ["api.qa.10xr.co"]
+      values = [local.current_domains.agentic_services]
     }
   }
 
@@ -246,8 +265,6 @@ resource "aws_lb_listener_rule" "agentic_services_https_host_rule" {
   ]
 }
 
-# modules/ecs/ui-console-listener-rules.tf
-
 # HTTP Host-based routing rule for ui-console
 resource "aws_lb_listener_rule" "ui_console_http_host_rule" {
   count = var.create_alb ? 1 : 0
@@ -262,7 +279,7 @@ resource "aws_lb_listener_rule" "ui_console_http_host_rule" {
 
   condition {
     host_header {
-      values = ["qa.10xr.co", "ui.qa.10xr.co"]
+      values = local.current_domains.ui_console
     }
   }
 
@@ -278,7 +295,7 @@ resource "aws_lb_listener_rule" "ui_console_http_host_rule" {
   ]
 }
 
-# HTTPS Host-based routing rule for ui-console (if SSL certificate provided)
+# HTTPS Host-based routing rule for ui-console
 resource "aws_lb_listener_rule" "ui_console_https_host_rule" {
   count = var.create_alb ? 1 : 0
 
@@ -292,7 +309,7 @@ resource "aws_lb_listener_rule" "ui_console_https_host_rule" {
 
   condition {
     host_header {
-      values = ["qa.10xr.co", "ui.qa.10xr.co"]
+      values = local.current_domains.ui_console
     }
   }
 
@@ -322,7 +339,7 @@ resource "aws_lb_listener_rule" "automation_service_mcp_http_host_rule" {
 
   condition {
     host_header {
-      values = ["automation.qa.10xr.co"]
+      values = [local.current_domains.automation_service]
     }
   }
 
@@ -338,7 +355,7 @@ resource "aws_lb_listener_rule" "automation_service_mcp_http_host_rule" {
   ]
 }
 
-# HTTPS Host-based routing rule for automation-service-mcp (if SSL certificate provided)
+# HTTPS Host-based routing rule for automation-service-mcp
 resource "aws_lb_listener_rule" "automation_service_mcp_https_host_rule" {
   count = var.create_alb ? 1 : 0
 
@@ -352,7 +369,7 @@ resource "aws_lb_listener_rule" "automation_service_mcp_https_host_rule" {
 
   condition {
     host_header {
-      values = ["automation.qa.10xr.co"]
+      values = [local.current_domains.automation_service]
     }
   }
 
