@@ -185,7 +185,7 @@ ecs_services = {
   },
   "ui-console": {
     "image": "761018882607.dkr.ecr.us-east-1.amazonaws.com/10xr-agents/ui-console",
-    "image_tag": "qa-0.1.0",  # Production tag
+    "image_tag": "production-0.1.0",  # Production tag
     "port": 3000,
     "cpu": 512,
     "memory": 1024,
