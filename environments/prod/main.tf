@@ -10,73 +10,23 @@ data "aws_region" "current" {}
 
 data "aws_caller_identity" "current" {}
 
-# TEMPORARILY COMMENT OUT DocumentDB data sources from separate repository
-# Uncomment these after DocumentDB workspace has run and created the SSM parameters
+module "certs" {
+  source = "../../modules/certs"
 
-data "aws_ssm_parameter" "documentdb_connection_string" {
-  name = "/ten_xr_storage_infra/${var.environment}/connection_string"
-}
-
-data "aws_ssm_parameter" "documentdb_endpoint" {
-  name = "/ten_xr_storage_infra/${var.environment}/endpoint"
-}
-
-data "aws_ssm_parameter" "documentdb_port" {
-  name = "/ten_xr_storage_infra/${var.environment}/port"
-}
-
-data "aws_ssm_parameter" "documentdb_username" {
-  name = "/ten_xr_storage_infra/${var.environment}/master_username"
-}
-
-data "aws_ssm_parameter" "documentdb_password" {
-  name = "/ten_xr_storage_infra/${var.environment}/master_password"
-}
-
-data "aws_ssm_parameter" "documentdb_security_group_id" {
-  name = "/ten_xr_storage_infra/${var.environment}/security_group_id"
-}
-
-
-resource "aws_acm_certificate" "main" {
-  domain_name       = var.domain
-  validation_method = "DNS"
-  subject_alternative_names = [
+  environment = var.environment
+  domain = var.domain
+  cloudflare_zone_id = var.cloudflare_zone_id
+  subject_alternative_domains = [
     "*.${var.domain}",
     "services.${var.domain}",
     "app.${var.domain}",
     "api.${var.domain}",
-    "proxy.${var.domain}"
+    "proxy.${var.domain}",
+    "app.${var.base_domain_name}",
+    "api.app.${var.base_domain_name}",
+    "proxy.app.${var.base_domain_name}",
+    "services.app.${var.base_domain_name}",
   ]
-
-  lifecycle {
-    create_before_destroy = true
-  }
-}
-
-# Cloudflare DNS record for certificate validation
-resource "cloudflare_record" "cert_validation" {
-  for_each = {
-    for dvo in aws_acm_certificate.main.domain_validation_options : dvo.domain_name => {
-      name   = dvo.resource_record_name
-      record = dvo.resource_record_value
-      type   = dvo.resource_record_type
-    }
-    if dvo.domain_name != "*.${var.domain}"
-  }
-
-  zone_id = var.cloudflare_zone_id
-  name    = each.value.name
-  content = each.value.record
-  type    = each.value.type
-  ttl     = 60
-  proxied = false
-}
-
-# Certificate Validation
-resource "aws_acm_certificate_validation" "main" {
-  certificate_arn         = aws_acm_certificate.main.arn
-  validation_record_fqdns = [for record in cloudflare_record.cert_validation : record.hostname]
 }
 
 # VPC Module - Reuse existing VPC module
@@ -109,30 +59,28 @@ module "vpc" {
   )
 }
 
-
 ################################################################################
 # DocumentDB Sub-Workspace via TFE Module
 ################################################################################
-
 module "storage" {
   source = "../../modules/storage"
 
   # Organization and parent workspace
-  tfe_organization_name   = var.tfe_organization_name
-  parent_workspace_name   = var.tfe_main_workspace_name
+  tfe_organization_name = var.tfe_organization_name
+  parent_workspace_name = var.tfe_main_workspace_name
 
   # Workspace configuration
-  environment        = var.environment
-  region            = var.region
-  workspace_suffix  = "storage"
+  environment           = var.environment
+  region                = var.region
+  workspace_suffix      = "storage"
   workspace_description = "DocumentDB infrastructure for ${var.environment}"
-  auto_apply        = var.documentdb_workspace_auto_apply
+  auto_apply = var.documentdb_workspace_auto_apply
 
   # VCS configuration
   github_repo           = var.documentdb_github_repo
   github_branch         = var.documentdb_github_branch
   github_oauth_token_id = var.github_oauth_token_id
-  working_directory     = "environments/${var.environment}"
+  working_directory = "environments/${var.environment}"
 
   # Variables to pass to DocumentDB workspace
   workspace_variables = {
@@ -152,7 +100,7 @@ module "storage" {
       description = "VPC name to find via data source"
     }
     instance_count = {
-      value       = tostring(var.documentdb_instance_count)
+      value = tostring(var.documentdb_instance_count)
       category    = "terraform"
       description = "Number of DocumentDB instances"
     }
@@ -162,7 +110,7 @@ module "storage" {
       description = "DocumentDB instance class"
     }
     allowed_cidr_blocks = {
-      value       = jsonencode([var.vpc_cidr])
+      value = jsonencode([var.vpc_cidr])
       category    = "terraform"
       description = "CIDR blocks allowed to access DocumentDB"
       hcl         = true
@@ -244,7 +192,7 @@ module "ecs" {
   private_subnet_ids = module.vpc.private_subnets
   public_subnet_ids  = module.vpc.public_subnets
 
-  acm_certificate_arn = aws_acm_certificate.main.arn
+  acm_certificate_arn = local.acm_certificate_arn
   create_alb_rules    = true
 
   enable_container_insights = var.enable_container_insights
@@ -275,8 +223,8 @@ module "networking" {
   source = "../../modules/networking"
 
   cluster_name = local.cluster_name  # Use shortened name
-  environment  = "prod"
-  vpc_id       = module.vpc.vpc_id
+  environment = "prod"
+  vpc_id      = module.vpc.vpc_id
 
   public_subnet_ids = module.vpc.public_subnets
   private_subnet_ids = module.vpc.private_subnets
@@ -288,8 +236,8 @@ module "networking" {
   nlb_enable_cross_zone_load_balancing = var.nlb_enable_cross_zone_load_balancing
 
   # Target Group Configuration
-  http_port                 = var.http_port
-  https_port                = var.https_port
+  http_port  = var.http_port
+  https_port = var.https_port
   target_type = var.target_type
 
   # Target Configuration
@@ -314,7 +262,7 @@ module "networking" {
   # Listener Configuration
   https_listener_protocol = var.https_listener_protocol
   ssl_policy              = var.ssl_policy
-  certificate_arn = aws_acm_certificate.main.arn
+  certificate_arn = local.acm_certificate_arn
 
   # Access Logs
   nlb_access_logs_enabled = var.nlb_access_logs_enabled
@@ -455,8 +403,6 @@ resource "aws_security_group_rule" "redis_from_ecs_ingress" {
 
   depends_on = [module.ecs, module.redis]
 }
-
-
 
 resource "aws_security_group_rule" "documentdb_from_ecs" {
   for_each = module.ecs.security_group_ids

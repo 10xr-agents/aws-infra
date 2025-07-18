@@ -139,7 +139,7 @@ module "redis" {
 
 # MongoDB Cluster Module
 module "mongodb" {
-  source = "../../modules/mongodb"
+  source = "../../.archival/mongodb"
 
   cluster_name = local.cluster_name
   environment  = var.environment

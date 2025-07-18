@@ -1,31 +1,39 @@
 # environments/prod/locals.tf
 
-resource "random_password" "mongo_auth_token" {
-  length  = 32
-  special = false
+data "aws_ssm_parameter" "documentdb_connection_string" {
+  name = "/ten_xr_storage_infra/${var.environment}/connection_string"
 }
 
-# Generate DocumentDB keyfile content for replica set authentication (if needed for compatibility)
-resource "random_password" "documentdb_keyfile" {
-  length = 756  # DocumentDB keyfile should be between 6-1024 characters
-  special = false
-  upper   = true
-  lower   = true
-  numeric = true
+data "aws_ssm_parameter" "documentdb_endpoint" {
+  name = "/ten_xr_storage_infra/${var.environment}/endpoint"
+}
+
+data "aws_ssm_parameter" "documentdb_port" {
+  name = "/ten_xr_storage_infra/${var.environment}/port"
+}
+
+data "aws_ssm_parameter" "documentdb_username" {
+  name = "/ten_xr_storage_infra/${var.environment}/master_username"
+}
+
+data "aws_ssm_parameter" "documentdb_password" {
+  name = "/ten_xr_storage_infra/${var.environment}/master_password"
+}
+
+data "aws_ssm_parameter" "documentdb_security_group_id" {
+  name = "/ten_xr_storage_infra/${var.environment}/security_group_id"
 }
 
 locals {
 
   ecs_services = var.ecs_services
 
-  # TEMPORARILY COMMENT OUT DocumentDB connection details from separate repository via SSM
-  # Uncomment these after DocumentDB workspace has run and created the SSM parameters
   documentdb_connection_string = data.aws_ssm_parameter.documentdb_connection_string.value
   documentdb_endpoint          = data.aws_ssm_parameter.documentdb_endpoint.value
-  documentdb_port             = data.aws_ssm_parameter.documentdb_port.value
-  documentdb_username         = data.aws_ssm_parameter.documentdb_username.value
+  documentdb_port              = data.aws_ssm_parameter.documentdb_port.value
+  documentdb_username          = data.aws_ssm_parameter.documentdb_username.value
 
-  acm_certificate_arn = aws_acm_certificate.main.arn
+  acm_certificate_arn = module.certs.acm_certificate_arn
 
   # Updated ECS services configuration with DocumentDB instead of MongoDB
   ecs_services_with_overrides = {
@@ -43,9 +51,9 @@ locals {
             # Add Redis connection details to all services
             REDIS_URL              = module.redis.redis_connection_string
             REDIS_HOST             = module.redis.redis_primary_endpoint
-            REDIS_PORT             = tostring(module.redis.redis_port)
+            REDIS_PORT = tostring(module.redis.redis_port)
             REDIS_USERNAME         = module.redis.redis_username
-            REDIS_TLS_ENABLED      = tostring(var.redis_transit_encryption_enabled)
+            REDIS_TLS_ENABLED = tostring(var.redis_transit_encryption_enabled)
 
             # TEMPORARILY COMMENT OUT - For backward compatibility with existing code
             # Uncomment these after DocumentDB workspace has run
@@ -64,8 +72,6 @@ locals {
               name       = "REDIS_PASSWORD"
               value_from = module.redis.ssm_parameter_redis_auth_token
             },
-            # TEMPORARILY COMMENT OUT DocumentDB secrets
-            # Uncomment these after DocumentDB workspace has run and created the SSM parameters
             {
               name       = "DOCUMENTDB_PASSWORD"
               value_from = data.aws_ssm_parameter.documentdb_password.name
@@ -82,8 +88,6 @@ locals {
           lookup(config, "additional_task_policies", {}),
           {
             "ElastiCacheAccess" = aws_iam_policy.ecs_elasticache_policy.arn
-            # TEMPORARILY COMMENT OUT DocumentDB IAM policy
-            # Uncomment this after DocumentDB workspace has run
             "DocumentDBAccess"  = aws_iam_policy.ecs_documentdb_policy.arn
           }
         )
