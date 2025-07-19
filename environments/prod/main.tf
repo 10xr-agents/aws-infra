@@ -389,3 +389,57 @@ resource "aws_security_group_rule" "ecs_to_mongo_egress" {
 
   depends_on = [module.ecs, module.mongodb_peering]
 }
+
+resource "mongodbatlas_database_user" "aws_iam_user" {
+  for_each           = module.ecs.task_role_arns
+  project_id         = var.mongodb_atlas_project_id
+  auth_database_name = "$external"
+  username           = each.value
+  aws_iam_type       = "ROLE"
+
+  roles {
+    role_name     = "readWrite"
+    database_name = "admin"
+  }
+
+  roles {
+    role_name     = "dbAdmin"
+    database_name = "admin"
+  }
+
+  roles {
+    role_name     = "readWrite"
+    database_name = var.mongodb_database_name
+  }
+
+  roles {
+    role_name     = "dbAdmin"
+    database_name = var.mongodb_database_name
+  }
+
+  scopes {
+    name = var.mongodb_cluster_name
+    type = "CLUSTER"
+  }
+}
+
+resource "aws_iam_role_policy" "ecs_task_mongodb_policy" {
+  for_each = module.ecs.task_role_arns
+
+  name = "${each.key}-mongodb-policy"
+  role = each.value
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "sts:AssumeRole",
+          "sts:TagSession"
+        ]
+        Resource = each.value
+      }
+    ]
+  })
+}

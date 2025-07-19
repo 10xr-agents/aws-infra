@@ -50,7 +50,7 @@ locals {
             # MongoDB connection secrets from Secrets Manager
             {
               name       = "MONGODB_CONNECTION_URI"
-              value_from = "${local.mongodb_secret_arn}:app_connection_uri::"
+              value_from = "${local.mongodb_secret_arn}:ecs_connection_uri::"
             },
             {
               name       = "MONGODB_USERNAME"
@@ -62,15 +62,15 @@ locals {
             },
             {
               name       = "SPRING_DATA_MONGODB_URI"
-              value_from = "${local.mongodb_secret_arn}:app_connection_uri::"
+              value_from = "${local.mongodb_secret_arn}:ecs_connection_uri::"
             },
             {
               name       = "MONGO_DB_URL"
-              value_from = "${local.mongodb_secret_arn}:app_connection_uri::"
+              value_from = "${local.mongodb_secret_arn}:ecs_connection_uri::"
             },
             {
               name       = "MONGO_DB_URI"
-              value_from = "${local.mongodb_secret_arn}:app_connection_uri::"
+              value_from = "${local.mongodb_secret_arn}:ecs_connection_uri::"
             }
           ]
         )
