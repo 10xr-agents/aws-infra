@@ -424,7 +424,7 @@ resource "mongodbatlas_database_user" "aws_iam_user" {
 }
 
 resource "aws_iam_role_policy" "ecs_task_mongodb_policy" {
-  for_each = module.ecs.task_role_arns
+  for_each = module.ecs.task_role_names
 
   name = "${each.key}-mongodb-policy"
   role = each.value

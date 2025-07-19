@@ -77,6 +77,13 @@ output "task_role_arns" {
   }
 }
 
+output "task_role_names" {
+  description = "Map of service names to their task role ARNs"
+  value = {
+    for name, role in aws_iam_role.task_role : name => role.name
+  }
+}
+
 # Security Groups
 output "security_group_ids" {
   description = "Map of service names to their security group IDs"
