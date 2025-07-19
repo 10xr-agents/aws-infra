@@ -24,10 +24,9 @@ terraform {
       source  = "cloudflare/cloudflare"
       version = "~> 4.40.0"
     }
-    # Add TFE provider for managing sub-workspaces
-    tfe = {
-      source  = "hashicorp/tfe"
-      version = "~> 0.67.1"
+    mongodbatlas = {
+      source  = "mongodb/mongodbatlas"
+      version = "~> 1.38.0"
     }
   }
 }
