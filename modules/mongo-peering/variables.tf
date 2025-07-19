@@ -60,9 +60,3 @@ variable "whitelist_private_subnets" {
   type        = bool
   default     = false
 }
-
-variable "create_security_group" {
-  description = "Create security group for MongoDB Atlas access"
-  type        = bool
-  default     = true
-}

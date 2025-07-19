@@ -350,7 +350,6 @@ mongodb_project_name  = "TenXR"
 enable_mongodb_atlas_peering = false
 mongodb_atlas_cidr_block = "192.168.248.0/21"  # Default MongoDB Atlas CIDR
 mongodb_whitelist_private_subnets = false
-mongodb_create_security_group = true
 
 # Redis Configuration - Production settings
 redis_node_type                    = "cache.r6g.large"  # Larger instance for production

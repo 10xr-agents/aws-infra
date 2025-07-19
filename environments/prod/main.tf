@@ -76,7 +76,6 @@ module "mongodb_peering" {
   # Network configuration
   private_subnet_cidrs      = var.private_subnets
   whitelist_private_subnets = var.mongodb_whitelist_private_subnets
-  create_security_group     = var.mongodb_create_security_group
 
   depends_on = [module.vpc]
 }
