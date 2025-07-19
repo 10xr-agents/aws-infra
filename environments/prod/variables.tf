@@ -85,6 +85,92 @@ variable "enable_execute_command" {
   default     = false
 }
 
+################################################################################
+# MongoDB Atlas Configuration (from separate repository)
+################################################################################
+
+variable "mongodb_secret_manager_arn" {
+  description = "ARN of the AWS Secrets Manager secret containing MongoDB connection strings (from separate repository)"
+  type        = string
+}
+
+variable "mongodb_database_name" {
+  description = "Name of the MongoDB database to connect to"
+  type        = string
+  default     = "ten_xr_agents_prod"
+}
+
+variable "mongodb_cluster_name" {
+  description = "Name of the MongoDB Atlas cluster (for reference)"
+  type        = string
+  default     = ""
+}
+
+variable "mongodb_project_name" {
+  description = "Name of the MongoDB Atlas project (for reference)"
+  type        = string
+  default     = "TenXR"
+}
+
+################################################################################
+# MongoDB Atlas VPC Peering Configuration Variables
+################################################################################
+
+#------------------------------------------------------------------------------
+# Required Variables - MongoDB Atlas
+#------------------------------------------------------------------------------
+variable "mongodb_atlas_public_key" {
+  description = "MongoDB Atlas public key"
+  type        = string
+  sensitive   = true
+}
+
+variable "mongodb_atlas_private_key" {
+  description = "MongoDB Atlas private key"
+  type        = string
+  sensitive   = true
+}
+
+variable "enable_mongodb_atlas_peering" {
+  description = "Whether to enable MongoDB Atlas VPC peering"
+  type        = bool
+  default     = false  # Disabled by default since you're using DocumentDB
+}
+
+variable "mongodb_atlas_project_id" {
+  description = "MongoDB Atlas project ID for VPC peering"
+  type        = string
+  default     = ""
+}
+
+variable "mongodb_atlas_container_id" {
+  description = "MongoDB Atlas container ID for VPC peering"
+  type        = string
+  default     = ""
+}
+
+variable "mongodb_atlas_cidr_block" {
+  description = "CIDR block for MongoDB Atlas network container"
+  type        = string
+  default     = "192.168.248.0/21"
+  validation {
+    condition = can(regex("^([0-9]{1,3}\\.){3}[0-9]{1,3}/[0-9]{1,2}$", var.mongodb_atlas_cidr_block))
+    error_message = "MongoDB Atlas CIDR block must be a valid CIDR notation."
+  }
+}
+
+variable "mongodb_whitelist_private_subnets" {
+  description = "Whether to individually whitelist private subnet CIDRs in MongoDB Atlas"
+  type        = bool
+  default     = false
+}
+
+variable "mongodb_create_security_group" {
+  description = "Whether to create security group for MongoDB Atlas access"
+  type        = bool
+  default     = true
+}
+
 # ECS Configuration
 variable "enable_container_insights" {
   description = "Whether to enable Container Insights for the ECS cluster"
@@ -930,62 +1016,6 @@ variable "cloudflare_account_id" {
   description = "Cloudflare Account ID"
   type        = string
   default     = ""
-}
-
-variable "documentdb_default_database" {
-  description = "Default DocumentDB database name"
-  type        = string
-  default     = "ten_xr_agents_prod"
-}
-
-
-
-# Add only these essential variables to your variables.tf
-
-variable "tfe_organization_name" {
-  description = "Terraform Cloud organization name"
-  type        = string
-}
-
-variable "tfe_main_workspace_name" {
-  description = "Name of the main workspace"
-  type        = string
-  default     = "prod-us-east-1-ten-xr-app"
-}
-
-variable "github_oauth_token_id" {
-  description = "GitHub OAuth token ID"
-  type        = string
-  default     = ""  
-}
-
-variable "documentdb_github_repo" {
-  description = "GitHub repository for DocumentDB"
-  type        = string
-}
-
-variable "documentdb_github_branch" {
-  description = "GitHub branch"
-  type        = string
-  default     = "main"
-}
-
-variable "documentdb_workspace_auto_apply" {
-  description = "Auto-apply DocumentDB workspace"
-  type        = bool
-  default     = true
-}
-
-variable "documentdb_instance_count" {
-  description = "Number of DocumentDB instances"
-  type        = number
-  default     = 3
-}
-
-variable "documentdb_instance_class" {
-  description = "DocumentDB instance class"
-  type        = string
-  default     = "db.r6g.large"
 }
 
 # Tags

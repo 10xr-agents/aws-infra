@@ -59,6 +59,33 @@ module "vpc" {
   )
 }
 
+# MongoDB Atlas VPC Peering Module (optional - can be enabled when needed)
+module "mongodb_peering" {
+  count = var.enable_mongodb_atlas_peering ? 1 : 0
+
+  source = "../../modules/mongo-peering"
+
+  # Basic configuration
+  region        = var.region
+  environment   = var.environment
+  cluster_name  = var.cluster_name
+
+  # VPC configuration
+  vpc_name = local.vpc_name
+
+  # MongoDB Atlas configuration
+  mongodb_atlas_project_id   = var.mongodb_atlas_project_id
+  mongodb_atlas_container_id = var.mongodb_atlas_container_id
+  atlas_cidr_block          = var.mongodb_atlas_cidr_block
+
+  # Network configuration
+  private_subnet_cidrs      = var.private_subnets
+  whitelist_private_subnets = var.mongodb_whitelist_private_subnets
+  create_security_group     = var.mongodb_create_security_group
+
+  depends_on = [module.vpc]
+}
+
 # Redis Module
 module "redis" {
   source = "../../modules/redis"
@@ -335,18 +362,4 @@ resource "aws_security_group_rule" "redis_from_ecs_ingress" {
   description              = "Allow ECS services to access Redis"
 
   depends_on = [module.ecs, module.redis]
-}
-
-resource "aws_security_group_rule" "documentdb_from_ecs" {
-  for_each = module.ecs.security_group_ids
-
-  type                     = "ingress"
-  from_port                = 27017
-  to_port                  = 27017
-  protocol                 = "tcp"
-  source_security_group_id = each.value
-  security_group_id        = data.aws_ssm_parameter.documentdb_security_group_id.value
-  description              = "Allow ECS services to access DocumentDB"
-
-  depends_on = [module.ecs]
 }

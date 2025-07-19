@@ -61,6 +61,55 @@ output "alb_target_groups" {
   value       = module.ecs.alb_target_groups
 }
 
+################################################################################
+# MongoDB Atlas Configuration Outputs
+################################################################################
+
+output "mongodb_secret_arn" {
+  description = "ARN of the MongoDB Secrets Manager secret"
+  value       = var.mongodb_secret_manager_arn
+  sensitive   = true
+}
+
+output "mongodb_database_name" {
+  description = "MongoDB database name"
+  value       = var.mongodb_database_name
+}
+
+output "mongodb_cluster_name" {
+  description = "MongoDB Atlas cluster name"
+  value       = var.mongodb_cluster_name
+}
+
+################################################################################
+# MongoDB Atlas VPC Peering Outputs
+################################################################################
+
+output "mongodb_vpc_peering_connection_id" {
+  description = "ID of the VPC peering connection between AWS VPC and MongoDB Atlas"
+  value       = var.enable_mongodb_atlas_peering ? module.mongodb_peering[0].vpc_peering_connection_id : null
+}
+
+output "mongodb_network_container_id" {
+  description = "MongoDB Atlas network container ID"
+  value       = var.enable_mongodb_atlas_peering ? module.mongodb_peering[0].network_container_id : null
+}
+
+output "mongodb_atlas_cidr_block" {
+  description = "CIDR block used by MongoDB Atlas"
+  value       = var.enable_mongodb_atlas_peering ? module.mongodb_peering[0].atlas_cidr_block : null
+}
+
+output "mongodb_vpc_peering_status" {
+  description = "Status of the VPC peering connection"
+  value       = var.enable_mongodb_atlas_peering ? module.mongodb_peering[0].vpc_peering_status : null
+}
+
+output "mongodb_security_group_id" {
+  description = "Security group ID for MongoDB Atlas access"
+  value       = var.enable_mongodb_atlas_peering ? module.mongodb_peering[0].mongodb_security_group_id : null
+}
+
 # ECS Cluster outputs
 output "ecs_cluster_id" {
   description = "The ID of the ECS cluster"
@@ -92,8 +141,6 @@ output "ecs_service_urls" {
     }
   }
 }
-
-
 
 # Redis outputs
 output "redis_port" {
@@ -358,28 +405,4 @@ output "redis_parameters_check" {
   description = "Redis parameters that might affect connectivity"
   value = var.redis_parameters
 }
-
-output "documentdb_endpoint" {
-  description = "DocumentDB cluster endpoint from separate repository"
-  value       = data.aws_ssm_parameter.documentdb_endpoint.value
-  sensitive   = true  # Added this line
-}
-
-output "documentdb_security_group_id" {
-  description = "DocumentDB security group ID from separate repository"
-  value       = data.aws_ssm_parameter.documentdb_security_group_id.value
-  sensitive   = true  # Added this line
-}
-
-output "documentdb_connection_info" {
-  description = "DocumentDB connection information"
-  value = {
-    endpoint          = data.aws_ssm_parameter.documentdb_endpoint.value
-    port             = data.aws_ssm_parameter.documentdb_port.value
-    database         = var.documentdb_default_database
-    security_group_id = data.aws_ssm_parameter.documentdb_security_group_id.value
-  }
-  sensitive = true  # This one is already marked as sensitive
-}
-
 

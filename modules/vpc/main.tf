@@ -33,13 +33,11 @@ module "vpc" {
 
   # Tags for subnet discovery by load balancers and cluster
   public_subnet_tags = {
-    "kubernetes.io/cluster/${var.cluster_name}" = "shared"
-    "kubernetes.io/role/elb"                    = "1"
+    "Type" = "${var.cluster_name}-public"
   }
 
   private_subnet_tags = {
-    "kubernetes.io/cluster/${var.cluster_name}" = "shared"
-    "kubernetes.io/role/internal-elb"           = "1"
+    "Type" = "${var.cluster_name}-private"
   }
 
   # Default security group configuration
