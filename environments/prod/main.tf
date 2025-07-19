@@ -358,3 +358,18 @@ resource "aws_security_group_rule" "redis_from_ecs_ingress" {
 
   depends_on = [module.ecs, module.redis]
 }
+
+# Allow ECS to connect to Redis (INGRESS to Redis)
+resource "aws_security_group_rule" "mongo_from_ecs_ingress" {
+  for_each = module.ecs.security_group_ids
+
+  type                     = "ingress"
+  from_port                = 27016
+  to_port                  = 27017
+  protocol                 = "tcp"
+  source_security_group_id = each.value
+  security_group_id        = module.mongodb_peering.mongodb_security_group_id
+  description              = "Allow ECS services to access Redis"
+
+  depends_on = [module.ecs, module.redis]
+}
