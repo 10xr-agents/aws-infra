@@ -169,7 +169,7 @@ module "ecs" {
     }
   )
 
-  depends_on = [module.redis, module.certs]
+  depends_on = [module.redis, module.certs, module.mongodb_peering]
 }
 
 # Networking Module

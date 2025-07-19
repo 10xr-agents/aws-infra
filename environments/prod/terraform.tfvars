@@ -336,8 +336,9 @@ ecs_services = {
 ################################################################################
 # MongoDB Atlas Configuration (from separate repository)
 ################################################################################
-mongodb_secret_manager_arn = "arn:aws:secretsmanager:us-east-1:761018882607:secret:TenXR-prod-mongodb-connection-V6XFNy"
+mongodb_atlas_project_id = "687a357dfab5f35062bf45d9"
 mongodb_atlas_container_id = "687a4099229c7a60e8a93022"
+mongodb_secret_manager_arn = "arn:aws:secretsmanager:us-east-1:761018882607:secret:TenXR-prod-mongodb-connection-V6XFNy"
 
 # MongoDB database configuration
 mongodb_database_name = "ten_xr_agents_prod"
