@@ -1,37 +1,9 @@
 # environments/prod/locals.tf
-
-data "aws_ssm_parameter" "documentdb_connection_string" {
-  name = "/ten_xr_storage_infra/${var.environment}/connection_string"
-}
-
-data "aws_ssm_parameter" "documentdb_endpoint" {
-  name = "/ten_xr_storage_infra/${var.environment}/endpoint"
-}
-
-data "aws_ssm_parameter" "documentdb_port" {
-  name = "/ten_xr_storage_infra/${var.environment}/port"
-}
-
-data "aws_ssm_parameter" "documentdb_username" {
-  name = "/ten_xr_storage_infra/${var.environment}/master_username"
-}
-
-data "aws_ssm_parameter" "documentdb_password" {
-  name = "/ten_xr_storage_infra/${var.environment}/master_password"
-}
-
-data "aws_ssm_parameter" "documentdb_security_group_id" {
-  name = "/ten_xr_storage_infra/${var.environment}/security_group_id"
-}
-
 locals {
 
   ecs_services = var.ecs_services
 
-  documentdb_connection_string = data.aws_ssm_parameter.documentdb_connection_string.value
-  documentdb_endpoint          = data.aws_ssm_parameter.documentdb_endpoint.value
-  documentdb_port              = data.aws_ssm_parameter.documentdb_port.value
-  documentdb_username          = data.aws_ssm_parameter.documentdb_username.value
+  mongodb_connection_string = data.aws_ssm_parameter.documentdb_connection_string.value
 
   acm_certificate_arn = module.certs.acm_certificate_arn
 
@@ -57,9 +29,9 @@ locals {
 
             # TEMPORARILY COMMENT OUT - For backward compatibility with existing code
             # Uncomment these after DocumentDB workspace has run
-            SPRING_DATA_MONGODB_URI = local.documentdb_connection_string
-            MONGO_DB_URL            = local.documentdb_connection_string
-            MONGO_DB_URI            = local.documentdb_connection_string
+            SPRING_DATA_MONGODB_URI = local.mongodb_connection_string
+            MONGO_DB_URL            = local.mongodb_connection_string
+            MONGO_DB_URI            = local.mongodb_connection_string
             MONGODB_DATABASE        = var.documentdb_default_database
             DATABASE_NAME           = var.documentdb_default_database
           }
@@ -71,14 +43,6 @@ locals {
             {
               name       = "REDIS_PASSWORD"
               value_from = module.redis.ssm_parameter_redis_auth_token
-            },
-            {
-              name       = "DOCUMENTDB_PASSWORD"
-              value_from = data.aws_ssm_parameter.documentdb_password.name
-            },
-            {
-              name       = "DOCUMENTDB_USERNAME"
-              value_from = data.aws_ssm_parameter.documentdb_username.name
             }
           ]
         )
