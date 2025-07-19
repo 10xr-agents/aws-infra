@@ -16,8 +16,8 @@ data "aws_subnets" "private" {
   }
 
   filter {
-    name   = "tag:Type"
-    values = ["private"]
+    name   = "tag:Name"
+    values = ["${var.cluster_name}-${var.environment}-${var.region}-private*"]
   }
 }
 
@@ -29,8 +29,8 @@ data "aws_route_tables" "private" {
   }
 
   filter {
-    name   = "association.subnet-id"
-    values = data.aws_subnets.private.ids
+    name   = "tag:Name"
+    values = ["${var.cluster_name}-${var.environment}-${var.region}-private*"]
   }
 }
 
