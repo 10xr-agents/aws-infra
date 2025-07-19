@@ -336,9 +336,6 @@ ecs_services = {
 ################################################################################
 # MongoDB Atlas Configuration (from separate repository)
 ################################################################################
-
-# IMPORTANT: Replace this with the actual ARN from your MongoDB repository
-# You can find this from the outputs of your MongoDB Terraform workspace
 mongodb_secret_manager_arn = "arn:aws:secretsmanager:us-east-1:761018882607:secret:TenXR-prod-mongodb-connection-V6XFNy"
 
 # MongoDB database configuration
@@ -347,9 +344,9 @@ mongodb_cluster_name  = "TenXR-prod"
 mongodb_project_name  = "TenXR"
 
 # Mongo Peering Configuration - Production settings
-enable_mongodb_atlas_peering = false
+enable_mongodb_atlas_peering = true
 mongodb_atlas_cidr_block = "192.168.248.0/21"  # Default MongoDB Atlas CIDR
-mongodb_whitelist_private_subnets = false
+mongodb_whitelist_private_subnets = true
 
 # Redis Configuration - Production settings
 redis_node_type                    = "cache.r6g.large"  # Larger instance for production
