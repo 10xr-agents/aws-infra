@@ -27,5 +27,5 @@ output "vpc_peering_status" {
 
 output "mongodb_security_group_id" {
   description = "Security group ID for MongoDB Atlas access"
-  value       = var.create_security_group ? aws_security_group.mongodb_atlas_access[0].id : null
+  value       = var.create_security_group ? aws_security_group.mongodb_atlas_access.id : null
 }

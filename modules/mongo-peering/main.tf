@@ -12,7 +12,7 @@ data "aws_subnets" "private" {
 
   filter {
     name   = "vpc-id"
-    values = [data.aws_vpc.main[0].id]
+    values = [data.aws_vpc.main.id]
   }
 
   filter {
@@ -25,12 +25,12 @@ data "aws_route_tables" "private" {
 
   filter {
     name   = "vpc-id"
-    values = [data.aws_vpc.main[0].id]
+    values = [data.aws_vpc.main.id]
   }
 
   filter {
     name   = "association.subnet-id"
-    values = data.aws_subnets.private[0].ids
+    values = data.aws_subnets.private.ids
   }
 }
 
@@ -67,7 +67,7 @@ resource "aws_route" "mongodb_atlas" {
   count                     = length(data.aws_route_tables.private.ids)
   route_table_id            = tolist(data.aws_route_tables.private.ids)[count.index]
   destination_cidr_block    = var.atlas_cidr_block
-  vpc_peering_connection_id = mongodbatlas_network_peering.main[0].connection_id
+  vpc_peering_connection_id = mongodbatlas_network_peering.main.connection_id
 
   depends_on = [aws_vpc_peering_connection_accepter.main]
 }
