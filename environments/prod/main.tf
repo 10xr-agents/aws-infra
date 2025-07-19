@@ -170,7 +170,7 @@ module "ecs" {
     }
   )
 
-  depends_on = [module.redis]
+  depends_on = [module.redis, module.certs]
 }
 
 # Networking Module
