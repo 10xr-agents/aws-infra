@@ -15,8 +15,6 @@ private_subnets  = ["10.1.1.0/24", "10.1.2.0/24", "10.1.3.0/24"]
 public_subnets   = ["10.1.101.0/24", "10.1.102.0/24", "10.1.103.0/24"]
 database_subnets = ["10.1.21.0/24", "10.1.22.0/24", "10.1.23.0/24"]
 
-documentdb_default_database = "ten_xr_agents_prod"
-
 enable_nat_gateway     = true
 single_nat_gateway     = true
 one_nat_gateway_per_az = false
@@ -500,20 +498,6 @@ cloudflare_ssl_mode = "flexible"  # Changed from "strict" to "flexible"
 cloudflare_always_use_https = "off"  # Changed from "on" to "off"
 cloudflare_min_tls_version = "1.2"
 cloudflare_security_level = "medium"  # Changed from "high" to "medium"
-
-################################################################################
-# TFE Configuration - UPDATE THESE WITH YOUR ACTUAL VALUES
-################################################################################
-
-# TFE Configuration (replace with your actual values)
-tfe_organization_name = "10xr"
-
-documentdb_github_repo = "10xr-agents/ten_xr_storage_infra"
-
-# DocumentDB Configuration
-documentdb_workspace_auto_apply = true
-documentdb_instance_count = 3
-documentdb_instance_class = "db.r6g.large"
 
 # Tags
 tags = {

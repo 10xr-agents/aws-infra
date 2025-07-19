@@ -231,6 +231,10 @@ resource "aws_s3_bucket_lifecycle_configuration" "nlb_access_logs" {
     id     = "nlb_access_logs_lifecycle"
     status = "Enabled"
 
+    filter {
+      prefix = ""
+    }
+
     expiration {
       days = 30
     }
@@ -256,6 +260,10 @@ resource "aws_s3_bucket_lifecycle_configuration" "nlb_connection_logs" {
   rule {
     id     = "nlb_connection_logs_lifecycle"
     status = "Enabled"
+
+    filter {
+      prefix = ""
+    }
 
     expiration {
       days = 30
