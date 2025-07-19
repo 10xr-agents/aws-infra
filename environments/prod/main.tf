@@ -438,7 +438,7 @@ resource "aws_iam_role_policy" "ecs_task_mongodb_policy" {
           "sts:AssumeRole",
           "sts:TagSession"
         ]
-        Resource = each.value
+        Resource = module.ecs.task_role_arns[each.key]
       }
     ]
   })
