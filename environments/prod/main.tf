@@ -1,10 +1,5 @@
 # environments/prod/main.tf
 
-locals {
-  cluster_name = "${var.cluster_name}-prod"
-  vpc_name     = "${var.cluster_name}-${var.environment}-${var.region}"
-}
-
 # Data sources for AWS information
 data "aws_region" "current" {}
 

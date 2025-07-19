@@ -1,6 +1,7 @@
 # environments/prod/locals.tf
 locals {
   cluster_name = "${var.cluster_name}-prod"
+  vpc_name     = "${var.cluster_name}-${var.environment}-${var.region}"
 
   ecs_services = var.ecs_services
 
