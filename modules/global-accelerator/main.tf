@@ -1,7 +1,7 @@
 # modules/global-accelerator/main.tf - Fixed version
 
 locals {
-  name_prefix = "${var.cluster_name}-${var.environment}"
+  name_prefix = var.cluster_name
 
   common_tags = merge(
     var.tags,
@@ -20,20 +20,12 @@ locals {
 resource "aws_s3_bucket" "flow_logs" {
   count = var.enable_flow_logs ? 1 : 0
 
-  bucket        = var.flow_logs_s3_bucket != "" ? var.flow_logs_s3_bucket : "${local.name_prefix}-ga-flow-logs-${random_string.bucket_suffix[0].result}"
+  bucket        = var.flow_logs_s3_bucket != "" ? var.flow_logs_s3_bucket : "${local.name_prefix}-ga-flow-logs"
   force_destroy = var.s3_force_destroy
 
   tags = merge(local.common_tags, {
     Name = "${local.name_prefix}-ga-flow-logs"
   })
-}
-
-resource "random_string" "bucket_suffix" {
-  count = var.enable_flow_logs && var.flow_logs_s3_bucket == "" ? 1 : 0
-
-  length  = 8
-  special = false
-  upper   = false
 }
 
 resource "aws_s3_bucket_versioning" "flow_logs" {
