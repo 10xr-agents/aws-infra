@@ -61,7 +61,7 @@ ecs_services = {
       "retries": 3
     },
     "health_check": {
-      "path": "",
+      "path": "/",
       "interval": 30,
       "timeout": 20,
       "healthy_threshold": 2,
