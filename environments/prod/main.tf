@@ -197,7 +197,6 @@ module "networking" {
   # Target Configuration
   alb_arn = module.ecs.alb_arn
 
-  # Removed MongoDB custom target groups and listeners since using DocumentDB now
   custom_target_groups = {}
   custom_listeners = {}
 
@@ -244,7 +243,7 @@ module "global_accelerator" {
 
   source = "../../modules/global-accelerator"
 
-  cluster_name = local.cluster_name  # Use shortened name
+  cluster_name = local.cluster_name
   environment = var.environment
 
   # Global Accelerator Configuration
@@ -304,7 +303,7 @@ module "cloudflare" {
 
   source = "../../modules/cloudflare"
 
-  cluster_name = local.cluster_name  # Use shortened name
+  cluster_name = local.cluster_name
   environment = var.environment
 
   # Cloudflare Configuration

@@ -1,26 +1,11 @@
 # environments/qa/locals.tf
-
-resource "random_password" "mongo_auth_token" {
-  length  = 32
-  special = false
-}
-
-# Generate MongoDB keyfile content for replica set authentication
-resource "random_password" "mongodb_keyfile" {
-  length = 756  # MongoDB keyfile should be between 6-1024 characters
-  special = false
-  upper   = true
-  lower   = true
-  numeric = true
-}
-
 locals {
 
   ecs_services = var.ecs_services
 
   mongodb_connection_string = "mongodb+srv://doadmin:2wP6eJ810Sa573WI@db-mongodb-nyc3-50305-ea8e643e.mongo.ondigitalocean.com/ten_xr_agents_qa?tls=true&authSource=admin&replicaSet=db-mongodb-nyc3-50305"
 
-  acm_certificate_arn = aws_acm_certificate.main.arn
+  acm_certificate_arn = module.certs.acm_certificate_arn
 
   # You can also merge with environment-specific overrides
   ecs_services_with_overrides = {
@@ -59,7 +44,7 @@ locals {
             },
             {
               name       = "MONGODB_PASSWORD"
-              value_from = module.mongodb.ssm_parameter_name
+              value_from = "2wP6eJ810Sa573WI"
             }
           ]
         )

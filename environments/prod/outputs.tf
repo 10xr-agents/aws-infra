@@ -386,7 +386,7 @@ output "application_urls" {
   }
 }
 
-# Production debug outputs
+# 4. OUTPUTS for debugging
 output "debug_redis_info" {
   description = "Complete Redis debug information"
   value = {
@@ -405,4 +405,3 @@ output "redis_parameters_check" {
   description = "Redis parameters that might affect connectivity"
   value = var.redis_parameters
 }
-

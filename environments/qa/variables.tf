@@ -203,150 +203,6 @@ variable "recordings_expiration_days" {
   default     = 30
 }
 
-# MongoDB Configuration Variables
-variable "mongodb_replica_count" {
-  description = "Number of MongoDB replica set members (should be odd number: 1, 3, 5, etc.)"
-  type        = number
-  default     = 3
-}
-
-variable "mongodb_instance_type" {
-  description = "EC2 instance type for MongoDB nodes"
-  type        = string
-  default     = "t3.large"
-}
-
-variable "mongodb_ami_id" {
-  description = "AMI ID for MongoDB instances. If empty, will use latest Ubuntu 22.04"
-  type        = string
-  default     = ""
-}
-
-# Removed mongodb_key_name variable - key pair will be created automatically
-
-variable "mongodb_version" {
-  description = "MongoDB version to install"
-  type        = string
-  default     = "8.0"
-}
-
-variable "mongodb_admin_username" {
-  description = "MongoDB admin username"
-  type        = string
-  default     = "admin"
-  sensitive   = true
-}
-
-variable "mongodb_default_database" {
-  description = "Default database name"
-  type        = string
-  default     = "ten_xr_app_qa"
-}
-
-variable "mongodb_root_volume_size" {
-  description = "Size of the root EBS volume in GB"
-  type        = number
-  default     = 20
-}
-
-variable "mongodb_data_volume_size" {
-  description = "Size of the data EBS volume in GB"
-  type        = number
-  default     = 100
-}
-
-variable "mongodb_data_volume_type" {
-  description = "Type of the data EBS volume (gp2, gp3, io1, io2)"
-  type        = string
-  default     = "gp3"
-}
-
-variable "mongodb_data_volume_iops" {
-  description = "IOPS for the data volume (only for gp3, io1, io2)"
-  type        = number
-  default     = 3000
-}
-
-variable "mongodb_data_volume_throughput" {
-  description = "Throughput in MiB/s for the data volume (only for gp3)"
-  type        = number
-  default     = 125
-}
-
-variable "mongodb_allow_ssh" {
-  description = "Whether to allow SSH access to MongoDB instances"
-  type        = bool
-  default     = false
-}
-
-variable "mongodb_ssh_cidr_blocks" {
-  description = "CIDR blocks allowed to SSH to MongoDB instances"
-  type        = list(string)
-  default     = []
-}
-
-variable "mongodb_enable_monitoring" {
-  description = "Whether to enable CloudWatch monitoring for MongoDB"
-  type        = bool
-  default     = true
-}
-
-variable "mongodb_log_retention_days" {
-  description = "CloudWatch log retention in days for MongoDB"
-  type        = number
-  default     = 7
-}
-
-variable "mongodb_create_dns_records" {
-  description = "Whether to create Route53 DNS records for MongoDB"
-  type        = bool
-  default     = true
-}
-
-variable "mongodb_private_domain" {
-  description = "Private domain for MongoDB DNS records"
-  type        = string
-  default     = ""
-}
-
-variable "mongodb_backup_enabled" {
-  description = "Whether to enable automated EBS snapshots for MongoDB"
-  type        = bool
-  default     = true
-}
-
-variable "mongodb_backup_schedule" {
-  description = "Cron expression for MongoDB backup schedule"
-  type        = string
-  default     = "cron(0 2 * * ? *)"
-}
-
-variable "mongodb_backup_retention_days" {
-  description = "Number of days to retain MongoDB backups"
-  type        = number
-  default     = 7
-}
-
-variable "mongodb_store_connection_string_in_ssm" {
-  description = "Whether to store MongoDB connection string in AWS Systems Manager Parameter Store"
-  type        = bool
-  default     = true
-}
-
-variable "mongodb_enable_encryption_at_rest" {
-  description = "Whether to enable MongoDB encryption at rest"
-  type        = bool
-  default     = true
-}
-
-variable "mongodb_enable_audit_logging" {
-  description = "Whether to enable MongoDB audit logging"
-  type        = bool
-  default     = false
-}
-
-# Add these Redis variables to your environments/qa/variables.tf
-
 # Redis Configuration Variables
 variable "redis_node_type" {
   description = "Node type for Redis instances"
@@ -509,6 +365,7 @@ variable "ecs_services" {
     alb_priority      = optional(number)
     alb_path_patterns = optional(list(string))
     enable_default_routing = optional(bool, false),
+    alb_host_headers = optional(list(string))
 
     # Additional configuration
     efs_config = optional(object({
@@ -666,14 +523,12 @@ variable "nlb_access_logs_enabled" {
   default     = false
 }
 
-
 # NLB Connection Logs
 variable "nlb_connection_logs_enabled" {
   description = "Whether to enable NLB connection logs"
   type        = bool
   default     = false
 }
-
 
 # Security Groups (optional for NLB)
 variable "create_security_groups" {
@@ -833,8 +688,6 @@ variable "global_accelerator_traffic_dial_percentage" {
   default     = 100
 }
 
-# Add these variables to your environments/qa/variables.tf
-
 ################################################################################
 # Cloudflare Configuration Variables
 ################################################################################
@@ -926,7 +779,6 @@ variable "cloudflare_security_level" {
   type        = string
   default     = "medium"
 }
-# Add these missing variables to your environments/qa/variables.tf
 
 variable "cloudflare_api_key" {
   description = "Cloudflare API key (legacy - use api_token instead)"
