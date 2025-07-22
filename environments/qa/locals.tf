@@ -30,8 +30,8 @@ locals {
             SPRING_DATA_MONGODB_URI = local.mongodb_connection_string
             MONGO_DB_URL            = local.mongodb_connection_string
             MONGO_DB_URI            = local.mongodb_connection_string
-            MONGODB_DATABASE        = var.mongodb_default_database
-            DATABASE_NAME           = var.mongodb_default_database
+            MONGODB_DATABASE        = "ten_xr_agents_qa"
+            DATABASE_NAME           = "ten_xr_agents_qa"
           }
         )
         # Add Redis auth token as a secret for all services that need it
