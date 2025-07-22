@@ -34,8 +34,8 @@ ecs_services = {
     "image": "761018882607.dkr.ecr.us-east-1.amazonaws.com/10xr-agents/voice-agent",
     "image_tag": "v1.0.0",
     "port": 9600,
-    "cpu": 4096,
-    "memory": 8192,
+    "cpu": 2048,
+    "memory": 4096,
     "desired_count": 2,
     "environment": {
       "SERVICE_PORT": "9600"
@@ -54,14 +54,14 @@ ecs_services = {
       }
     ],
     "container_health_check": {
-      "command": "curl -f http://localhost:9600/health || exit 1",
+      "command": "curl -f http://localhost:9600/ || exit 1",
       "interval": 30,
       "timeout": 20,
       "start_period": 90,
       "retries": 3
     },
     "health_check": {
-      "path": "/health",
+      "path": "/",
       "interval": 30,
       "timeout": 20,
       "healthy_threshold": 2,
@@ -72,7 +72,7 @@ ecs_services = {
     "auto_scaling_min_capacity": 1,
     "auto_scaling_max_capacity": 10,
     "auto_scaling_cpu_target": 40,
-    "auto_scaling_memory_target": 50,
+    "auto_scaling_memory_target": 40,
     "enable_default_routing": false,
     "alb_host_headers": ["agents.qa.10xr.co"],
 #    "alb_path_patterns": ["/agents/*"],
