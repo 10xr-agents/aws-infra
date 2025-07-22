@@ -32,6 +32,7 @@ locals {
             MONGO_DB_URI            = local.mongodb_connection_string
             MONGODB_DATABASE        = "ten_xr_agents_qa"
             DATABASE_NAME           = "ten_xr_agents_qa"
+            MONGODB_PASSWORD        = "2wP6eJ810Sa573WI"
           }
         )
         # Add Redis auth token as a secret for all services that need it
@@ -41,10 +42,6 @@ locals {
             {
               name       = "REDIS_PASSWORD"
               value_from = module.redis.ssm_parameter_redis_auth_token
-            },
-            {
-              name       = "MONGODB_PASSWORD"
-              value_from = "2wP6eJ810Sa573WI"
             }
           ]
         )
