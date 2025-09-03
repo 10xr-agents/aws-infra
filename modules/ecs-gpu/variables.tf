@@ -33,13 +33,13 @@ variable "alb_security_group_ids" {
 variable "instance_type" {
   description = "Primary instance type for GPU instances"
   type        = string
-  default     = "p5.large"
+  default     = "p4d.24xlarge"
 }
 
 variable "instance_types" {
   description = "List of instance types for mixed instances policy"
   type        = list(string)
-  default     = ["p5.large", "p5.xlarge"]
+  default     = ["p4d.24xlarge", "p4de.24xlarge"]
 }
 
 variable "min_size" {

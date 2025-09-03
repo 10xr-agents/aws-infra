@@ -339,7 +339,7 @@ ecs_services = {
 }
 
 ################################################################################
-# GPU ECS Services Configuration (New GPU Cluster)
+# GPU ECS Services Configuration - Updated for P4 A100 instances
 ################################################################################
 
 gpu_ecs_services = {
@@ -347,27 +347,27 @@ gpu_ecs_services = {
     image         = "761018882607.dkr.ecr.us-east-1.amazonaws.com/10xr-agents/tts-streaming-service:main-21a86ac"
     image_tag     = "latest"
     port          = 8000
-    cpu           = 16384 # 16 vCPUs (to match p5.4xlarge)
-    memory        = 65536 # 64 GB RAM (reasonable for p5.4xlarge with 256 GB available)
-    gpu_count     = 1     # 1 GPU per task
-    desired_count = 1     # Start with 1 for testing
+    cpu           = 32768  # 32 vCPUs (increased for p4d.24xlarge - can use up to 96)
+    memory        = 131072 # 128 GB RAM (conservative allocation from 1152 GB available)
+    gpu_count     = 2      # 2 GPUs per task (from 8 available A100s)
+    desired_count = 1      # Start with 1 for testing
 
-    # Environment variables for Indic TTS
+    # Environment variables for Indic TTS - Updated for P4 A100 performance
     environment = {
       ENVIRONMENT     = "qa"
       DEVICE         = "cuda"
       ULTRA_FAST_MODE = "true"
       
-      # Performance settings for P5
-      TARGET_FIRST_CHUNK_MS     = "25"
-      MODEL_POOL_SIZE           = "4"
-      MAX_CONCURRENT_REQUESTS   = "200"
+      # Performance settings optimized for P4 A100 GPUs
+      TARGET_FIRST_CHUNK_MS     = "15"   # Faster with A100s
+      MODEL_POOL_SIZE           = "8"    # Increased for multiple GPUs
+      MAX_CONCURRENT_REQUESTS   = "500"  # Higher capacity with P4
       WARMUP_ON_STARTUP        = "true"
       
       # Redis configuration (Redis connection details will be merged in main.tf)
       ENABLE_REDIS    = "true"
       
-      # Caching
+      # Caching - optimized for P4 memory capacity
       ENABLE_AUDIO_CACHING  = "true"
       ENABLE_VOICE_CACHING  = "true"
       ENABLE_MODEL_CACHING  = "true"
@@ -376,7 +376,7 @@ gpu_ecs_services = {
       # Model configuration
       MODEL_NAME        = "ai4bharat/indic-parler-tts"
       AUDIO_SAMPLE_RATE = "24000"
-      MAX_TEXT_LENGTH   = "2000"
+      MAX_TEXT_LENGTH   = "4000"  # Increased for P4 capacity
       
       # Logging and monitoring
       LOG_LEVEL                  = "INFO"
@@ -395,16 +395,20 @@ gpu_ecs_services = {
       # CORS settings
       ALLOWED_ORIGINS = "[\"https://qa.10xr.co\", \"https://api.qa.10xr.co\", \"https://tts.qa.10xr.co\"]"
       
-      # Performance optimizations
-      TORCH_COMPILE_MODE     = "reduce-overhead"
+      # Performance optimizations for A100 GPUs
+      TORCH_COMPILE_MODE     = "max-autotune"  # More aggressive optimization for A100
       TORCH_COMPILE_DYNAMIC  = "false"
       CUDA_LAUNCH_BLOCKING   = "0"
-      PYTORCH_CUDA_ALLOC_CONF = "expandable_segments:True"
+      PYTORCH_CUDA_ALLOC_CONF = "expandable_segments:True,max_split_size_mb:512"
       
-      # Batch processing
+      # Multi-GPU configuration
+      CUDA_VISIBLE_DEVICES   = "0,1"  # Use first 2 GPUs
+      NCCL_DEBUG            = "INFO"
+      
+      # Batch processing - optimized for multiple A100s
       ENABLE_BATCH_PROCESSING = "true"
-      MAX_BATCH_SIZE         = "8"
-      BATCH_TIMEOUT_MS       = "50"
+      MAX_BATCH_SIZE         = "16"  # Increased for A100 capacity
+      BATCH_TIMEOUT_MS       = "30"  # Faster with A100s
       
       # Quality settings
       DEFAULT_QUALITY     = "high"
@@ -417,8 +421,12 @@ gpu_ecs_services = {
       # Monitoring
       PROMETHEUS_METRICS_PORT = "9090"
       
-      # Rate limiting
-      RATE_LIMIT_REQUESTS_PER_MINUTE = "300"
+      # Rate limiting - increased for P4 capacity
+      RATE_LIMIT_REQUESTS_PER_MINUTE = "600"
+      
+      # Memory management for large instance
+      MAX_MEMORY_USAGE_PCT = "80"
+      GARBAGE_COLLECTION_THRESHOLD = "0.8"
     }
 
     # Secrets (Redis password will be added in main.tf)
@@ -434,27 +442,30 @@ gpu_ecs_services = {
       matcher             = "200"
     }
 
-    # Container health check with longer startup time for GPU
+    # Container health check with longer startup time for P4 multi-GPU model loading
     container_health_check = {
       command      = "curl -f http://localhost:8000/health/liveness || exit 1"
       interval     = 30
       timeout      = 10
       retries      = 3
-      start_period = 180  # 3 minutes for GPU model loading
+      start_period = 240  # 4 minutes for P4 multi-GPU model loading
     }
 
     # Load balancer integration
     enable_load_balancer = true
     deregistration_delay = 60
 
-    # Docker configuration for GPU workload
+    # Docker configuration for P4 GPU workload
     docker_labels = {
       service_type = "indic-tts"
       gpu_enabled  = "true"
+      gpu_type     = "a100"
+      gpu_count    = "2"
+      instance_type = "p4d"
       model_type   = "parler-tts"
     }
 
-    # System limits for GPU workload - FIXED: No duplicate ulimits
+    # System limits for P4 GPU workload - optimized for high-memory instance
     ulimits = [
       {
         name       = "memlock"
@@ -463,6 +474,11 @@ gpu_ecs_services = {
       },
       {
         name       = "nofile"
+        soft_limit = 1048576  # Increased for P4
+        hard_limit = 1048576
+      },
+      {
+        name       = "nproc"
         soft_limit = 65536
         hard_limit = 65536
       }
@@ -471,22 +487,22 @@ gpu_ecs_services = {
 }
 
 ################################################################################
-# GPU Infrastructure Configuration - FIXED
+# GPU Infrastructure Configuration - Updated for P4 instances
 ################################################################################
 
-# GPU Instance Configuration - FIXED: Use valid P5 instance types
-gpu_instance_type    = "p5.4xlarge"  # 8 vCPUs, 32 GB RAM, 1 H100 GPU
-gpu_instance_types   = ["p5.4xlarge"]  # Start with one type for stability
+# GPU Instance Configuration - UPDATED: Use P4 instance types
+gpu_instance_type    = "p4d.24xlarge"  # 96 vCPUs, 1152 GB RAM, 8 A100 GPUs
+gpu_instance_types   = ["p4d.24xlarge", "p4de.24xlarge"]  # Both P4 variants for better availability
 gpu_min_size         = 0
-gpu_max_size         = 2  # Reduced for cost control
+gpu_max_size         = 2  # Keep conservative for cost control
 gpu_desired_capacity = 1
 
 # Cost optimization with mixed instances
 gpu_on_demand_base       = 1
 gpu_on_demand_percentage = 50  # 50% spot for better availability
 
-# Storage - increased for P5 instances and model storage
-gpu_root_volume_size = 300  # Larger for model storage and Docker images
+# Storage - increased for P4 instances and model storage
+gpu_root_volume_size = 500  # Increased for larger P4 instances and model storage
 
 ################################################################################
 # Redis Configuration
@@ -627,8 +643,8 @@ app_dns_records = {
     type     = "CNAME"
     proxied  = false
     ttl      = 300
-    comment  = "QA Indic TTS Service - Ultra-fast GPU-powered text-to-speech"
-    tags     = ["qa", "tts", "indic", "gpu"]
+    comment  = "QA Indic TTS Service - Ultra-fast P4 A100 GPU-powered text-to-speech"
+    tags     = ["qa", "tts", "indic", "gpu", "p4", "a100"]
   }
 }
 

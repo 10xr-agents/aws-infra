@@ -1,4 +1,4 @@
-# modules/ecs-gpu/main.tf - Fixed version
+# modules/ecs-gpu/main.tf - Complete P4 optimized version
 
 locals {
   name_prefix = "${var.cluster_name}-${var.environment}"
@@ -55,7 +55,7 @@ locals {
           }
         ]
 
-        # Environment variables - REMOVED GPU-specific variables that are auto-set by ECS
+        # Environment variables - optimized for P4 A100 GPUs
         environment = concat(
           [
             {
@@ -70,8 +70,6 @@ locals {
               name  = "SERVICE_NAME"
               value = name
             }
-            # REMOVED: NVIDIA_VISIBLE_DEVICES and NVIDIA_DRIVER_CAPABILITIES
-            # These are automatically set by ECS for GPU tasks
           ],
           [
             for key, value in lookup(config, "environment", {}) : {
@@ -99,7 +97,7 @@ locals {
           }
         }
 
-        # Health check configuration
+        # Health check configuration - extended for P4 multi-GPU startup
         healthCheck = lookup(config, "container_health_check", null) != null ? {
           command = [
             "CMD-SHELL",
@@ -108,7 +106,7 @@ locals {
           interval    = lookup(config.container_health_check, "interval", 30)
           timeout     = lookup(config.container_health_check, "timeout", 5)
           retries     = lookup(config.container_health_check, "retries", 3)
-          startPeriod = lookup(config.container_health_check, "start_period", 120) # Longer for GPU startup
+          startPeriod = lookup(config.container_health_check, "start_period", 240) # Extended for P4 multi-GPU
         } : null
 
         # Working directory
@@ -117,7 +115,7 @@ locals {
         # User
         user = lookup(config, "user", null)
 
-        # Docker labels with GPU info
+        # Docker labels with P4 GPU info
         dockerLabels = merge(
           {
             "service"      = name
@@ -125,11 +123,13 @@ locals {
             "cluster"      = local.name_prefix
             "gpu-enabled"  = tostring(config.gpu_count > 0)
             "gpu-count"    = tostring(config.gpu_count)
+            "gpu-type"     = "a100"
+            "instance-family" = "p4d"
           },
           lookup(config, "docker_labels", {})
         )
 
-        # Ulimits for GPU workloads - check for duplicates
+        # Ulimits for P4 GPU workloads - optimized for high-memory instances
         ulimits = length(lookup(config, "ulimits", [])) > 0 ? [
           for ulimit in config.ulimits : {
             name      = ulimit.name
@@ -141,6 +141,11 @@ locals {
             name      = "memlock"
             softLimit = -1
             hardLimit = -1
+          },
+          {
+            name      = "nofile"
+            softLimit = 1048576
+            hardLimit = 1048576
           }
         ]
       }
@@ -162,7 +167,7 @@ data "aws_vpc" "main" {
 }
 
 ################################################################################
-# ECS Cluster with GPU Support
+# ECS Cluster with P4 GPU Support
 ################################################################################
 
 resource "aws_ecs_cluster" "gpu" {
@@ -196,7 +201,7 @@ resource "aws_cloudwatch_log_group" "cluster" {
 }
 
 ################################################################################
-# EC2 Launch Template for P5 Instances
+# EC2 Launch Template for P4 Instances
 ################################################################################
 
 data "aws_ami" "ecs_gpu" {
@@ -230,12 +235,12 @@ resource "aws_launch_template" "ecs_gpu" {
     # Update system
     yum update -y
     
-    # Configure ECS agent
+    # Configure ECS agent for P4 instances
     echo ECS_CLUSTER=${aws_ecs_cluster.gpu.name} >> /etc/ecs/ecs.config
     echo ECS_ENABLE_GPU_SUPPORT=true >> /etc/ecs/ecs.config
     echo ECS_ENABLE_CONTAINER_METADATA=true >> /etc/ecs/ecs.config
     
-    # Configure Docker daemon for GPU support
+    # Configure Docker daemon for P4 GPU support
     mkdir -p /etc/docker
     cat > /etc/docker/daemon.json << 'DOCKER_EOF'
 {
@@ -254,12 +259,23 @@ resource "aws_launch_template" "ecs_gpu" {
 }
 DOCKER_EOF
     
-    # Install NVIDIA drivers and container toolkit
+    # Install NVIDIA drivers optimized for P4 A100 GPUs
     yum install -y nvidia-driver-latest-dkms
     yum install -y nvidia-container-toolkit
     
     # Configure nvidia-container-toolkit
     nvidia-ctk runtime configure --runtime=docker
+    
+    # P4-specific optimizations
+    # Set GPU persistence mode
+    nvidia-smi -pm 1
+    
+    # Set memory and compute modes for A100
+    nvidia-smi -ac 1215,1410  # Memory and Graphics clocks for A100
+    
+    # Configure NCCL for multi-GPU communication
+    echo 'export NCCL_TREE_THRESHOLD=0' >> /etc/environment
+    echo 'export NCCL_IB_DISABLE=1' >> /etc/environment
     
     # Restart services
     systemctl restart docker
@@ -269,8 +285,12 @@ DOCKER_EOF
     systemctl enable docker
     systemctl enable ecs
     
-    # Log GPU information
+    # Log GPU information for P4 diagnostics
     nvidia-smi > /var/log/gpu-info.log 2>&1
+    nvidia-smi topo -m > /var/log/gpu-topology.log 2>&1
+    
+    # Log instance metadata
+    curl -s http://169.254.169.254/latest/meta-data/instance-type > /var/log/instance-type.log
     EOF
   )
 
@@ -279,15 +299,19 @@ DOCKER_EOF
     ebs {
       volume_size = var.root_volume_size
       volume_type = "gp3"
+      iops        = 4000  # Higher IOPS for P4 instances
+      throughput  = 250   # Higher throughput for model loading
       encrypted   = true
     }
   }
 
-  # GPU-specific settings
+  # P4-specific instance settings
   tag_specifications {
     resource_type = "instance"
     tags = merge(local.common_tags, {
       Name = "${local.name_prefix}-ecs-instance"
+      InstanceFamily = "p4d"
+      GPUType = "A100"
     })
   }
 
@@ -295,7 +319,7 @@ DOCKER_EOF
 }
 
 ################################################################################
-# Auto Scaling Group for P5 Instances - FIXED
+# Auto Scaling Group for P4 Instances
 ################################################################################
 
 resource "aws_autoscaling_group" "ecs_gpu" {
@@ -309,7 +333,7 @@ resource "aws_autoscaling_group" "ecs_gpu" {
   max_size         = var.max_size
   desired_capacity = var.desired_capacity
 
-  # Use mixed instances for cost optimization if needed
+  # Use mixed instances for cost optimization with P4 variants
   mixed_instances_policy {
     launch_template {
       launch_template_specification {
@@ -317,7 +341,7 @@ resource "aws_autoscaling_group" "ecs_gpu" {
         version            = "$Latest"
       }
 
-      # Allow different P5 instance types if available
+      # Support both P4 instance types for better availability
       dynamic "override" {
         for_each = var.instance_types
         content {
@@ -329,7 +353,6 @@ resource "aws_autoscaling_group" "ecs_gpu" {
     instances_distribution {
       on_demand_base_capacity                  = var.on_demand_base_capacity
       on_demand_percentage_above_base_capacity = var.on_demand_percentage
-      # FIXED: Use valid spot allocation strategy
       spot_allocation_strategy                 = "capacity-optimized"
     }
   }
@@ -437,7 +460,7 @@ resource "aws_iam_role_policy_attachment" "ecs_instance" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceforEC2Role"
 }
 
-# Additional policy for GPU instances
+# Additional policy for P4 GPU instances
 resource "aws_iam_role_policy" "ecs_instance_gpu" {
   name = "${local.name_prefix}-ecs-instance-gpu-policy"
   role = aws_iam_role.ecs_instance.id
@@ -516,7 +539,7 @@ resource "aws_iam_role" "task_role" {
 
 resource "aws_security_group" "ecs_instances" {
   name        = "${local.name_prefix}-ecs-instances"
-  description = "Security group for ECS GPU instances"
+  description = "Security group for ECS P4 GPU instances"
   vpc_id      = var.vpc_id
 
   # Allow inbound traffic from ALB
@@ -604,12 +627,12 @@ resource "aws_ecs_service" "service" {
     base             = 1
   }
 
-  # Placement constraints for GPU instances
+  # Placement constraints for P4 GPU instances - UPDATED
   dynamic "placement_constraints" {
     for_each = each.value.gpu_count > 0 ? [1] : []
     content {
       type       = "memberOf"
-      expression = "attribute:ecs.instance-type =~ p5.*"
+      expression = "attribute:ecs.instance-type =~ p4.*"  # Updated to match P4 instances
     }
   }
 

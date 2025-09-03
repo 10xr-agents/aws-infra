@@ -859,13 +859,13 @@ variable "gpu_ecs_services" {
 variable "gpu_instance_type" {
   description = "Primary GPU instance type"
   type        = string
-  default     = "p5.large"
+  default     = "p4d.24xlarge"
 }
 
 variable "gpu_instance_types" {
   description = "List of GPU instance types"
   type        = list(string)
-  default     = ["p5.large"]
+  default     = ["p4d.24xlarge", "p4de.24xlarge"]
 }
 
 variable "gpu_min_size" {
@@ -901,7 +901,7 @@ variable "gpu_on_demand_percentage" {
 variable "gpu_root_volume_size" {
   description = "Root volume size in GB"
   type        = number
-  default     = 200
+  default     = 500
 }
 
 variable "indic_tts_enable_alb" {
