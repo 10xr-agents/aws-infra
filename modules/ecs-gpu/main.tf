@@ -1,4 +1,4 @@
-# modules/ecs-gpu/main.tf - Specialized ECS module for GPU workloads
+# modules/ecs-gpu/main.tf - Fixed version
 
 locals {
   name_prefix = "${var.cluster_name}-${var.environment}"
@@ -129,17 +129,20 @@ locals {
           lookup(config, "docker_labels", {})
         )
 
-        # Ulimits for GPU workloads
-        ulimits = concat(
-          lookup(config, "ulimits", []),
-          [
-            {
-              name      = "memlock"
-              softLimit = -1
-              hardLimit = -1
-            }
-          ]
-        )
+        # Ulimits for GPU workloads - check for duplicates
+        ulimits = length(lookup(config, "ulimits", [])) > 0 ? [
+          for ulimit in config.ulimits : {
+            name      = ulimit.name
+            softLimit = ulimit.soft_limit
+            hardLimit = ulimit.hard_limit
+          }
+        ] : [
+          {
+            name      = "memlock"
+            softLimit = -1
+            hardLimit = -1
+          }
+        ]
       }
     ])
   }
@@ -292,7 +295,7 @@ DOCKER_EOF
 }
 
 ################################################################################
-# Auto Scaling Group for P5 Instances
+# Auto Scaling Group for P5 Instances - FIXED
 ################################################################################
 
 resource "aws_autoscaling_group" "ecs_gpu" {

@@ -350,7 +350,7 @@ gpu_ecs_services = {
     cpu           = 8192  # 8 vCPUs
     memory        = 32768 # 32 GB RAM
     gpu_count     = 1     # 1 GPU per task
-    desired_count = 2
+    desired_count = 1     # Start with 1 for testing
 
     # Environment variables for Indic TTS
     environment = {
@@ -471,25 +471,26 @@ gpu_ecs_services = {
 }
 
 ################################################################################
-# GPU Infrastructure Configuration
+# GPU Infrastructure Configuration - FIXED
 ################################################################################
 
-# GPU Instance Configuration
-gpu_instance_type    = "p5.large"
-gpu_instance_types   = ["p5.large"]
+# GPU Instance Configuration - FIXED: Use valid P5 instance types
+gpu_instance_type    = "p5.2xlarge"  # 8 vCPUs, 32 GB RAM, 1 H100 GPU
+gpu_instance_types   = ["p5.2xlarge"]  # Start with one type for stability
 gpu_min_size         = 0
-gpu_max_size         = 3
+gpu_max_size         = 2  # Reduced for cost control
 gpu_desired_capacity = 1
 
 # Cost optimization with mixed instances
 gpu_on_demand_base       = 1
-gpu_on_demand_percentage = 25  # 75% spot instances for cost savings
+gpu_on_demand_percentage = 50  # 50% spot for better availability
 
-# Storage
-gpu_root_volume_size = 200  # Larger for model storage
+# Storage - increased for P5 instances and model storage
+gpu_root_volume_size = 300  # Larger for model storage and Docker images
 
 ################################################################################
 # Redis Configuration
+################################################################################
 redis_node_type                    = "cache.m5.4xlarge"
 redis_engine_version              = "7.0"
 redis_num_cache_clusters          = 2
@@ -630,11 +631,15 @@ app_dns_records = {
     tags     = ["qa", "tts", "indic", "gpu"]
   }
 }
+
 # Zone Settings (optional)
 cloudflare_ssl_mode = "flexible"
 cloudflare_always_use_https = "off"
 cloudflare_min_tls_version = "1.2"
 cloudflare_security_level = "medium"
+
+# TTS-specific configuration
+indic_tts_enable_alb = true
 
 # Tags
 tags = {
