@@ -55,7 +55,7 @@ locals {
           }
         ]
 
-        # Environment variables with GPU-specific settings
+        # Environment variables - REMOVED GPU-specific variables that are auto-set by ECS
         environment = concat(
           [
             {
@@ -69,16 +69,9 @@ locals {
             {
               name  = "SERVICE_NAME"
               value = name
-            },
-            # GPU-specific environment variables
-            {
-              name  = "NVIDIA_VISIBLE_DEVICES"
-              value = "all"
-            },
-            {
-              name  = "NVIDIA_DRIVER_CAPABILITIES"
-              value = "compute,utility"
             }
+            # REMOVED: NVIDIA_VISIBLE_DEVICES and NVIDIA_DRIVER_CAPABILITIES
+            # These are automatically set by ECS for GPU tasks
           ],
           [
             for key, value in lookup(config, "environment", {}) : {
@@ -333,7 +326,8 @@ resource "aws_autoscaling_group" "ecs_gpu" {
     instances_distribution {
       on_demand_base_capacity                  = var.on_demand_base_capacity
       on_demand_percentage_above_base_capacity = var.on_demand_percentage
-      spot_allocation_strategy                 = "diversified"
+      # FIXED: Use valid spot allocation strategy
+      spot_allocation_strategy                 = "capacity-optimized"
     }
   }
 
