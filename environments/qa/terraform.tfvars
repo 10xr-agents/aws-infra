@@ -344,8 +344,8 @@ ecs_services = {
 
 gpu_ecs_services = {
   "indic-tts" = {
-    image         = "761018882607.dkr.ecr.us-east-1.amazonaws.com/10xr-agents/indic-tts-ultra-fast"
-    image_tag     = "gpu-latest"
+    image         = "761018882607.dkr.ecr.us-east-1.amazonaws.com/10xr-agents/tts-streaming-service:main-21a86ac"
+    image_tag     = "latest"
     port          = 8000
     cpu           = 8192  # 8 vCPUs
     memory        = 32768 # 32 GB RAM
@@ -490,7 +490,7 @@ gpu_root_volume_size = 200  # Larger for model storage
 
 ################################################################################
 # Redis Configuration
-redis_node_type                    = "cache.t3.micro"
+redis_node_type                    = "cache.m5.4xlarge"
 redis_engine_version              = "7.0"
 redis_num_cache_clusters          = 2
 redis_multi_az_enabled            = true
