@@ -346,7 +346,7 @@ module "indic_tts_gpu" {
 
   vpc_id                 = module.vpc.vpc_id
   private_subnet_ids     = module.vpc.private_subnets
-  alb_security_group_ids = var.create_alb ? [module.ecs.alb_security_group_id] : []
+  alb_security_group_ids = [module.ecs.alb_security_group_id]
 
   # P5 Instance Configuration
   instance_type    = var.gpu_instance_type
@@ -361,7 +361,7 @@ module "indic_tts_gpu" {
 
   # ECS Configuration
   enable_container_insights = var.enable_container_insights
-  log_retention_days       = var.log_retention_days
+  log_retention_days       = 30
 
   # GPU Services Configuration - merge Redis config into services
   services = {
