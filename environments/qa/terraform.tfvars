@@ -338,6 +338,157 @@ ecs_services = {
   }
 }
 
+################################################################################
+# GPU ECS Services Configuration (New GPU Cluster)
+################################################################################
+
+gpu_ecs_services = {
+  "indic-tts" = {
+    image         = "761018882607.dkr.ecr.us-east-1.amazonaws.com/10xr-agents/indic-tts-ultra-fast"
+    image_tag     = "gpu-latest"
+    port          = 8000
+    cpu           = 8192  # 8 vCPUs
+    memory        = 32768 # 32 GB RAM
+    gpu_count     = 1     # 1 GPU per task
+    desired_count = 2
+
+    # Environment variables for Indic TTS
+    environment = {
+      ENVIRONMENT     = "qa"
+      DEVICE         = "cuda"
+      ULTRA_FAST_MODE = "true"
+      
+      # Performance settings for P5
+      TARGET_FIRST_CHUNK_MS     = "25"
+      MODEL_POOL_SIZE           = "4"
+      MAX_CONCURRENT_REQUESTS   = "200"
+      WARMUP_ON_STARTUP        = "true"
+      
+      # Redis configuration (Redis connection details will be merged in main.tf)
+      ENABLE_REDIS    = "true"
+      
+      # Caching
+      ENABLE_AUDIO_CACHING  = "true"
+      ENABLE_VOICE_CACHING  = "true"
+      ENABLE_MODEL_CACHING  = "true"
+      CACHE_COMPRESSION     = "true"
+      
+      # Model configuration
+      MODEL_NAME        = "ai4bharat/indic-parler-tts"
+      AUDIO_SAMPLE_RATE = "24000"
+      MAX_TEXT_LENGTH   = "2000"
+      
+      # Logging and monitoring
+      LOG_LEVEL                  = "INFO"
+      ENABLE_PERFORMANCE_LOGGING = "true"
+      ENABLE_REQUEST_LOGGING     = "true"
+      ENABLE_METRICS            = "true"
+      
+      # API configuration
+      HOST = "0.0.0.0"
+      PORT = "8000"
+      
+      # Production settings for QA
+      ENABLE_TEST_INTERFACE = "true"
+      ENABLE_OPENAPI_DOCS   = "true"
+      
+      # CORS settings
+      ALLOWED_ORIGINS = "[\"https://qa.10xr.co\", \"https://api.qa.10xr.co\", \"https://tts.qa.10xr.co\"]"
+      
+      # Performance optimizations
+      TORCH_COMPILE_MODE     = "reduce-overhead"
+      TORCH_COMPILE_DYNAMIC  = "false"
+      CUDA_LAUNCH_BLOCKING   = "0"
+      PYTORCH_CUDA_ALLOC_CONF = "expandable_segments:True"
+      
+      # Batch processing
+      ENABLE_BATCH_PROCESSING = "true"
+      MAX_BATCH_SIZE         = "8"
+      BATCH_TIMEOUT_MS       = "50"
+      
+      # Quality settings
+      DEFAULT_QUALITY     = "high"
+      ENABLE_VOICE_CLONING = "true"
+      
+      # API features
+      ENABLE_WEBSOCKET_STREAMING = "true"
+      ENABLE_SERVER_SENT_EVENTS  = "true"
+      
+      # Monitoring
+      PROMETHEUS_METRICS_PORT = "9090"
+      
+      # Rate limiting
+      RATE_LIMIT_REQUESTS_PER_MINUTE = "300"
+    }
+
+    # Secrets (Redis password will be added in main.tf)
+    secrets = []
+
+    # Health check configuration
+    health_check = {
+      path                = "/health/liveness"
+      interval            = 30
+      timeout             = 10
+      healthy_threshold   = 2
+      unhealthy_threshold = 3
+      matcher             = "200"
+    }
+
+    # Container health check with longer startup time for GPU
+    container_health_check = {
+      command      = "curl -f http://localhost:8000/health/liveness || exit 1"
+      interval     = 30
+      timeout      = 10
+      retries      = 3
+      start_period = 180  # 3 minutes for GPU model loading
+    }
+
+    # Load balancer integration
+    enable_load_balancer = true
+    deregistration_delay = 60
+
+    # Docker configuration for GPU workload
+    docker_labels = {
+      service_type = "indic-tts"
+      gpu_enabled  = "true"
+      model_type   = "parler-tts"
+    }
+
+    # System limits for GPU workload
+    ulimits = [
+      {
+        name       = "memlock"
+        soft_limit = -1
+        hard_limit = -1
+      },
+      {
+        name       = "nofile"
+        soft_limit = 65536
+        hard_limit = 65536
+      }
+    ]
+  }
+}
+
+################################################################################
+# GPU Infrastructure Configuration
+################################################################################
+
+# GPU Instance Configuration
+gpu_instance_type    = "p5.large"
+gpu_instance_types   = ["p5.large"]
+gpu_min_size         = 0
+gpu_max_size         = 3
+gpu_desired_capacity = 1
+
+# Cost optimization with mixed instances
+gpu_on_demand_base       = 1
+gpu_on_demand_percentage = 25  # 75% spot instances for cost savings
+
+# Storage
+gpu_root_volume_size = 200  # Larger for model storage
+
+################################################################################
 # Redis Configuration
 redis_node_type                    = "cache.t3.micro"
 redis_engine_version              = "7.0"
@@ -468,6 +619,15 @@ app_dns_records = {
     ttl      = 300
     comment  = "QA Automation Service environment - routes to automation MCP service"
     tags     = ["qa", "automation", "mcp"]
+  },
+  "qa-tts" = {
+    name     = "tts.qa"
+    content  = ""
+    type     = "CNAME"
+    proxied  = false
+    ttl      = 300
+    comment  = "QA Indic TTS Service - Ultra-fast GPU-powered text-to-speech"
+    tags     = ["qa", "tts", "indic", "gpu"]
   }
 }
 # Zone Settings (optional)

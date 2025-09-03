@@ -804,3 +804,108 @@ variable "tags" {
     Terraform   = "true"
   }
 }
+# Add these minimal variables to environments/qa/variables.tf
+
+################################################################################
+# GPU ECS Services Configuration
+################################################################################
+
+variable "gpu_ecs_services" {
+  description = "Map of ECS services to create on GPU cluster"
+  type = map(object({
+    image         = string
+    image_tag     = optional(string, "latest")
+    port          = number
+    cpu           = number
+    memory        = number
+    gpu_count     = number
+    desired_count = number
+    environment   = optional(map(string), {})
+    secrets       = optional(list(object({
+      name       = string
+      value_from = string
+    })), [])
+    health_check = optional(object({
+      path                = optional(string, "/health")
+      interval            = optional(number, 30)
+      timeout             = optional(number, 20)
+      healthy_threshold   = optional(number, 2)
+      unhealthy_threshold = optional(number, 3)
+      matcher             = optional(string, "200")
+    }), {})
+    container_health_check = optional(object({
+      command      = string
+      interval     = optional(number, 30)
+      timeout      = optional(number, 20)
+      retries      = optional(number, 3)
+      start_period = optional(number, 120)
+    }))
+    enable_load_balancer = optional(bool, false)
+    deregistration_delay = optional(number, 30)
+    docker_labels        = optional(map(string), {})
+    ulimits = optional(list(object({
+      name       = string
+      soft_limit = number
+      hard_limit = number
+    })), [])
+  }))
+  default = {}
+}
+
+################################################################################
+# GPU Infrastructure Configuration
+################################################################################
+
+variable "gpu_instance_type" {
+  description = "Primary GPU instance type"
+  type        = string
+  default     = "p5.large"
+}
+
+variable "gpu_instance_types" {
+  description = "List of GPU instance types"
+  type        = list(string)
+  default     = ["p5.large"]
+}
+
+variable "gpu_min_size" {
+  description = "Minimum GPU instances"
+  type        = number
+  default     = 0
+}
+
+variable "gpu_max_size" {
+  description = "Maximum GPU instances"
+  type        = number
+  default     = 3
+}
+
+variable "gpu_desired_capacity" {
+  description = "Desired GPU instances"
+  type        = number
+  default     = 1
+}
+
+variable "gpu_on_demand_base" {
+  description = "On-demand GPU instances base"
+  type        = number
+  default     = 1
+}
+
+variable "gpu_on_demand_percentage" {
+  description = "On-demand percentage above base"
+  type        = number
+  default     = 50
+}
+
+variable "gpu_root_volume_size" {
+  description = "Root volume size in GB"
+  type        = number
+  default     = 200
+}
+
+variable "indic_tts_enable_alb" {
+  description = "Enable ALB for TTS service"
+  type        = bool
+  default     = true
+}

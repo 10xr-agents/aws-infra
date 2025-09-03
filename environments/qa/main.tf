@@ -332,3 +332,104 @@ resource "aws_security_group_rule" "redis_from_ecs_ingress" {
 
   depends_on = [module.ecs, module.redis]
 }
+# Add this to the end of environments/qa/main.tf
+
+################################################################################
+# Indic TTS GPU ECS Cluster Module
+################################################################################
+
+module "indic_tts_gpu" {
+  source = "../../modules/ecs-gpu"
+
+  cluster_name = "${var.cluster_name}-gpu-tts"
+  environment  = var.environment
+
+  vpc_id                 = module.vpc.vpc_id
+  private_subnet_ids     = module.vpc.private_subnets
+  alb_security_group_ids = var.create_alb ? [module.ecs.alb_security_group_id] : []
+
+  # P5 Instance Configuration
+  instance_type    = var.gpu_instance_type
+  instance_types   = var.gpu_instance_types
+  min_size         = var.gpu_min_size
+  max_size         = var.gpu_max_size
+  desired_capacity = var.gpu_desired_capacity
+
+  on_demand_base_capacity = var.gpu_on_demand_base
+  on_demand_percentage    = var.gpu_on_demand_percentage
+  root_volume_size        = var.gpu_root_volume_size
+
+  # ECS Configuration
+  enable_container_insights = var.enable_container_insights
+  log_retention_days       = var.log_retention_days
+
+  # GPU Services Configuration - merge Redis config into services
+  services = {
+    for name, config in var.gpu_ecs_services : name => merge(config, {
+      # Merge Redis configuration into environment variables
+      environment = merge(
+        config.environment,
+        {
+          REDIS_URL  = module.redis.redis_connection_string
+          REDIS_HOST = module.redis.redis_primary_endpoint
+          REDIS_PORT = tostring(module.redis.redis_port)
+        }
+      )
+      # Merge Redis password into secrets
+      secrets = concat(
+        config.secrets,
+        [
+          {
+            name       = "REDIS_PASSWORD"
+            value_from = module.redis.ssm_parameter_redis_auth_token
+          }
+        ]
+      )
+    })
+  }
+
+  tags = merge(
+    var.tags,
+    {
+      Environment = var.environment
+      Project     = "10xR-Agents"
+      Component   = "Indic-TTS-GPU"
+      Platform    = "AWS"
+      Terraform   = "true"
+    }
+  )
+
+  depends_on = [module.vpc, module.redis]
+}
+
+################################################################################
+# Security Group Rules for Indic TTS
+################################################################################
+
+# Allow ALB to connect to Indic TTS GPU instances
+resource "aws_security_group_rule" "indic_tts_from_alb" {
+  count = var.indic_tts_enable_alb ? 1 : 0
+
+  type                     = "ingress"
+  from_port                = 8000
+  to_port                  = 8000
+  protocol                 = "tcp"
+  source_security_group_id = module.ecs.alb_security_group_id
+  security_group_id        = module.indic_tts_gpu.ecs_instances_security_group_id
+  description              = "Allow ALB access to Indic TTS service"
+
+  depends_on = [module.ecs, module.indic_tts_gpu]
+}
+
+# Allow Indic TTS to connect to Redis
+resource "aws_security_group_rule" "indic_tts_to_redis" {
+  type                     = "ingress"
+  from_port                = module.redis.redis_port
+  to_port                  = module.redis.redis_port
+  protocol                 = "tcp"
+  source_security_group_id = module.indic_tts_gpu.ecs_instances_security_group_id
+  security_group_id        = module.redis.redis_security_group_id
+  description              = "Allow Indic TTS GPU instances to access Redis"
+
+  depends_on = [module.redis, module.indic_tts_gpu]
+}

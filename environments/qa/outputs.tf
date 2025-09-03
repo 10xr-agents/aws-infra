@@ -356,3 +356,34 @@ output "redis_parameters_check" {
   description = "Redis parameters that might affect connectivity"
   value = var.redis_parameters
 }
+
+# Add these outputs to environments/qa/outputs.tf
+
+################################################################################
+# Indic TTS GPU Cluster Outputs (Required Only)
+################################################################################
+
+output "indic_tts_cluster_name" {
+  description = "Name of the Indic TTS GPU ECS cluster"
+  value       = module.indic_tts_gpu.cluster_name
+}
+
+output "indic_tts_service_url" {
+  description = "Public URL for Indic TTS service"
+  value = var.create_cloudflare_dns_records ? 
+    "https://${module.cloudflare[0].custom_dns_record_urls.qa-tts.hostname}" : 
+    "https://${module.networking.nlb_dns_name}"
+}
+
+output "indic_tts_api_endpoints" {
+  description = "Key API endpoints for Indic TTS"
+  value = {
+    base_url = var.create_cloudflare_dns_records ? 
+      "https://${module.cloudflare[0].custom_dns_record_urls.qa-tts.hostname}" : 
+      "https://${module.networking.nlb_dns_name}"
+    health_check = "/health/liveness"
+    api_docs = "/docs"
+    synthesize = "/tts/synthesize"
+    websocket = "/ws/{client_id}"
+  }
+}
