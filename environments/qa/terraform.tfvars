@@ -347,8 +347,8 @@ gpu_ecs_services = {
     image         = "761018882607.dkr.ecr.us-east-1.amazonaws.com/10xr-agents/tts-streaming-service:main-21a86ac"
     image_tag     = "latest"
     port          = 8000
-    cpu           = 8192  # 8 vCPUs
-    memory        = 32768 # 32 GB RAM
+    cpu           = 16384 # 16 vCPUs (to match p5.4xlarge)
+    memory        = 65536 # 64 GB RAM (reasonable for p5.4xlarge with 256 GB available)
     gpu_count     = 1     # 1 GPU per task
     desired_count = 1     # Start with 1 for testing
 
@@ -454,7 +454,7 @@ gpu_ecs_services = {
       model_type   = "parler-tts"
     }
 
-    # System limits for GPU workload
+    # System limits for GPU workload - FIXED: No duplicate ulimits
     ulimits = [
       {
         name       = "memlock"
@@ -475,8 +475,8 @@ gpu_ecs_services = {
 ################################################################################
 
 # GPU Instance Configuration - FIXED: Use valid P5 instance types
-gpu_instance_type    = "p5.2xlarge"  # 8 vCPUs, 32 GB RAM, 1 H100 GPU
-gpu_instance_types   = ["p5.2xlarge"]  # Start with one type for stability
+gpu_instance_type    = "p5.4xlarge"  # 8 vCPUs, 32 GB RAM, 1 H100 GPU
+gpu_instance_types   = ["p5.4xlarge"]  # Start with one type for stability
 gpu_min_size         = 0
 gpu_max_size         = 2  # Reduced for cost control
 gpu_desired_capacity = 1
