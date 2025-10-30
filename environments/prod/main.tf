@@ -55,30 +55,30 @@ module "vpc" {
 }
 
 # MongoDB Atlas VPC Peering Module (optional - can be enabled when needed)
-module "mongodb_peering" {
-  count = var.enable_mongodb_atlas_peering ? 1 : 0
-
-  source = "../../modules/mongo-peering"
-
-  # Basic configuration
-  region        = var.region
-  environment   = var.environment
-  cluster_name  = var.cluster_name
-
-  # VPC configuration
-  vpc_name = local.vpc_name
-
-  # MongoDB Atlas configuration
-  mongodb_atlas_project_id   = var.mongodb_atlas_project_id
-  mongodb_atlas_container_id = var.mongodb_atlas_container_id
-  atlas_cidr_block          = var.mongodb_atlas_cidr_block
-
-  # Network configuration
-  private_subnet_cidrs      = var.private_subnets
-  whitelist_private_subnets = var.mongodb_whitelist_private_subnets
-
-  depends_on = [module.vpc]
-}
+# module "mongodb_peering" {
+#   count = var.enable_mongodb_atlas_peering ? 1 : 0
+#
+#   source = "../../modules/mongo-peering"
+#
+#   # Basic configuration
+#   region        = var.region
+#   environment   = var.environment
+#   cluster_name  = var.cluster_name
+#
+#   # VPC configuration
+#   vpc_name = local.vpc_name
+#
+#   # MongoDB Atlas configuration
+#   mongodb_atlas_project_id   = var.mongodb_atlas_project_id
+#   mongodb_atlas_container_id = var.mongodb_atlas_container_id
+#   atlas_cidr_block          = var.mongodb_atlas_cidr_block
+#
+#   # Network configuration
+#   private_subnet_cidrs      = var.private_subnets
+#   whitelist_private_subnets = var.mongodb_whitelist_private_subnets
+#
+#   depends_on = [module.vpc]
+# }
 
 # Redis Module
 module "redis" {
@@ -389,38 +389,38 @@ resource "aws_security_group_rule" "ecs_to_mongo_egress" {
   depends_on = [module.ecs, module.mongodb_peering]
 }
 
-resource "mongodbatlas_database_user" "aws_iam_user" {
-  for_each           = module.ecs.task_role_arns
-  project_id         = var.mongodb_atlas_project_id
-  auth_database_name = "$external"
-  username           = each.value
-  aws_iam_type       = "ROLE"
-
-  roles {
-    role_name     = "readWrite"
-    database_name = "admin"
-  }
-
-  roles {
-    role_name     = "dbAdmin"
-    database_name = "admin"
-  }
-
-  roles {
-    role_name     = "readWrite"
-    database_name = var.mongodb_database_name
-  }
-
-  roles {
-    role_name     = "dbAdmin"
-    database_name = var.mongodb_database_name
-  }
-
-  scopes {
-    name = var.mongodb_cluster_name
-    type = "CLUSTER"
-  }
-}
+# resource "mongodbatlas_database_user" "aws_iam_user" {
+#   for_each           = module.ecs.task_role_arns
+#   project_id         = var.mongodb_atlas_project_id
+#   auth_database_name = "$external"
+#   username           = each.value
+#   aws_iam_type       = "ROLE"
+#
+#   roles {
+#     role_name     = "readWrite"
+#     database_name = "admin"
+#   }
+#
+#   roles {
+#     role_name     = "dbAdmin"
+#     database_name = "admin"
+#   }
+#
+#   roles {
+#     role_name     = "readWrite"
+#     database_name = var.mongodb_database_name
+#   }
+#
+#   roles {
+#     role_name     = "dbAdmin"
+#     database_name = var.mongodb_database_name
+#   }
+#
+#   scopes {
+#     name = var.mongodb_cluster_name
+#     type = "CLUSTER"
+#   }
+# }
 
 resource "aws_iam_role_policy" "ecs_task_mongodb_policy" {
   for_each = module.ecs.task_role_names
