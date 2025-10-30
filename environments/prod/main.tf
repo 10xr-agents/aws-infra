@@ -169,7 +169,7 @@ module "ecs" {
     }
   )
 
-  depends_on = [module.redis, module.certs, module.mongodb_peering]
+  depends_on = [module.redis, module.certs]
 }
 
 # Networking Module
@@ -357,37 +357,37 @@ resource "aws_security_group_rule" "redis_from_ecs_ingress" {
   depends_on = [module.ecs, module.redis]
 }
 
-# Allow ECS to connect to MongoDB (INGRESS to MongoDB)
-# Allow a broader port range for MongoDB
-resource "aws_security_group_rule" "mongo_from_ecs_ingress_range" {
-  # Only create this rule if MongoDB peering is enabled
-  for_each = var.enable_mongodb_atlas_peering ? module.ecs.security_group_ids : {}
-
-  type                     = "ingress"
-  from_port                = 27016
-  to_port                  = 27018
-  protocol                 = "tcp"
-  source_security_group_id = each.value
-  security_group_id        = module.mongodb_peering[0].mongodb_security_group_id
-  description              = "Allow ECS services to access MongoDB Atlas (range)"
-
-  depends_on = [module.ecs, module.mongodb_peering]
-}
-
-# Also add egress rules on ECS security groups to allow outbound to MongoDB
-resource "aws_security_group_rule" "ecs_to_mongo_egress" {
-  for_each = var.enable_mongodb_atlas_peering ? module.ecs.security_group_ids : {}
-
-  type                     = "egress"
-  from_port                = 27017
-  to_port                  = 27017
-  protocol                 = "tcp"
-  source_security_group_id = module.mongodb_peering[0].mongodb_security_group_id
-  security_group_id        = each.value
-  description              = "Allow ECS services egress to MongoDB Atlas"
-
-  depends_on = [module.ecs, module.mongodb_peering]
-}
+# # Allow ECS to connect to MongoDB (INGRESS to MongoDB)
+# # Allow a broader port range for MongoDB
+# resource "aws_security_group_rule" "mongo_from_ecs_ingress_range" {
+#   # Only create this rule if MongoDB peering is enabled
+#   for_each = var.enable_mongodb_atlas_peering ? module.ecs.security_group_ids : {}
+#
+#   type                     = "ingress"
+#   from_port                = 27016
+#   to_port                  = 27018
+#   protocol                 = "tcp"
+#   source_security_group_id = each.value
+#   security_group_id        = module.mongodb_peering[0].mongodb_security_group_id
+#   description              = "Allow ECS services to access MongoDB Atlas (range)"
+#
+#   depends_on = [module.ecs, module.mongodb_peering]
+# }
+#
+# # Also add egress rules on ECS security groups to allow outbound to MongoDB
+# resource "aws_security_group_rule" "ecs_to_mongo_egress" {
+#   for_each = var.enable_mongodb_atlas_peering ? module.ecs.security_group_ids : {}
+#
+#   type                     = "egress"
+#   from_port                = 27017
+#   to_port                  = 27017
+#   protocol                 = "tcp"
+#   source_security_group_id = module.mongodb_peering[0].mongodb_security_group_id
+#   security_group_id        = each.value
+#   description              = "Allow ECS services egress to MongoDB Atlas"
+#
+#   depends_on = [module.ecs, module.mongodb_peering]
+# }
 
 # resource "mongodbatlas_database_user" "aws_iam_user" {
 #   for_each           = module.ecs.task_role_arns
