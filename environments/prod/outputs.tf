@@ -85,30 +85,30 @@ output "mongodb_cluster_name" {
 # MongoDB Atlas VPC Peering Outputs
 ################################################################################
 
-output "mongodb_vpc_peering_connection_id" {
-  description = "ID of the VPC peering connection between AWS VPC and MongoDB Atlas"
-  value       = var.enable_mongodb_atlas_peering ? module.mongodb_peering[0].vpc_peering_connection_id : null
-}
-
-output "mongodb_network_container_id" {
-  description = "MongoDB Atlas network container ID"
-  value       = var.enable_mongodb_atlas_peering ? module.mongodb_peering[0].network_container_id : null
-}
-
-output "mongodb_atlas_cidr_block" {
-  description = "CIDR block used by MongoDB Atlas"
-  value       = var.enable_mongodb_atlas_peering ? module.mongodb_peering[0].atlas_cidr_block : null
-}
-
-output "mongodb_vpc_peering_status" {
-  description = "Status of the VPC peering connection"
-  value       = var.enable_mongodb_atlas_peering ? module.mongodb_peering[0].vpc_peering_status : null
-}
-
-output "mongodb_security_group_id" {
-  description = "Security group ID for MongoDB Atlas access"
-  value       = var.enable_mongodb_atlas_peering ? module.mongodb_peering[0].mongodb_security_group_id : null
-}
+# output "mongodb_vpc_peering_connection_id" {
+#   description = "ID of the VPC peering connection between AWS VPC and MongoDB Atlas"
+#   value       = var.enable_mongodb_atlas_peering ? module.mongodb_peering[0].vpc_peering_connection_id : null
+# }
+#
+# output "mongodb_network_container_id" {
+#   description = "MongoDB Atlas network container ID"
+#   value       = var.enable_mongodb_atlas_peering ? module.mongodb_peering[0].network_container_id : null
+# }
+#
+# output "mongodb_atlas_cidr_block" {
+#   description = "CIDR block used by MongoDB Atlas"
+#   value       = var.enable_mongodb_atlas_peering ? module.mongodb_peering[0].atlas_cidr_block : null
+# }
+#
+# output "mongodb_vpc_peering_status" {
+#   description = "Status of the VPC peering connection"
+#   value       = var.enable_mongodb_atlas_peering ? module.mongodb_peering[0].vpc_peering_status : null
+# }
+#
+# output "mongodb_security_group_id" {
+#   description = "Security group ID for MongoDB Atlas access"
+#   value       = var.enable_mongodb_atlas_peering ? module.mongodb_peering[0].mongodb_security_group_id : null
+# }
 
 # ECS Cluster outputs
 output "ecs_cluster_id" {
