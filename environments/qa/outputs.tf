@@ -93,39 +93,6 @@ output "ecs_service_urls" {
   }
 }
 
-# Redis outputs
-output "redis_port" {
-  description = "Redis port"
-  value       = module.redis.redis_port
-}
-
-output "redis_connection_string" {
-  description = "Redis connection string"
-  value       = module.redis.redis_connection_string
-  sensitive   = true
-}
-
-output "redis_auth_token" {
-  description = "Redis AUTH token"
-  value       = module.redis.redis_auth_token
-  sensitive   = true
-}
-
-output "redis_security_group_id" {
-  description = "ID of the Redis security group"
-  value       = module.redis.redis_security_group_id
-}
-
-output "redis_ssm_parameters" {
-  description = "SSM parameter names for Redis connection details"
-  value = {
-    endpoint          = module.redis.ssm_parameter_redis_endpoint
-    port             = module.redis.ssm_parameter_redis_port
-    auth_token       = module.redis.ssm_parameter_redis_auth_token
-    connection_string = module.redis.ssm_parameter_redis_connection_string
-  }
-}
-
 ################################################################################
 # Networking Module Outputs
 ################################################################################
@@ -214,12 +181,6 @@ output "network_architecture" {
       internal = var.nlb_internal
     }
 
-    # Global Accelerator (if enabled)
-    global_accelerator = var.create_global_accelerator ? {
-      dns_name = module.global_accelerator[0].accelerator_dns_name
-      static_ips = module.global_accelerator[0].static_ip_addresses_flat
-    } : null
-
     # Traffic Flow
     traffic_flow = {
       external_requests = var.create_global_accelerator ? "Internet -> Global Accelerator -> NLB -> ALB -> ECS Services" : "Internet -> NLB -> ALB -> ECS Services"
@@ -233,71 +194,6 @@ output "network_architecture" {
       ssl_termination_point = var.https_listener_protocol == "TLS" ? "NLB" : (local.acm_certificate_arn != "" ? "ALB" : "None")
     }
   }
-}
-
-################################################################################
-# Global Accelerator Outputs
-################################################################################
-
-output "global_accelerator_dns_name" {
-  description = "DNS name of the Global Accelerator"
-  value       = var.create_global_accelerator ? module.global_accelerator[0].accelerator_dns_name : null
-}
-
-output "global_accelerator_static_ips" {
-  description = "Static IP addresses of the Global Accelerator"
-  value       = var.create_global_accelerator ? module.global_accelerator[0].static_ip_addresses_flat : []
-}
-
-output "global_accelerator_id" {
-  description = "ID of the Global Accelerator"
-  value       = var.create_global_accelerator ? module.global_accelerator[0].accelerator_id : null
-}
-
-output "global_accelerator_configuration" {
-  description = "Global Accelerator configuration summary"
-  value = var.create_global_accelerator ? module.global_accelerator[0].accelerator_configuration : {
-    dns_name                = null
-    ip_address_type         = null
-    enabled                 = false
-    static_ips              = []
-    flow_logs_enabled       = false
-    flow_logs_bucket        = null
-    listener_protocol       = null
-    listener_client_affinity = null
-    endpoint_count          = 0
-    health_check_protocol   = null
-    health_check_path       = null
-  }
-}
-
-output "global_accelerator_connection_info" {
-  description = "Global Accelerator connection information"
-  value = var.create_global_accelerator ? module.global_accelerator[0].accelerator_connection_info : null
-}
-
-output "global_accelerator_flow_logs_bucket" {
-  description = "S3 bucket for Global Accelerator flow logs"
-  value       = var.create_global_accelerator ? module.global_accelerator[0].flow_logs_bucket_id : null
-}
-
-################################################################################
-# Cloudflare Outputs
-################################################################################
-
-output "cloudflare_dns_records" {
-  description = "Summary of Cloudflare DNS records created"
-  value = var.create_cloudflare_dns_records ? module.cloudflare[0].dns_records_summary : null
-}
-
-output "cloudflare_urls" {
-  description = "Application URLs via Cloudflare"
-  value = var.create_cloudflare_dns_records ? module.cloudflare[0].custom_dns_record_urls : {}
-}
-
-output "cloudflare_configuration" {
-  description = "Cloudflare configuration summary"
-  value       = var.create_cloudflare_dns_records ? module.cloudflare[0].cloudflare_configuration : {}
 }
 
 ################################################################################
@@ -316,72 +212,10 @@ output "application_urls" {
     nlb_dns_name = module.networking.nlb_dns_name
     nlb_http_url = var.create_http_listener ? "http://${module.networking.nlb_dns_name}" : null
     nlb_https_url = local.acm_certificate_arn != "" ? "https://${module.networking.nlb_dns_name}" : null
-
-    # Global Accelerator access (if enabled)
-    global_accelerator_dns_name = var.create_global_accelerator ? module.global_accelerator[0].accelerator_dns_name : null
-    global_accelerator_http_url = var.create_global_accelerator ? "http://${module.global_accelerator[0].accelerator_dns_name}" : null
-    global_accelerator_https_url = var.create_global_accelerator ? "https://${module.global_accelerator[0].accelerator_dns_name}" : null
-    global_accelerator_static_ips = var.create_global_accelerator ? module.global_accelerator[0].static_ip_addresses_flat : []
-
-    # Primary URLs (recommended for users)
-    primary_app_url = var.create_cloudflare_dns_records ? module.cloudflare[0].custom_dns_record_urls.qa-main.https_url : (
-      var.create_global_accelerator ? "https://${module.global_accelerator[0].accelerator_dns_name}" : (
-      local.acm_certificate_arn != "" ? "https://${module.networking.nlb_dns_name}" : "http://${module.ecs.alb_dns_name}"
-    )
-    )
-    primary_api_url = var.create_cloudflare_dns_records ? module.cloudflare[0].custom_dns_record_urls.qa-service.https_url : (
-      var.create_global_accelerator ? "https://${module.global_accelerator[0].accelerator_dns_name}" : (
-      local.acm_certificate_arn != "" ? "https://${module.networking.nlb_dns_name}" : "http://${module.ecs.alb_dns_name}"
-    )
-    )
-  }
-}
-
-# 4. OUTPUTS for debugging
-output "debug_redis_info" {
-  description = "Complete Redis debug information"
-  value = {
-    redis_endpoint = module.redis.redis_primary_endpoint
-    redis_port = module.redis.redis_port
-    redis_security_group_id = module.redis.redis_security_group_id
-    ecs_security_group_ids = module.ecs.security_group_ids
-    vpc_cidr = module.vpc.vpc_cidr_block
-    auth_enabled = var.redis_auth_token_enabled
-    encryption_in_transit = var.redis_transit_encryption_enabled
-    redis_parameter_group = module.redis.redis_parameter_group_name
   }
 }
 
 output "redis_parameters_check" {
   description = "Redis parameters that might affect connectivity"
   value = var.redis_parameters
-}
-
-# Add these outputs to environments/qa/outputs.tf
-
-# Add these outputs to environments/qa/outputs.tf
-
-################################################################################
-# Indic TTS GPU Cluster Outputs (Required Only)
-################################################################################
-
-output "indic_tts_cluster_name" {
-  description = "Name of the Indic TTS GPU ECS cluster"
-  value       = module.indic_tts_gpu.cluster_name
-}
-
-output "indic_tts_service_url" {
-  description = "Public URL for Indic TTS service"
-  value = var.create_cloudflare_dns_records ? "https://${module.cloudflare[0].custom_dns_record_urls.qa-tts.hostname}" : "https://${module.networking.nlb_dns_name}"
-}
-
-output "indic_tts_api_endpoints" {
-  description = "Key API endpoints for Indic TTS"
-  value = {
-    base_url = var.create_cloudflare_dns_records ? "https://${module.cloudflare[0].custom_dns_record_urls.qa-tts.hostname}" : "https://${module.networking.nlb_dns_name}"
-    health_check = "/health/liveness"
-    api_docs = "/docs"
-    synthesize = "/tts/synthesize"
-    websocket = "/ws/{client_id}"
-  }
 }
