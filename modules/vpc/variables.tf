@@ -100,6 +100,12 @@ variable "flow_log_max_aggregation_interval" {
   default     = 600
 }
 
+variable "flow_log_cloudwatch_log_retention_days" {
+  description = "Number of days to retain VPC Flow Logs in CloudWatch. HIPAA requires 6 years (2190 days) for audit logs."
+  type        = number
+  default     = 2190  # 6 years - HIPAA compliance requirement
+}
+
 variable "public_subnet_tags" {
   description = "Additional tags for public subnets"
   type        = map(string)

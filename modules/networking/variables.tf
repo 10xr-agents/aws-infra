@@ -42,9 +42,9 @@ variable "nlb_internal" {
 }
 
 variable "nlb_enable_deletion_protection" {
-  description = "Whether to enable deletion protection for the NLB"
+  description = "Whether to enable deletion protection for the NLB. HIPAA best practice: enable in production."
   type        = bool
-  default     = false
+  default     = true
 }
 
 variable "nlb_enable_cross_zone_load_balancing" {
@@ -58,9 +58,15 @@ variable "nlb_enable_cross_zone_load_balancing" {
 ################################################################################
 
 variable "nlb_access_logs_enabled" {
-  description = "Whether to enable NLB access logs"
+  description = "Whether to enable NLB access logs. HIPAA requires access logging for audit trails."
   type        = bool
-  default     = false
+  default     = true  # HIPAA compliance - access logging required
+}
+
+variable "nlb_logs_retention_days" {
+  description = "Number of days to retain NLB logs in S3. HIPAA requires 6 years (2190 days) for audit logs."
+  type        = number
+  default     = 2190  # 6 years - HIPAA compliance requirement
 }
 
 ################################################################################
@@ -68,9 +74,9 @@ variable "nlb_access_logs_enabled" {
 ################################################################################
 
 variable "nlb_connection_logs_enabled" {
-  description = "Whether to enable NLB connection logs"
+  description = "Whether to enable NLB connection logs. HIPAA requires connection logging for audit trails."
   type        = bool
-  default     = false
+  default     = true  # HIPAA compliance - connection logging required
 }
 
 ################################################################################
@@ -305,9 +311,9 @@ variable "route53_evaluate_target_health" {
 ################################################################################
 
 variable "create_cloudwatch_alarms" {
-  description = "Whether to create CloudWatch alarms for NLB"
+  description = "Whether to create CloudWatch alarms for NLB. HIPAA requires monitoring for availability."
   type        = bool
-  default     = false
+  default     = true  # HIPAA compliance - monitoring required
 }
 
 variable "alarm_actions" {

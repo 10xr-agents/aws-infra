@@ -16,7 +16,7 @@ resource "aws_s3_bucket" "nlb_access_logs" {
   count = var.nlb_access_logs_enabled ? 1 : 0
 
   bucket        = "${local.name_prefix}-nlb-access-logs"
-  force_destroy = true
+  force_destroy = false  # HIPAA compliance - prevent accidental deletion of audit logs
 
   tags = merge(local.common_tags, {
     Name    = "${local.name_prefix}-nlb-access-logs"
@@ -29,7 +29,7 @@ resource "aws_s3_bucket" "nlb_connection_logs" {
   count = var.nlb_connection_logs_enabled ? 1 : 0
 
   bucket        = "${local.name_prefix}-nlb-connection-logs"
-  force_destroy = true
+  force_destroy = false  # HIPAA compliance - prevent accidental deletion of audit logs
 
   tags = merge(local.common_tags, {
     Name    = "${local.name_prefix}-nlb-connection-logs"
@@ -222,6 +222,7 @@ resource "aws_s3_bucket_policy" "nlb_connection_logs" {
 }
 
 # S3 Bucket Lifecycle Configuration for Access Logs
+# HIPAA requires 6 years (2190 days) retention for audit logs
 resource "aws_s3_bucket_lifecycle_configuration" "nlb_access_logs" {
   count = var.nlb_access_logs_enabled ? 1 : 0
 
@@ -235,12 +236,25 @@ resource "aws_s3_bucket_lifecycle_configuration" "nlb_access_logs" {
       prefix = ""
     }
 
+    # HIPAA: Retain logs for 6 years
     expiration {
-      days = 30
+      days = var.nlb_logs_retention_days
     }
 
     noncurrent_version_expiration {
-      noncurrent_days = 30
+      noncurrent_days = var.nlb_logs_retention_days
+    }
+
+    # Transition to cheaper storage after 90 days
+    transition {
+      days          = 90
+      storage_class = "STANDARD_IA"
+    }
+
+    # Transition to Glacier after 365 days
+    transition {
+      days          = 365
+      storage_class = "GLACIER"
     }
 
     abort_incomplete_multipart_upload {
@@ -252,6 +266,7 @@ resource "aws_s3_bucket_lifecycle_configuration" "nlb_access_logs" {
 }
 
 # S3 Bucket Lifecycle Configuration for Connection Logs
+# HIPAA requires 6 years (2190 days) retention for audit logs
 resource "aws_s3_bucket_lifecycle_configuration" "nlb_connection_logs" {
   count = var.nlb_connection_logs_enabled ? 1 : 0
 
@@ -265,12 +280,25 @@ resource "aws_s3_bucket_lifecycle_configuration" "nlb_connection_logs" {
       prefix = ""
     }
 
+    # HIPAA: Retain logs for 6 years
     expiration {
-      days = 30
+      days = var.nlb_logs_retention_days
     }
 
     noncurrent_version_expiration {
-      noncurrent_days = 30
+      noncurrent_days = var.nlb_logs_retention_days
+    }
+
+    # Transition to cheaper storage after 90 days
+    transition {
+      days          = 90
+      storage_class = "STANDARD_IA"
+    }
+
+    # Transition to Glacier after 365 days
+    transition {
+      days          = 365
+      storage_class = "GLACIER"
     }
 
     abort_incomplete_multipart_upload {

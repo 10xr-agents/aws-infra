@@ -110,6 +110,38 @@ module "vpc" {
 #   depends_on = [module.vpc]
 # }
 
+# HIPAA-Compliant S3 Bucket for Patient Data
+module "s3_patients" {
+  source = "../../modules/s3-hipaa"
+
+  cluster_name = var.cluster_name
+  environment  = var.environment
+  bucket_name  = "patients"
+
+  # KMS encryption for HIPAA compliance
+  create_kms_key          = true
+  kms_key_deletion_window = 30
+
+  # ECS task roles that need access (will be populated after ECS module)
+  ecs_task_role_arns = [
+    "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"  # Temporary - will update with actual task roles
+  ]
+
+  # HIPAA retention (6 years)
+  retention_days = 2190
+
+  # Enable access logging for audit trail
+  enable_access_logging = true
+
+  tags = merge(var.tags, {
+    "Component" = "S3"
+    "HIPAA"     = "true"
+    "DataType"  = "PHI"
+  })
+
+  depends_on = [module.vpc]
+}
+
 # DocumentDB Module - HIPAA Compliant Database
 module "documentdb" {
   source = "../../modules/documentdb"

@@ -26,10 +26,12 @@ module "vpc" {
   enable_dns_support   = true
 
   # VPC Flow Logs (Cloudwatch log group and IAM role will be created)
-  enable_flow_log                      = var.enable_flow_log
-  create_flow_log_cloudwatch_log_group = var.create_flow_log_cloudwatch_log_group
-  create_flow_log_cloudwatch_iam_role  = var.create_flow_log_cloudwatch_iam_role
-  flow_log_max_aggregation_interval    = var.flow_log_max_aggregation_interval
+  # HIPAA requires 6 years (2190 days) retention for audit logs
+  enable_flow_log                                 = var.enable_flow_log
+  create_flow_log_cloudwatch_log_group            = var.create_flow_log_cloudwatch_log_group
+  create_flow_log_cloudwatch_iam_role             = var.create_flow_log_cloudwatch_iam_role
+  flow_log_max_aggregation_interval               = var.flow_log_max_aggregation_interval
+  flow_log_cloudwatch_log_group_retention_in_days = var.flow_log_cloudwatch_log_retention_days
 
   # Tags for subnet discovery by load balancers and cluster
   public_subnet_tags = {
@@ -99,38 +101,44 @@ module "vpc_endpoints" {
   }
   security_group_tags = var.tags
 
+  # Essential VPC Endpoints for HIPAA-compliant ECS/Fargate workloads
+  # Cost-optimized: ~$176/month (8 endpoints × 3 AZs) vs ~$307/month (15 endpoints)
+  #
+  # Removed (will use NAT Gateway instead):
+  # - ecs-telemetry: Optional telemetry, not critical
+  # - autoscaling: Only needed for EC2 auto-scaling groups
+  # - ec2: Only needed for EC2 instance API calls
+  # - ec2messages: Only needed for SSM Session Manager to EC2
+  # - elasticloadbalancing: ALB/NLB API calls are infrequent
+  # - ssmmessages: Only needed for SSM Session Manager
+
   endpoints = merge({
+    # Gateway Endpoint (FREE) - Required for ECR image layers
     s3 = {
       service             = "s3"
       service_type        = "Gateway"
       private_dns_enabled = true
-      route_table_ids = flatten([module.vpc.private_route_table_ids, module.vpc.public_route_table_ids])
-      tags = { Name = "${module.vpc.name}-s3-vpc-endpoint" }
+      route_table_ids     = flatten([module.vpc.private_route_table_ids, module.vpc.public_route_table_ids])
+      tags                = { Name = "${module.vpc.name}-s3-vpc-endpoint" }
     }
   }, {
+    # Interface Endpoints (Essential for ECS/Fargate + HIPAA)
     for service in toset([
-      "ecr.api",
-      "ecr.dkr",
-      "ecs",
-      "ecs-agent",
-      "ecs-telemetry",
-      "sts",
-      "autoscaling",
-      "ec2",
-      "ec2messages",
-      "elasticloadbalancing",
-      "kms",
-      "logs",
-      "ssm",
-      "ssmmessages",
-      "secretsmanager"
+      "ecr.api",        # Required: ECR API for image pulls
+      "ecr.dkr",        # Required: Docker registry for image pulls
+      "ecs",            # Required: ECS service API
+      "ecs-agent",      # Required: ECS agent communication
+      "sts",            # Required: IAM role assumption for tasks
+      "kms",            # Required: Encryption/decryption (HIPAA)
+      "logs",           # Required: CloudWatch Logs for containers
+      "secretsmanager"  # Required: DocumentDB credentials (HIPAA)
     ]) :
     replace(service, ".", "_") => {
       service             = service
       service_type        = "Interface"
       private_dns_enabled = true
       subnet_ids          = module.vpc.private_subnets
-      tags = merge(var.tags, { Name = "${module.vpc.name}-${service}" })
+      tags                = merge(var.tags, { Name = "${module.vpc.name}-${service}" })
     }
   })
 

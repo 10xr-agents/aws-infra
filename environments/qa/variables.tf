@@ -666,9 +666,9 @@ variable "documentdb_create_kms_key" {
 }
 
 variable "documentdb_backup_retention_period" {
-  description = "Number of days to retain DocumentDB backups"
+  description = "Number of days to retain DocumentDB backups. HIPAA recommends at least 30 days."
   type        = number
-  default     = 7
+  default     = 35  # 5 weeks - HIPAA best practice
 }
 
 variable "documentdb_preferred_backup_window" {
@@ -714,9 +714,9 @@ variable "documentdb_enabled_cloudwatch_logs_exports" {
 }
 
 variable "documentdb_cloudwatch_log_retention_days" {
-  description = "Number of days to retain DocumentDB CloudWatch logs"
+  description = "Number of days to retain DocumentDB CloudWatch logs. HIPAA requires 6 years (2190 days)."
   type        = number
-  default     = 90
+  default     = 2190  # 6 years - HIPAA compliance requirement
 }
 
 variable "documentdb_profiler_enabled" {
@@ -753,4 +753,77 @@ variable "tags" {
   description = "Additional tags for all resources"
   type        = map(string)
   default     = {}
+}
+
+################################################################################
+# Service Secrets - Home Health
+# These should be set in Terraform Cloud workspace variables (sensitive)
+################################################################################
+
+variable "home_health_nextauth_secret" {
+  description = "NextAuth secret for Home Health service"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "home_health_ontune_secret" {
+  description = "OnTune secret for Home Health service"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "home_health_admin_api_key" {
+  description = "Admin API key for Home Health service"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "home_health_gemini_api_key" {
+  description = "Gemini API key for Home Health service"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "home_health_openai_api_key" {
+  description = "OpenAI API key for Home Health service"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+################################################################################
+# Service Secrets - Hospice
+# These should be set in Terraform Cloud workspace variables (sensitive)
+################################################################################
+
+variable "hospice_nextauth_secret" {
+  description = "NextAuth secret for Hospice service"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "hospice_ontune_secret" {
+  description = "OnTune secret for Hospice service"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "hospice_admin_api_key" {
+  description = "Admin API key for Hospice service"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "hospice_gemini_api_key" {
+  description = "Gemini API key for Hospice service"
+  type        = string
+  sensitive   = true
+  default     = ""
 }

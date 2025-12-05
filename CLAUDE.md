@@ -119,10 +119,10 @@ terraform state list
 │  │  │                                   ACM Certificate (*.10xr.co)                                   │  │  │
 │  │  │  ┌─────────────────────────────────────────────────────────────────────────────────────────┐   │  │  │
 │  │  │  │                              LISTENER RULES (Host Headers)                              │   │  │  │
-│  │  │  │  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐       │   │  │  │
-│  │  │  │  │agents.*.co  │ │proxy.*.co   │ │analytics.*  │ │api.*.co     │ │*.10xr.co    │       │   │  │  │
-│  │  │  │  │  → voice    │ │  → livekit  │ │  → analytics│ │  → agentic  │ │  → ui-console│       │   │  │  │
-│  │  │  │  └─────────────┘ └─────────────┘ └─────────────┘ └─────────────┘ └─────────────┘       │   │  │  │
+│  │  │  │           ┌───────────────────────┐       ┌───────────────────────┐                    │   │  │  │
+│  │  │  │           │ homehealth.qa.10xr.co │       │  hospice.qa.10xr.co   │                    │   │  │  │
+│  │  │  │           │    → home-health      │       │     → hospice         │                    │   │  │  │
+│  │  │  │           └───────────────────────┘       └───────────────────────┘                    │   │  │  │
 │  │  │  └─────────────────────────────────────────────────────────────────────────────────────────┘   │  │  │
 │  │  └─────────────────────────────────────────────────────────────────────────────────────────────────┘  │  │
 │  │                                                     │                                                  │  │
@@ -130,23 +130,23 @@ terraform state list
 │  │  │                              ECS FARGATE CLUSTER                                                 │  │  │
 │  │  │                        (Serverless containers, awsvpc networking)                               │  │  │
 │  │  │                                                                                                  │  │  │
-│  │  │   ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │  │  │
-│  │  │   │ voice-agent  │  │livekit-proxy │  │agent-analyt. │  │agentic-svc   │  │ ui-console   │      │  │  │
-│  │  │   │  Port: 9600  │  │  Port: 9000  │  │  Port: 9800  │  │  Port: 8080  │  │  Port: 3000  │      │  │  │
-│  │  │   │CPU:4096 M:8GB│  │CPU:1024 M:2GB│  │CPU:2048 M:4GB│  │CPU:1024 M:2GB│  │CPU:512 M:1GB │      │  │  │
-│  │  │   └──────────────┘  └──────────────┘  └──────────────┘  └──────────────┘  └──────────────┘      │  │  │
+│  │  │   ┌────────────────────────────────┐    ┌────────────────────────────────┐                      │  │  │
+│  │  │   │        home-health             │    │          hospice               │                      │  │  │
+│  │  │   │     (Next.js Application)      │    │     (Next.js Application)      │                      │  │  │
+│  │  │   │        Port: 3000              │    │        Port: 3000              │                      │  │  │
+│  │  │   │    CPU: 1024  Memory: 2GB      │    │    CPU: 1024  Memory: 2GB      │                      │  │  │
+│  │  │   │    homehealth.qa.10xr.co       │    │    hospice.qa.10xr.co          │                      │  │  │
+│  │  │   └────────────────────────────────┘    └────────────────────────────────┘                      │  │  │
 │  │  │                                                                                                  │  │  │
-│  │  │   ┌──────────────┐                                                                               │  │  │
-│  │  │   │automation-mcp│   Service Discovery: {service}.{cluster}-{env}.local                         │  │  │
-│  │  │   │  Port: 8090  │   Auto-scaling: CPU/Memory based (min:1, max:8-10)                           │  │  │
-│  │  │   │CPU:1024 M:2GB│   Capacity: FARGATE + FARGATE_SPOT                                           │  │  │
-│  │  │   └──────────────┘                                                                               │  │  │
+│  │  │   Service Discovery: {service}.{cluster}-{env}.local                                            │  │  │
+│  │  │   Auto-scaling: CPU/Memory based (min:2, max:6)                                                 │  │  │
+│  │  │   Capacity: FARGATE (base) + FARGATE_SPOT (burst)                                               │  │  │
 │  │  └─────────────────────────────────────────────────────────────────────────────────────────────────┘  │  │
 │  │                                                     │                                                  │  │
 │  │  ┌─────────────────────────────────────────────────────────────────────────────────────────────────┐  │  │
-│  │  │                              ELASTICACHE REDIS (Optional)                                        │  │  │
-│  │  │               (Replication Group, Multi-AZ, Auth Token, Encryption)                             │  │  │
-│  │  │                     Transit Encryption: TLS | At-Rest Encryption: AES-256                       │  │  │
+│  │  │                         S3 BUCKET (HIPAA-Compliant Patient Data)                                │  │  │
+│  │  │               KMS Encryption | Versioning | Access Logging | 6-Year Retention                   │  │  │
+│  │  │                     Bucket: ten-xr-app-{env}-patients                                           │  │  │
 │  │  └─────────────────────────────────────────────────────────────────────────────────────────────────┘  │  │
 │  └───────────────────────────────────────────────────────────────────────────────────────────────────────┘  │
 │                                                                                                              │
@@ -163,9 +163,9 @@ terraform state list
 │  └───────────────────────────────────────────────────────────────────────────────────────────────────────┘  │
 │                                                                                                              │
 │  ┌───────────────────────────────────────────────────────────────────────────────────────────────────────┐  │
-│  │                                       VPC ENDPOINTS                                                    │  │
-│  │   S3 (Gateway) | ECR | ECS | SSM | Secrets Manager | CloudWatch Logs | KMS | STS                      │  │
-│  │                         (Private connectivity - no internet traversal)                                 │  │
+│  │                                  VPC ENDPOINTS (Cost-Optimized)                                        │  │
+│  │   S3 (Gateway/FREE) | ECR (api+dkr) | ECS (ecs+agent) | STS | KMS | Logs | Secrets Manager            │  │
+│  │                   (Private connectivity - no internet traversal, ~$176/mo)                             │  │
 │  └───────────────────────────────────────────────────────────────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
                                                      │
@@ -224,7 +224,50 @@ terraform state list
 
 ## HIPAA Compliance Features
 
-This infrastructure implements AWS HIPAA-eligible services and security best practices:
+This infrastructure implements AWS HIPAA-eligible services and security best practices.
+
+### Log Retention Requirements (6 Years / 2190 Days)
+
+HIPAA requires audit log retention for **6 years (2190 days)**. The following components are configured:
+
+| Component | Location | Retention | Configuration |
+|-----------|----------|-----------|---------------|
+| **ECS CloudWatch Logs** | CloudWatch Log Groups | 2190 days | `modules/ecs/variables.tf` → `log_retention_days` |
+| **DocumentDB Audit Logs** | CloudWatch Log Groups | 2190 days | `modules/documentdb/variables.tf` → `cloudwatch_log_retention_days` |
+| **Redis CloudWatch Logs** | CloudWatch Log Groups | 2190 days | `modules/redis/variables.tf` → `cloudwatch_log_retention_days` |
+| **VPC Flow Logs** | CloudWatch Log Groups | 2190 days | `modules/vpc/variables.tf` → `flow_log_cloudwatch_log_retention_days` |
+| **NLB Access Logs** | S3 Bucket | 2190 days | `modules/networking/s3.tf` → Lifecycle policy |
+| **NLB Connection Logs** | S3 Bucket | 2190 days | `modules/networking/s3.tf` → Lifecycle policy |
+| **ALB Access Logs** | S3 Bucket | 2190 days | Environment-level S3 bucket |
+
+### S3 Log Lifecycle (Cost Optimization)
+
+S3 buckets for logs use tiered storage to reduce long-term costs:
+
+```
+Day 1-90     → STANDARD (frequent access)
+Day 91-365   → STANDARD_IA (infrequent access, ~40% savings)
+Day 366-2190 → GLACIER (archive, ~80% savings)
+Day 2191+    → Deleted (after 6-year retention)
+```
+
+### Access Logging (Enabled by Default)
+
+| Resource | Logging Enabled | Configuration |
+|----------|-----------------|---------------|
+| **ALB Access Logs** | ✅ Yes (default: true) | `modules/ecs/variables.tf` → `alb_access_logs_enabled` |
+| **ALB Connection Logs** | ✅ Yes (default: true) | `modules/ecs/variables.tf` → `alb_connection_logs_enabled` |
+| **NLB Access Logs** | ✅ Yes (default: true) | `modules/networking/variables.tf` → `nlb_access_logs_enabled` |
+| **NLB Connection Logs** | ✅ Yes (default: true) | `modules/networking/variables.tf` → `nlb_connection_logs_enabled` |
+
+### Deletion Protection
+
+| Resource | Protection Enabled | Configuration |
+|----------|-------------------|---------------|
+| **ALB** | ✅ Yes (default: true) | `modules/ecs/variables.tf` → `alb_enable_deletion_protection` |
+| **NLB** | ✅ Yes (default: true) | `modules/networking/variables.tf` → `nlb_enable_deletion_protection` |
+| **DocumentDB** | ✅ Yes (default: true) | `modules/documentdb/variables.tf` → `deletion_protection` |
+| **S3 Log Buckets** | ✅ Yes (force_destroy: false) | `modules/networking/s3.tf` → Prevents accidental deletion |
 
 ### Data Protection
 | Feature | Implementation |
@@ -233,7 +276,7 @@ This infrastructure implements AWS HIPAA-eligible services and security best pra
 | **Encryption in Transit** | TLS 1.2+ (DocumentDB, ALB, NLB, Redis, VPC endpoints) |
 | **Secrets Management** | AWS Secrets Manager & SSM Parameter Store (SecureString) |
 | **Key Management** | AWS KMS for encryption keys (auto-rotation enabled) |
-| **Database Audit Logs** | DocumentDB audit logs to CloudWatch |
+| **Database Audit Logs** | DocumentDB audit logs to CloudWatch (2190-day retention) |
 
 ### Network Security
 | Feature | Implementation |
@@ -244,6 +287,7 @@ This infrastructure implements AWS HIPAA-eligible services and security best pra
 | **No Public IPs** | ECS tasks have no public IP addresses |
 | **NAT Gateways** | One per AZ for HA outbound connectivity |
 | **US-Only Deployment** | Single region (us-east-1) for data residency |
+| **VPC Flow Logs** | All traffic logged with 6-year retention |
 
 ### Access Control
 | Feature | Implementation |
@@ -255,11 +299,20 @@ This infrastructure implements AWS HIPAA-eligible services and security best pra
 ### Audit & Monitoring
 | Feature | Implementation |
 |---------|----------------|
-| **VPC Flow Logs** | Network traffic logging to CloudWatch |
-| **CloudWatch Logs** | Centralized application logging |
-| **ALB/NLB Access Logs** | Load balancer request logging to S3 |
+| **VPC Flow Logs** | Network traffic logging to CloudWatch (2190-day retention) |
+| **CloudWatch Logs** | Centralized application logging (2190-day retention) |
+| **ALB/NLB Access Logs** | Load balancer request logging to S3 (2190-day retention) |
 | **Container Insights** | ECS performance monitoring |
 | **Route 53 Query Logs** | DNS query logging (optional) |
+| **DocumentDB Profiler** | Slow query logging (threshold: 100ms) |
+
+### Backup & Recovery
+| Feature | Implementation |
+|---------|----------------|
+| **DocumentDB Backups** | 35-day retention (daily automated backups) |
+| **DocumentDB Window** | 03:00-05:00 UTC |
+| **S3 Versioning** | Enabled on all log buckets |
+| **Final Snapshots** | Required before cluster deletion |
 
 ### High Availability
 | Feature | Implementation |
@@ -269,6 +322,32 @@ This infrastructure implements AWS HIPAA-eligible services and security best pra
 | **Redis Multi-AZ** | Automatic failover enabled |
 | **Auto-scaling** | CPU/Memory based scaling |
 | **Health Checks** | Container + ALB + Route 53 health checks |
+
+### CloudWatch Alarms (Enabled by Default)
+
+| Resource | Alarms Enabled | Configuration |
+|----------|----------------|---------------|
+| **NLB Health** | ✅ Yes (default: true) | `modules/networking/variables.tf` → `create_cloudwatch_alarms` |
+| **DocumentDB** | ✅ Yes (default: true) | `modules/documentdb/variables.tf` → `create_cloudwatch_alarms` |
+
+### HIPAA Compliance Checklist
+
+- [x] Encryption at rest (KMS, AES-256)
+- [x] Encryption in transit (TLS 1.2+)
+- [x] 6-year audit log retention (2190 days) - all log types
+- [x] VPC Flow Logs enabled with 6-year retention
+- [x] Database audit logging enabled (DocumentDB)
+- [x] Load balancer access logging enabled by default (ALB + NLB)
+- [x] Load balancer connection logging enabled by default
+- [x] Deletion protection on critical resources (ALB, NLB, DocumentDB, S3)
+- [x] S3 log buckets protected (force_destroy: false)
+- [x] No public IPs on compute resources
+- [x] Secrets in AWS Secrets Manager
+- [x] IAM least-privilege access
+- [x] Multi-AZ for high availability
+- [x] Automated backups (35-day retention)
+- [x] US-only data residency
+- [x] CloudWatch alarms for critical metrics
 
 ---
 
@@ -317,6 +396,11 @@ aws-infra/
     │   ├── main.tf                  # DocumentDB cluster, instances, security
     │   ├── variables.tf             # Configuration options
     │   └── outputs.tf               # Connection info, secrets ARNs
+    │
+    ├── s3-hipaa/                    # HIPAA-compliant S3 buckets for PHI
+    │   ├── main.tf                  # S3 bucket, KMS encryption, policies
+    │   ├── variables.tf             # Configuration options
+    │   └── outputs.tf               # Bucket ARNs, IAM policy ARNs
     │
     ├── certs/                       # SSL/TLS certificates
     │   ├── main.tf                  # ACM certificate (DNS validation via Route 53)
@@ -370,68 +454,114 @@ aws-infra/
 
 Services are defined in `terraform.tfvars` under the `ecs_services` map:
 
-| Service | Port | CPU | Memory | Domain Pattern |
-|---------|------|-----|--------|----------------|
-| `voice-agent` | 9600 | 4096 | 8192 | agents.{env}.10xr.co |
-| `livekit-proxy` | 9000 | 1024 | 2048 | proxy.{env}.10xr.co |
-| `agent-analytics` | 9800 | 2048 | 4096 | analytics.{env}.10xr.co |
-| `agentic-services` | 8080 | 1024 | 2048 | api.{env}.10xr.co |
-| `ui-console` | 3000 | 512 | 1024 | {env}.10xr.co, ui.{env}.10xr.co |
-| `automation-service-mcp` | 8090 | 1024 | 2048 | automation.{env}.10xr.co |
+| Service | Port | CPU | Memory | Domain Pattern | Description |
+|---------|------|-----|--------|----------------|-------------|
+| `home-health` | 3000 | 1024 | 2048 | homehealth.{env}.10xr.co | Home Health Next.js application |
+| `hospice` | 3000 | 1024 | 2048 | hospice.{env}.10xr.co | Hospice Next.js application |
+
+### ECR Repositories
+
+| Service | ECR Repository |
+|---------|---------------|
+| Home Health | `761018882607.dkr.ecr.us-east-1.amazonaws.com/10xr/home-health` |
+| Hospice | `761018882607.dkr.ecr.us-east-1.amazonaws.com/10xr/hospice` |
 
 ### Service Configuration Structure
 
 ```hcl
 ecs_services = {
-  "service-name" = {
-    image                    = "ECR_REPO_URI"
-    image_tag               = "version"
-    port                    = 8080
-    cpu                     = 1024
-    memory                  = 2048
-    desired_count           = 2
+  "home-health" = {
+    image         = "761018882607.dkr.ecr.us-east-1.amazonaws.com/10xr/home-health"
+    image_tag     = "latest"
+    port          = 3000
+    cpu           = 1024
+    memory        = 2048
+    desired_count = 2
 
     environment = {
-      SERVICE_PORT = "8080"
-      LOG_LEVEL    = "INFO"
+      PORT = "3000"
     }
 
-    secrets = []  # Merged with Redis/MongoDB in locals.tf
+    secrets = []  # Secrets injected via locals.tf from Secrets Manager
 
     capacity_provider_strategy = [
       { capacity_provider = "FARGATE", weight = 1, base = 1 },
-      { capacity_provider = "FARGATE_SPOT", weight = 2, base = 0 }
+      { capacity_provider = "FARGATE_SPOT", weight = 1, base = 0 }
     ]
 
-    container_health_check = {
-      command      = "curl -f http://localhost:8080/health || exit 1"
-      interval     = 30
-      timeout      = 20
-      start_period = 90
-      retries      = 3
-    }
-
-    health_check = {
-      path                = "/health"
-      interval            = 30
-      timeout             = 20
-      healthy_threshold   = 2
-      unhealthy_threshold = 3
-      matcher             = "200"
-    }
-
     enable_auto_scaling        = true
-    auto_scaling_min_capacity  = 1
-    auto_scaling_max_capacity  = 8
-    auto_scaling_cpu_target    = 70
-    auto_scaling_memory_target = 80
+    auto_scaling_min_capacity  = 2
+    auto_scaling_max_capacity  = 6
 
-    alb_host_headers         = ["api.qa.10xr.co"]
+    alb_host_headers         = ["homehealth.qa.10xr.co"]
     enable_load_balancer     = true
     enable_service_discovery = true
   }
 }
 ```
+
+### Environment Variables Injected (via locals.tf)
+
+Each service automatically receives:
+
+| Variable | Source | Description |
+|----------|--------|-------------|
+| `NEXT_PUBLIC_BASE_URL` | SSM | Service base URL (e.g., https://homehealth.qa.10xr.co) |
+| `NEXTAUTH_URL` | SSM | NextAuth callback URL |
+| `NODE_ENV` | Environment | `production` |
+| `DOCUMENTDB_HOST` | DocumentDB Module | Primary cluster endpoint |
+| `DOCUMENTDB_PORT` | DocumentDB Module | `27017` |
+| `S3_BUCKET_NAME` | S3 Module | Patient data bucket name |
+| `AWS_REGION` | Environment | `us-east-1` |
+
+### Secrets Injected (via Secrets Manager)
+
+| Secret | Source | Description |
+|--------|--------|-------------|
+| `MONGODB_URI` | DocumentDB Secret | Full connection string with credentials |
+| `NEXTAUTH_SECRET` | Service Secret | NextAuth encryption key |
+| `ONTUNE_SECRET` | Service Secret | OnTune integration secret |
+| `ADMIN_API_KEY` | Service Secret | Admin API authentication key |
+| `GEMINI_API_KEY` | Service Secret | Google Gemini API key |
+| `OPENAI_API_KEY` | Service Secret | OpenAI API key (home-health only) |
+
+### Terraform Cloud Variables (Sensitive)
+
+Set these in Terraform Cloud workspace:
+
+```
+# Home Health Secrets
+home_health_nextauth_secret  = "..."
+home_health_ontune_secret    = "..."
+home_health_admin_api_key    = "..."
+home_health_gemini_api_key   = "..."
+home_health_openai_api_key   = "..."
+
+# Hospice Secrets
+hospice_nextauth_secret      = "..."
+hospice_ontune_secret        = "..."
+hospice_admin_api_key        = "..."
+hospice_gemini_api_key       = "..."
+```
+
+---
+
+## S3 Patient Data Bucket
+
+HIPAA-compliant S3 bucket for storing patient data (PHI):
+
+| Feature | Configuration |
+|---------|---------------|
+| **Bucket Name** | `{cluster}-{env}-patients` |
+| **Encryption** | KMS (customer-managed key with rotation) |
+| **Versioning** | Enabled |
+| **Access Logging** | Enabled |
+| **Public Access** | Blocked |
+| **SSL Required** | Yes (bucket policy enforces) |
+| **Retention** | 6 years (2190 days) |
+| **Lifecycle** | Standard → Standard-IA (90d) → Glacier (365d) |
+
+Access is granted via IAM task roles - no AWS access keys needed.
 
 ---
 
@@ -440,9 +570,9 @@ ecs_services = {
 | Feature | QA | Production |
 |---------|----|----|
 | **Region** | us-east-1 | us-east-1 |
-| **DNS** | Route 53 (*.qa.10xr.co) | Route 53 (*.prod.10xr.co, app.10xr.co) |
+| **DNS** | Route 53 (homehealth.qa.10xr.co, hospice.qa.10xr.co) | Route 53 (homehealth.10xr.co, hospice.10xr.co) |
 | **DocumentDB** | 2-node cluster (db.r6g.large) | 2+ node cluster (db.r6g.large) |
-| **Redis** | Optional (can be disabled) | Full HA deployment |
+| **S3 Bucket** | `ten-xr-app-qa-patients` | `ten-xr-app-prod-patients` |
 | **Workspace** | `qa-us-east-1-ten-xr-app` | `prod-us-east-1-ten-xr-app` |
 
 ---

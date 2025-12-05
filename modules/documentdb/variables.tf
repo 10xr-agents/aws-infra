@@ -160,9 +160,9 @@ variable "tls_enabled" {
 ################################################################################
 
 variable "backup_retention_period" {
-  description = "Number of days to retain backups"
+  description = "Number of days to retain backups. HIPAA recommends at least 30 days."
   type        = number
-  default     = 7
+  default     = 35  # 5 weeks - HIPAA best practice
 }
 
 variable "preferred_backup_window" {
@@ -222,9 +222,9 @@ variable "enabled_cloudwatch_logs_exports" {
 }
 
 variable "cloudwatch_log_retention_days" {
-  description = "Number of days to retain CloudWatch logs"
+  description = "Number of days to retain CloudWatch logs. HIPAA requires 6 years (2190 days) for audit logs."
   type        = number
-  default     = 90
+  default     = 2190  # 6 years - HIPAA compliance requirement
 }
 
 variable "audit_logs_enabled" {

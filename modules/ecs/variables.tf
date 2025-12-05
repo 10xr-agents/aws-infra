@@ -82,9 +82,9 @@ variable "alb_internal" {
 }
 
 variable "alb_enable_deletion_protection" {
-  description = "Whether to enable deletion protection for the ALB"
+  description = "Whether to enable deletion protection for the ALB. HIPAA best practice: enable in production."
   type        = bool
-  default     = false
+  default     = true
 }
 
 variable "alb_enable_http2" {
@@ -143,9 +143,9 @@ variable "create_default_target_group" {
 
 # ALB Access Logs
 variable "alb_access_logs_enabled" {
-  description = "Whether to enable ALB access logs"
+  description = "Whether to enable ALB access logs. HIPAA requires access logging for audit trails."
   type        = bool
-  default     = false
+  default     = true  # HIPAA compliance - access logging required
 }
 
 variable "alb_access_logs_bucket" {
@@ -162,9 +162,9 @@ variable "alb_access_logs_prefix" {
 
 # ALB Connection Logs
 variable "alb_connection_logs_enabled" {
-  description = "Whether to enable ALB connection logs"
+  description = "Whether to enable ALB connection logs. HIPAA requires connection logging for audit trails."
   type        = bool
-  default     = false
+  default     = true  # HIPAA compliance - connection logging required
 }
 
 variable "alb_connection_logs_bucket" {
@@ -180,9 +180,9 @@ variable "alb_connection_logs_prefix" {
 }
 
 variable "log_retention_days" {
-  description = "Number of days to retain CloudWatch logs"
+  description = "Number of days to retain CloudWatch logs. HIPAA requires 6 years (2190 days) for audit logs."
   type        = number
-  default     = 30
+  default     = 2190  # 6 years - HIPAA compliance requirement
 }
 
 variable "efs_file_system_id" {
