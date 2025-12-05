@@ -16,7 +16,6 @@ module "certs" {
 
   environment = var.environment
   domain = var.domain
-  cloudflare_zone_id = var.cloudflare_zone_id
   subject_alternative_domains = [
     "*.${var.domain}",
     "services.${var.domain}",
