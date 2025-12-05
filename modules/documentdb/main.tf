@@ -89,8 +89,7 @@ resource "random_password" "master_password" {
   count = var.master_password == "" ? 1 : 0
 
   length           = var.password_length
-  special          = true
-  override_special = "!#$%&*()-_=+[]{}<>:?"
+  special          = false
 }
 
 ################################################################################
