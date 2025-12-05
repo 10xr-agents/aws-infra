@@ -181,12 +181,6 @@ output "network_architecture" {
       internal = var.nlb_internal
     }
 
-    # Traffic Flow
-    traffic_flow = {
-      external_requests = var.create_global_accelerator ? "Internet -> Global Accelerator -> NLB -> ALB -> ECS Services" : "Internet -> NLB -> ALB -> ECS Services"
-      internal_requests = "ECS Services -> Service Discovery -> ECS Services"
-    }
-
     # SSL/TLS Configuration
     ssl_config = {
       alb_https_enabled = local.acm_certificate_arn != ""
