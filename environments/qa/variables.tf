@@ -668,7 +668,7 @@ variable "documentdb_create_kms_key" {
 variable "documentdb_backup_retention_period" {
   description = "Number of days to retain DocumentDB backups. HIPAA recommends at least 30 days."
   type        = number
-  default     = 60  # 5 weeks - HIPAA best practice
+  default     = 35  # 5 weeks - HIPAA best practice
 }
 
 variable "documentdb_preferred_backup_window" {

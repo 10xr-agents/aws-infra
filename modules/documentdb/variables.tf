@@ -162,7 +162,7 @@ variable "tls_enabled" {
 variable "backup_retention_period" {
   description = "Number of days to retain backups. HIPAA recommends at least 30 days."
   type        = number
-  default     = 60  # 5 weeks - HIPAA best practice
+  default     = 35  # 5 weeks - HIPAA best practice
 }
 
 variable "preferred_backup_window" {

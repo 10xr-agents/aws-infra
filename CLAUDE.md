@@ -309,7 +309,7 @@ Day 2191+    → Deleted (after 6-year retention)
 ### Backup & Recovery
 | Feature | Implementation |
 |---------|----------------|
-| **DocumentDB Backups** | 60-day retention (daily automated backups) |
+| **DocumentDB Backups** | 35-day retention (daily automated backups) |
 | **DocumentDB Window** | 03:00-05:00 UTC |
 | **S3 Versioning** | Enabled on all log buckets |
 | **Final Snapshots** | Required before cluster deletion |
@@ -345,7 +345,7 @@ Day 2191+    → Deleted (after 6-year retention)
 - [x] Secrets in AWS Secrets Manager
 - [x] IAM least-privilege access
 - [x] Multi-AZ for high availability
-- [x] Automated backups (60-day retention)
+- [x] Automated backups (35-day retention)
 - [x] US-only data residency
 - [x] CloudWatch alarms for critical metrics
 
