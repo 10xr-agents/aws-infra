@@ -270,8 +270,9 @@ output "documentdb_connection_info" {
     endpoint           = module.documentdb.endpoint
     reader_endpoint    = module.documentdb.reader_endpoint
     port               = module.documentdb.port
-    database_name      = local.documentdb_database_name
-    tls_enabled        = true
+    tls_enabled         = true
     secrets_manager_arn = module.documentdb.secrets_manager_secret_arn
+    database_name_home_health  = local.documentdb_database_home_health
+    database_name_hospice      = local.documentdb_database_hospice
   }
 }
