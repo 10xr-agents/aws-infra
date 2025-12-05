@@ -3,14 +3,6 @@
 # These secrets should be manually populated in AWS Console or via CLI before deployment
 
 ################################################################################
-# Local Variables for Secret Names
-################################################################################
-
-locals {
-  secret_prefix = "${var.cluster_name}-${var.environment}"
-}
-
-################################################################################
 # Home Health Service Secrets
 ################################################################################
 

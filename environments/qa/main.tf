@@ -1,8 +1,7 @@
 # environments/qa/main.tf
 
 locals {
-  cluster_name = "${var.cluster_name}-${var.environment}"
-  vpc_name     = "${var.cluster_name}-${var.environment}-${var.region}"
+  vpc_name     = "${local.cluster_name}-${var.region}"
 }
 
 # Add this data source to the top of environments/qa/main.tf after the locals block

@@ -5,7 +5,7 @@ locals {
   cluster_name = "${var.cluster_name}-${var.environment}"
 
   # Secret prefix for consistent naming
-  secret_prefix = "${var.cluster_name}-${var.environment}"
+  secret_prefix = local.cluster_name
 
   # Get ECS services from tfvars
   ecs_services = var.ecs_services
