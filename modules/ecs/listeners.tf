@@ -8,7 +8,7 @@ locals {
   # Filter services that have load balancer enabled and host headers defined
   services_with_host_headers = {
     for name, config in var.services : name => config
-    if lookup(config, "enable_load_balancer", true) && length(lookup(config, "alb_host_headers", [])) > 0
+    if try(config.enable_load_balancer, true) && length(coalesce(try(config.alb_host_headers, []), [])) > 0
   }
 
   # Generate priority map for services (starting at 101 to leave room for defaults)
@@ -91,7 +91,7 @@ locals {
   # Filter services that have path patterns defined
   services_with_path_patterns = {
     for name, config in var.services : name => config
-    if lookup(config, "enable_load_balancer", true) && length(lookup(config, "alb_path_patterns", [])) > 0
+    if try(config.enable_load_balancer, true) && length(coalesce(try(config.alb_path_patterns, []), [])) > 0
   }
 
   # Generate priority map for path-based rules (starting at 201)
