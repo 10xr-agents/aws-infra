@@ -235,6 +235,27 @@ module "ecs" {
   # Pass the entire services configuration from variables
   services = local.ecs_services_with_overrides
 
+  # IAM and KMS Configuration for accessing secrets and encrypted resources
+  kms_key_arns = [
+    module.documentdb.kms_key_arn,  # DocumentDB KMS key
+    module.s3_patients.kms_key_arn  # S3 HIPAA bucket KMS key
+  ]
+
+  # Attach DocumentDB access policy to task execution roles (for pulling secrets at startup)
+  task_execution_policy_arns = [
+    module.documentdb.iam_policy_arn
+  ]
+
+  # Attach DocumentDB access policy to task roles (for runtime database access)
+  task_role_policy_arns = [
+    module.documentdb.iam_policy_arn
+  ]
+
+  # S3 bucket access for PHI data
+  s3_bucket_arns = [
+    module.s3_patients.bucket_arn
+  ]
+
   tags = merge(
     var.tags,
     {
@@ -246,7 +267,7 @@ module "ecs" {
     }
   )
 
-  depends_on = [module.documentdb, module.certs]
+  depends_on = [module.documentdb, module.certs, module.s3_patients]
 }
 
 # Networking Module (NEW - replaces the NLB resources)

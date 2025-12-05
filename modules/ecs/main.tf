@@ -343,31 +343,64 @@ resource "aws_iam_role_policy_attachment" "task_execution_role_policy" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
-# Additional execution policies for Secrets Manager, SSM, etc.
+# Additional execution policies for Secrets Manager, SSM, KMS, etc.
+# This policy is needed for ECS to pull secrets during task startup
 resource "aws_iam_role_policy" "task_execution_secrets" {
-  for_each = {
-    for name, config in local.services_config : name => config
-    if length(lookup(config, "secrets", [])) > 0
-  }
+  for_each = local.services_config
 
-  name = "${each.value.task_exec_role_name}-secrets"
+  name = "${each.value.task_exec_role_name}-secrets-kms"
   role = aws_iam_role.task_execution_role[each.key].id
 
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
       {
+        Sid    = "SecretsManagerAccess"
         Effect = "Allow"
         Action = [
           "secretsmanager:GetSecretValue",
+          "secretsmanager:DescribeSecret"
+        ]
+        Resource = "*"
+      },
+      {
+        Sid    = "SSMParameterAccess"
+        Effect = "Allow"
+        Action = [
           "ssm:GetParameter",
           "ssm:GetParameters",
           "ssm:GetParametersByPath"
         ]
         Resource = "*"
+      },
+      {
+        Sid    = "KMSDecryptForSecrets"
+        Effect = "Allow"
+        Action = [
+          "kms:Decrypt",
+          "kms:DescribeKey",
+          "kms:GenerateDataKey"
+        ]
+        Resource = var.kms_key_arns
       }
     ]
   })
+}
+
+# Attach additional IAM policies to task execution role (e.g., DocumentDB access policy)
+resource "aws_iam_role_policy_attachment" "task_execution_additional_policies" {
+  for_each = merge([
+    for service_name, config in local.services_config : {
+      for idx, policy_arn in var.task_execution_policy_arns :
+      "${service_name}-${idx}" => {
+        role       = aws_iam_role.task_execution_role[service_name].name
+        policy_arn = policy_arn
+      }
+    }
+  ]...)
+
+  role       = each.value.role
+  policy_arn = each.value.policy_arn
 }
 
 # Task Role (for application permissions)
@@ -392,7 +425,7 @@ resource "aws_iam_role" "task_role" {
   tags = merge(local.common_tags, { Service = each.key })
 }
 
-# Attach additional task policies if specified
+# Attach additional task policies if specified in service config
 resource "aws_iam_role_policy_attachment" "additional_task_policies" {
   for_each = merge([
     for service_name, config in local.services_config : {
@@ -406,6 +439,60 @@ resource "aws_iam_role_policy_attachment" "additional_task_policies" {
 
   role       = each.value.role
   policy_arn = each.value.policy_arn
+}
+
+# Attach global task role policies (e.g., DocumentDB access)
+resource "aws_iam_role_policy_attachment" "task_role_global_policies" {
+  for_each = merge([
+    for service_name, config in local.services_config : {
+      for idx, policy_arn in var.task_role_policy_arns :
+      "${service_name}-global-${idx}" => {
+        role       = aws_iam_role.task_role[service_name].name
+        policy_arn = policy_arn
+      }
+    }
+  ]...)
+
+  role       = each.value.role
+  policy_arn = each.value.policy_arn
+}
+
+# S3 access policy for task roles (for PHI data access)
+resource "aws_iam_role_policy" "task_role_s3_access" {
+  for_each = length(var.s3_bucket_arns) > 0 ? local.services_config : {}
+
+  name = "${each.value.task_role_name}-s3-access"
+  role = aws_iam_role.task_role[each.key].id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "S3BucketAccess"
+        Effect = "Allow"
+        Action = [
+          "s3:GetObject",
+          "s3:PutObject",
+          "s3:DeleteObject",
+          "s3:ListBucket"
+        ]
+        Resource = concat(
+          var.s3_bucket_arns,
+          [for arn in var.s3_bucket_arns : "${arn}/*"]
+        )
+      },
+      {
+        Sid    = "KMSDecryptForS3"
+        Effect = "Allow"
+        Action = [
+          "kms:Decrypt",
+          "kms:GenerateDataKey",
+          "kms:DescribeKey"
+        ]
+        Resource = var.kms_key_arns
+      }
+    ]
+  })
 }
 
 ################################################################################

@@ -185,6 +185,34 @@ variable "log_retention_days" {
   default     = 2192  # 6 years - HIPAA compliance requirement
 }
 
+################################################################################
+# IAM and KMS Configuration
+################################################################################
+
+variable "kms_key_arns" {
+  description = "List of KMS key ARNs that ECS tasks need access to (for decrypting secrets)"
+  type        = list(string)
+  default     = ["*"]  # Default allows all KMS keys - restrict in production
+}
+
+variable "task_execution_policy_arns" {
+  description = "List of IAM policy ARNs to attach to task execution roles (e.g., DocumentDB access policy)"
+  type        = list(string)
+  default     = []
+}
+
+variable "task_role_policy_arns" {
+  description = "List of IAM policy ARNs to attach to task roles for application permissions"
+  type        = list(string)
+  default     = []
+}
+
+variable "s3_bucket_arns" {
+  description = "List of S3 bucket ARNs that ECS tasks need access to"
+  type        = list(string)
+  default     = []
+}
+
 variable "efs_file_system_id" {
   description = "EFS file system ID (required if any service uses EFS)"
   type        = string
