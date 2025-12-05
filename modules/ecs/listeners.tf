@@ -1,51 +1,46 @@
-# modules/ecs/listeners.tf - Dynamic Environment-Aware Version
+# modules/ecs/listeners.tf - Dynamic Listener Rules Based on Services
+
+################################################################################
+# Local Variables for Listener Rules
+################################################################################
 
 locals {
-  # Define environment-specific domains
-  environment_domains = {
-    qa = {
-      voice_agent        = "agents.qa.10xr.co"
-      livekit_proxy     = "proxy.qa.10xr.co"
-      agent_analytics   = "analytics.qa.10xr.co"
-      agentic_services  = "api.qa.10xr.co"
-      ui_console        = ["qa.10xr.co", "ui.qa.10xr.co"]
-      automation_service = "automation.qa.10xr.co"
-    }
-    prod = {
-      voice_agent        = "agents.prod.10xr.co"
-      livekit_proxy     = "proxy.prod.10xr.co"
-      agent_analytics   = "analytics.prod.10xr.co"
-      agentic_services  = "api.prod.10xr.co"
-      ui_console        = ["prod.10xr.co", "ui.prod.10xr.co", "app.10xr.co"]
-      automation_service = "automation.prod.10xr.co"
-    }
+  # Filter services that have load balancer enabled and host headers defined
+  services_with_host_headers = {
+    for name, config in var.services : name => config
+    if lookup(config, "enable_load_balancer", true) && length(lookup(config, "alb_host_headers", [])) > 0
   }
 
-  # Get current environment domains
-  current_domains = local.environment_domains[var.environment]
+  # Generate priority map for services (starting at 101 to leave room for defaults)
+  service_priorities = {
+    for idx, name in keys(local.services_with_host_headers) : name => 101 + idx
+  }
 }
 
-# HTTP Host-based routing rule for voice-agent
-resource "aws_lb_listener_rule" "voice_agent_http_host_rule" {
-  count = var.create_alb ? 1 : 0
+################################################################################
+# Dynamic HTTP Host-based Listener Rules
+################################################################################
+
+resource "aws_lb_listener_rule" "service_http_host_rule" {
+  for_each = var.create_alb ? local.services_with_host_headers : {}
 
   listener_arn = aws_lb_listener.http[0].arn
-  priority     = 101
+  priority     = local.service_priorities[each.key]
 
   action {
     type             = "forward"
-    target_group_arn = aws_lb_target_group.service["voice-agent"].arn
+    target_group_arn = aws_lb_target_group.service[each.key].arn
   }
 
   condition {
     host_header {
-      values = [local.current_domains.voice_agent]
+      values = each.value.alb_host_headers
     }
   }
 
   tags = merge(local.common_tags, {
-    Name      = "${local.name_prefix}-voice-agent-http-host-rule"
-    Service   = "voice-agent"
+    Name      = "${local.name_prefix}-${each.key}-http-host-rule"
+    Service   = each.key
     Component = "ListenerRule"
   })
 
@@ -55,27 +50,30 @@ resource "aws_lb_listener_rule" "voice_agent_http_host_rule" {
   ]
 }
 
-# HTTPS Host-based routing rule for voice-agent
-resource "aws_lb_listener_rule" "voice_agent_https_host_rule" {
-  count = var.create_alb ? 1 : 0
+################################################################################
+# Dynamic HTTPS Host-based Listener Rules
+################################################################################
+
+resource "aws_lb_listener_rule" "service_https_host_rule" {
+  for_each = var.create_alb ? local.services_with_host_headers : {}
 
   listener_arn = aws_lb_listener.https[0].arn
-  priority     = 101
+  priority     = local.service_priorities[each.key]
 
   action {
     type             = "forward"
-    target_group_arn = aws_lb_target_group.service["voice-agent"].arn
+    target_group_arn = aws_lb_target_group.service[each.key].arn
   }
 
   condition {
     host_header {
-      values = [local.current_domains.voice_agent]
+      values = each.value.alb_host_headers
     }
   }
 
   tags = merge(local.common_tags, {
-    Name      = "${local.name_prefix}-voice-agent-https-host-rule"
-    Service   = "voice-agent"
+    Name      = "${local.name_prefix}-${each.key}-https-host-rule"
+    Service   = each.key
     Component = "ListenerRule"
   })
 
@@ -85,27 +83,43 @@ resource "aws_lb_listener_rule" "voice_agent_https_host_rule" {
   ]
 }
 
-# HTTP Host-based routing rule for livekit-proxy
-resource "aws_lb_listener_rule" "livekit_proxy_http_host_rule" {
-  count = var.create_alb ? 1 : 0
+################################################################################
+# Dynamic Path-based Listener Rules (Optional)
+################################################################################
+
+locals {
+  # Filter services that have path patterns defined
+  services_with_path_patterns = {
+    for name, config in var.services : name => config
+    if lookup(config, "enable_load_balancer", true) && length(lookup(config, "alb_path_patterns", [])) > 0
+  }
+
+  # Generate priority map for path-based rules (starting at 201)
+  path_service_priorities = {
+    for idx, name in keys(local.services_with_path_patterns) : name => 201 + idx
+  }
+}
+
+resource "aws_lb_listener_rule" "service_http_path_rule" {
+  for_each = var.create_alb ? local.services_with_path_patterns : {}
 
   listener_arn = aws_lb_listener.http[0].arn
-  priority     = 102
+  priority     = local.path_service_priorities[each.key]
 
   action {
     type             = "forward"
-    target_group_arn = aws_lb_target_group.service["livekit-proxy"].arn
+    target_group_arn = aws_lb_target_group.service[each.key].arn
   }
 
   condition {
-    host_header {
-      values = [local.current_domains.livekit_proxy]
+    path_pattern {
+      values = each.value.alb_path_patterns
     }
   }
 
   tags = merge(local.common_tags, {
-    Name      = "${local.name_prefix}-livekit-proxy-http-host-rule"
-    Service   = "livekit-proxy"
+    Name      = "${local.name_prefix}-${each.key}-http-path-rule"
+    Service   = each.key
     Component = "ListenerRule"
   })
 
@@ -115,267 +129,26 @@ resource "aws_lb_listener_rule" "livekit_proxy_http_host_rule" {
   ]
 }
 
-# HTTPS Host-based routing rule for livekit-proxy
-resource "aws_lb_listener_rule" "livekit_proxy_https_host_rule" {
-  count = var.create_alb ? 1 : 0
+resource "aws_lb_listener_rule" "service_https_path_rule" {
+  for_each = var.create_alb ? local.services_with_path_patterns : {}
 
   listener_arn = aws_lb_listener.https[0].arn
-  priority     = 102
+  priority     = local.path_service_priorities[each.key]
 
   action {
     type             = "forward"
-    target_group_arn = aws_lb_target_group.service["livekit-proxy"].arn
+    target_group_arn = aws_lb_target_group.service[each.key].arn
   }
 
   condition {
-    host_header {
-      values = [local.current_domains.livekit_proxy]
+    path_pattern {
+      values = each.value.alb_path_patterns
     }
   }
 
   tags = merge(local.common_tags, {
-    Name      = "${local.name_prefix}-livekit-proxy-https-host-rule"
-    Service   = "livekit-proxy"
-    Component = "ListenerRule"
-  })
-
-  depends_on = [
-    aws_lb_listener.https,
-    aws_lb_target_group.service
-  ]
-}
-
-# HTTP Host-based routing rule for agent-analytics
-resource "aws_lb_listener_rule" "agent_analytics_http_host_rule" {
-  count = var.create_alb ? 1 : 0
-
-  listener_arn = aws_lb_listener.http[0].arn
-  priority     = 103
-
-  action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.service["agent-analytics"].arn
-  }
-
-  condition {
-    host_header {
-      values = [local.current_domains.agent_analytics]
-    }
-  }
-
-  tags = merge(local.common_tags, {
-    Name      = "${local.name_prefix}-agent-analytics-http-host-rule"
-    Service   = "agent-analytics"
-    Component = "ListenerRule"
-  })
-
-  depends_on = [
-    aws_lb_listener.http,
-    aws_lb_target_group.service
-  ]
-}
-
-# HTTPS Host-based routing rule for agent-analytics
-resource "aws_lb_listener_rule" "agent_analytics_https_host_rule" {
-  count = var.create_alb ? 1 : 0
-
-  listener_arn = aws_lb_listener.https[0].arn
-  priority     = 103
-
-  action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.service["agent-analytics"].arn
-  }
-
-  condition {
-    host_header {
-      values = [local.current_domains.agent_analytics]
-    }
-  }
-
-  tags = merge(local.common_tags, {
-    Name      = "${local.name_prefix}-agent-analytics-https-host-rule"
-    Service   = "agent-analytics"
-    Component = "ListenerRule"
-  })
-
-  depends_on = [
-    aws_lb_listener.https,
-    aws_lb_target_group.service
-  ]
-}
-
-# HTTP Host-based routing rule for agentic-services (THE IMPORTANT ONE)
-resource "aws_lb_listener_rule" "agentic_services_http_host_rule" {
-  count = var.create_alb ? 1 : 0
-
-  listener_arn = aws_lb_listener.http[0].arn
-  priority     = 104
-
-  action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.service["agentic-services"].arn
-  }
-
-  condition {
-    host_header {
-      values = [local.current_domains.agentic_services]
-    }
-  }
-
-  tags = merge(local.common_tags, {
-    Name      = "${local.name_prefix}-agentic-services-http-host-rule"
-    Service   = "agentic-services"
-    Component = "ListenerRule"
-  })
-
-  depends_on = [
-    aws_lb_listener.http,
-    aws_lb_target_group.service
-  ]
-}
-
-# HTTPS Host-based routing rule for agentic-services (THE IMPORTANT ONE)
-resource "aws_lb_listener_rule" "agentic_services_https_host_rule" {
-  count = var.create_alb ? 1 : 0
-
-  listener_arn = aws_lb_listener.https[0].arn
-  priority     = 104
-
-  action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.service["agentic-services"].arn
-  }
-
-  condition {
-    host_header {
-      values = [local.current_domains.agentic_services]
-    }
-  }
-
-  tags = merge(local.common_tags, {
-    Name      = "${local.name_prefix}-agentic-services-https-host-rule"
-    Service   = "agentic-services"
-    Component = "ListenerRule"
-  })
-
-  depends_on = [
-    aws_lb_listener.https,
-    aws_lb_target_group.service
-  ]
-}
-
-# HTTP Host-based routing rule for ui-console
-resource "aws_lb_listener_rule" "ui_console_http_host_rule" {
-  count = var.create_alb ? 1 : 0
-
-  listener_arn = aws_lb_listener.http[0].arn
-  priority     = 105
-
-  action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.service["ui-console"].arn
-  }
-
-  condition {
-    host_header {
-      values = local.current_domains.ui_console
-    }
-  }
-
-  tags = merge(local.common_tags, {
-    Name      = "${local.name_prefix}-ui-console-http-host-rule"
-    Service   = "ui-console"
-    Component = "ListenerRule"
-  })
-
-  depends_on = [
-    aws_lb_listener.http,
-    aws_lb_target_group.service
-  ]
-}
-
-# HTTPS Host-based routing rule for ui-console
-resource "aws_lb_listener_rule" "ui_console_https_host_rule" {
-  count = var.create_alb ? 1 : 0
-
-  listener_arn = aws_lb_listener.https[0].arn
-  priority     = 105
-
-  action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.service["ui-console"].arn
-  }
-
-  condition {
-    host_header {
-      values = local.current_domains.ui_console
-    }
-  }
-
-  tags = merge(local.common_tags, {
-    Name      = "${local.name_prefix}-ui-console-https-host-rule"
-    Service   = "ui-console"
-    Component = "ListenerRule"
-  })
-
-  depends_on = [
-    aws_lb_listener.https,
-    aws_lb_target_group.service
-  ]
-}
-
-# HTTP Host-based routing rule for automation-service-mcp
-resource "aws_lb_listener_rule" "automation_service_mcp_http_host_rule" {
-  count = var.create_alb ? 1 : 0
-
-  listener_arn = aws_lb_listener.http[0].arn
-  priority     = 106
-
-  action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.service["automation-service-mcp"].arn
-  }
-
-  condition {
-    host_header {
-      values = [local.current_domains.automation_service]
-    }
-  }
-
-  tags = merge(local.common_tags, {
-    Name      = "${local.name_prefix}-automation-service-mcp-http-host-rule"
-    Service   = "automation-service-mcp"
-    Component = "ListenerRule"
-  })
-
-  depends_on = [
-    aws_lb_listener.http,
-    aws_lb_target_group.service
-  ]
-}
-
-# HTTPS Host-based routing rule for automation-service-mcp
-resource "aws_lb_listener_rule" "automation_service_mcp_https_host_rule" {
-  count = var.create_alb ? 1 : 0
-
-  listener_arn = aws_lb_listener.https[0].arn
-  priority     = 106
-
-  action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.service["automation-service-mcp"].arn
-  }
-
-  condition {
-    host_header {
-      values = [local.current_domains.automation_service]
-    }
-  }
-
-  tags = merge(local.common_tags, {
-    Name      = "${local.name_prefix}-automation-service-mcp-https-host-rule"
-    Service   = "automation-service-mcp"
+    Name      = "${local.name_prefix}-${each.key}-https-path-rule"
+    Service   = each.key
     Component = "ListenerRule"
   })
 
