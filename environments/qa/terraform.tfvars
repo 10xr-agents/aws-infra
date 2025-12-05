@@ -5,7 +5,7 @@ region = "us-east-1"
 environment = "qa"
 
 # Cluster Configuration
-cluster_name = "ten-xr-healthcare"
+cluster_name = "ten-xr-app"
 
 # VPC Configuration
 vpc_cidr = "10.0.0.0/16"
