@@ -748,3 +748,9 @@ variable "documentdb_create_cloudwatch_alarms" {
   type        = bool
   default     = true
 }
+
+variable "tags" {
+  description = "Additional tags for all resources"
+  type        = map(string)
+  default     = {}
+}
