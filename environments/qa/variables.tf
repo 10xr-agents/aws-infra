@@ -668,7 +668,7 @@ variable "documentdb_create_kms_key" {
 variable "documentdb_backup_retention_period" {
   description = "Number of days to retain DocumentDB backups. HIPAA recommends at least 30 days."
   type        = number
-  default     = 35  # 5 weeks - HIPAA best practice
+  default     = 60  # 5 weeks - HIPAA best practice
 }
 
 variable "documentdb_preferred_backup_window" {
@@ -714,9 +714,9 @@ variable "documentdb_enabled_cloudwatch_logs_exports" {
 }
 
 variable "documentdb_cloudwatch_log_retention_days" {
-  description = "Number of days to retain DocumentDB CloudWatch logs. HIPAA requires 6 years (2190 days)."
+  description = "Number of days to retain DocumentDB CloudWatch logs. HIPAA requires 6 years (2192 days)."
   type        = number
-  default     = 2190  # 6 years - HIPAA compliance requirement
+  default     = 2192  # 6 years - HIPAA compliance requirement
 }
 
 variable "documentdb_profiler_enabled" {

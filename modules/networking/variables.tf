@@ -64,9 +64,9 @@ variable "nlb_access_logs_enabled" {
 }
 
 variable "nlb_logs_retention_days" {
-  description = "Number of days to retain NLB logs in S3. HIPAA requires 6 years (2190 days) for audit logs."
+  description = "Number of days to retain NLB logs in S3. HIPAA requires 6 years (2192 days) for audit logs."
   type        = number
-  default     = 2190  # 6 years - HIPAA compliance requirement
+  default     = 2192  # 6 years - HIPAA compliance requirement
 }
 
 ################################################################################

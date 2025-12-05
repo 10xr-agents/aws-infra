@@ -56,9 +56,9 @@ variable "ecs_task_role_arns" {
 ################################################################################
 
 variable "retention_days" {
-  description = "Number of days to retain objects. HIPAA requires 6 years (2190 days)."
+  description = "Number of days to retain objects. HIPAA requires 6 years (2192 days)."
   type        = number
-  default     = 2190  # 6 years - HIPAA compliance
+  default     = 2192  # 6 years - HIPAA compliance
 }
 
 ################################################################################

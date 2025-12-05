@@ -127,7 +127,7 @@ module "s3_patients" {
   ]
 
   # HIPAA retention (6 years)
-  retention_days = 2190
+  retention_days = 2192
 
   # Enable access logging for audit trail
   enable_access_logging = true

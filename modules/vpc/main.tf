@@ -26,7 +26,7 @@ module "vpc" {
   enable_dns_support   = true
 
   # VPC Flow Logs (Cloudwatch log group and IAM role will be created)
-  # HIPAA requires 6 years (2190 days) retention for audit logs
+  # HIPAA requires 6 years (2192 days) retention for audit logs
   enable_flow_log                                 = var.enable_flow_log
   create_flow_log_cloudwatch_log_group            = var.create_flow_log_cloudwatch_log_group
   create_flow_log_cloudwatch_iam_role             = var.create_flow_log_cloudwatch_iam_role

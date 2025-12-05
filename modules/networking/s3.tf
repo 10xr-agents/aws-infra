@@ -222,7 +222,7 @@ resource "aws_s3_bucket_policy" "nlb_connection_logs" {
 }
 
 # S3 Bucket Lifecycle Configuration for Access Logs
-# HIPAA requires 6 years (2190 days) retention for audit logs
+# HIPAA requires 6 years (2192 days) retention for audit logs
 resource "aws_s3_bucket_lifecycle_configuration" "nlb_access_logs" {
   count = var.nlb_access_logs_enabled ? 1 : 0
 
@@ -266,7 +266,7 @@ resource "aws_s3_bucket_lifecycle_configuration" "nlb_access_logs" {
 }
 
 # S3 Bucket Lifecycle Configuration for Connection Logs
-# HIPAA requires 6 years (2190 days) retention for audit logs
+# HIPAA requires 6 years (2192 days) retention for audit logs
 resource "aws_s3_bucket_lifecycle_configuration" "nlb_connection_logs" {
   count = var.nlb_connection_logs_enabled ? 1 : 0
 

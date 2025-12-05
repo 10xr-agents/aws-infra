@@ -180,9 +180,9 @@ variable "alb_connection_logs_prefix" {
 }
 
 variable "log_retention_days" {
-  description = "Number of days to retain CloudWatch logs. HIPAA requires 6 years (2190 days) for audit logs."
+  description = "Number of days to retain CloudWatch logs. HIPAA requires 6 years (2192 days) for audit logs."
   type        = number
-  default     = 2190  # 6 years - HIPAA compliance requirement
+  default     = 2192  # 6 years - HIPAA compliance requirement
 }
 
 variable "efs_file_system_id" {

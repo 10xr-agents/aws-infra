@@ -226,19 +226,19 @@ terraform state list
 
 This infrastructure implements AWS HIPAA-eligible services and security best practices.
 
-### Log Retention Requirements (6 Years / 2190 Days)
+### Log Retention Requirements (6 Years / 2192 Days)
 
-HIPAA requires audit log retention for **6 years (2190 days)**. The following components are configured:
+HIPAA requires audit log retention for **6 years (2192 days)**. The following components are configured:
 
 | Component | Location | Retention | Configuration |
 |-----------|----------|-----------|---------------|
-| **ECS CloudWatch Logs** | CloudWatch Log Groups | 2190 days | `modules/ecs/variables.tf` → `log_retention_days` |
-| **DocumentDB Audit Logs** | CloudWatch Log Groups | 2190 days | `modules/documentdb/variables.tf` → `cloudwatch_log_retention_days` |
-| **Redis CloudWatch Logs** | CloudWatch Log Groups | 2190 days | `modules/redis/variables.tf` → `cloudwatch_log_retention_days` |
-| **VPC Flow Logs** | CloudWatch Log Groups | 2190 days | `modules/vpc/variables.tf` → `flow_log_cloudwatch_log_retention_days` |
-| **NLB Access Logs** | S3 Bucket | 2190 days | `modules/networking/s3.tf` → Lifecycle policy |
-| **NLB Connection Logs** | S3 Bucket | 2190 days | `modules/networking/s3.tf` → Lifecycle policy |
-| **ALB Access Logs** | S3 Bucket | 2190 days | Environment-level S3 bucket |
+| **ECS CloudWatch Logs** | CloudWatch Log Groups | 2192 days | `modules/ecs/variables.tf` → `log_retention_days` |
+| **DocumentDB Audit Logs** | CloudWatch Log Groups | 2192 days | `modules/documentdb/variables.tf` → `cloudwatch_log_retention_days` |
+| **Redis CloudWatch Logs** | CloudWatch Log Groups | 2192 days | `modules/redis/variables.tf` → `cloudwatch_log_retention_days` |
+| **VPC Flow Logs** | CloudWatch Log Groups | 2192 days | `modules/vpc/variables.tf` → `flow_log_cloudwatch_log_retention_days` |
+| **NLB Access Logs** | S3 Bucket | 2192 days | `modules/networking/s3.tf` → Lifecycle policy |
+| **NLB Connection Logs** | S3 Bucket | 2192 days | `modules/networking/s3.tf` → Lifecycle policy |
+| **ALB Access Logs** | S3 Bucket | 2192 days | Environment-level S3 bucket |
 
 ### S3 Log Lifecycle (Cost Optimization)
 
@@ -247,7 +247,7 @@ S3 buckets for logs use tiered storage to reduce long-term costs:
 ```
 Day 1-90     → STANDARD (frequent access)
 Day 91-365   → STANDARD_IA (infrequent access, ~40% savings)
-Day 366-2190 → GLACIER (archive, ~80% savings)
+Day 366-2192 → GLACIER (archive, ~80% savings)
 Day 2191+    → Deleted (after 6-year retention)
 ```
 
@@ -276,7 +276,7 @@ Day 2191+    → Deleted (after 6-year retention)
 | **Encryption in Transit** | TLS 1.2+ (DocumentDB, ALB, NLB, Redis, VPC endpoints) |
 | **Secrets Management** | AWS Secrets Manager & SSM Parameter Store (SecureString) |
 | **Key Management** | AWS KMS for encryption keys (auto-rotation enabled) |
-| **Database Audit Logs** | DocumentDB audit logs to CloudWatch (2190-day retention) |
+| **Database Audit Logs** | DocumentDB audit logs to CloudWatch (2192-day retention) |
 
 ### Network Security
 | Feature | Implementation |
@@ -299,9 +299,9 @@ Day 2191+    → Deleted (after 6-year retention)
 ### Audit & Monitoring
 | Feature | Implementation |
 |---------|----------------|
-| **VPC Flow Logs** | Network traffic logging to CloudWatch (2190-day retention) |
-| **CloudWatch Logs** | Centralized application logging (2190-day retention) |
-| **ALB/NLB Access Logs** | Load balancer request logging to S3 (2190-day retention) |
+| **VPC Flow Logs** | Network traffic logging to CloudWatch (2192-day retention) |
+| **CloudWatch Logs** | Centralized application logging (2192-day retention) |
+| **ALB/NLB Access Logs** | Load balancer request logging to S3 (2192-day retention) |
 | **Container Insights** | ECS performance monitoring |
 | **Route 53 Query Logs** | DNS query logging (optional) |
 | **DocumentDB Profiler** | Slow query logging (threshold: 100ms) |
@@ -309,7 +309,7 @@ Day 2191+    → Deleted (after 6-year retention)
 ### Backup & Recovery
 | Feature | Implementation |
 |---------|----------------|
-| **DocumentDB Backups** | 35-day retention (daily automated backups) |
+| **DocumentDB Backups** | 60-day retention (daily automated backups) |
 | **DocumentDB Window** | 03:00-05:00 UTC |
 | **S3 Versioning** | Enabled on all log buckets |
 | **Final Snapshots** | Required before cluster deletion |
@@ -334,7 +334,7 @@ Day 2191+    → Deleted (after 6-year retention)
 
 - [x] Encryption at rest (KMS, AES-256)
 - [x] Encryption in transit (TLS 1.2+)
-- [x] 6-year audit log retention (2190 days) - all log types
+- [x] 6-year audit log retention (2192 days) - all log types
 - [x] VPC Flow Logs enabled with 6-year retention
 - [x] Database audit logging enabled (DocumentDB)
 - [x] Load balancer access logging enabled by default (ALB + NLB)
@@ -345,7 +345,7 @@ Day 2191+    → Deleted (after 6-year retention)
 - [x] Secrets in AWS Secrets Manager
 - [x] IAM least-privilege access
 - [x] Multi-AZ for high availability
-- [x] Automated backups (35-day retention)
+- [x] Automated backups (60-day retention)
 - [x] US-only data residency
 - [x] CloudWatch alarms for critical metrics
 
@@ -558,7 +558,7 @@ HIPAA-compliant S3 bucket for storing patient data (PHI):
 | **Access Logging** | Enabled |
 | **Public Access** | Blocked |
 | **SSL Required** | Yes (bucket policy enforces) |
-| **Retention** | 6 years (2190 days) |
+| **Retention** | 6 years (2192 days) |
 | **Lifecycle** | Standard → Standard-IA (90d) → Glacier (365d) |
 
 Access is granted via IAM task roles - no AWS access keys needed.
