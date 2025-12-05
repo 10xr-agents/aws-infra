@@ -250,3 +250,24 @@ output "listener_rule_services" {
     lookup(config, "alb_path_patterns", null) != null
   }
 }
+
+# ALB Log Buckets (HIPAA Compliance)
+output "alb_access_logs_bucket" {
+  description = "S3 bucket for ALB access logs"
+  value       = try(aws_s3_bucket.alb_access_logs[0].id, null)
+}
+
+output "alb_access_logs_bucket_arn" {
+  description = "ARN of S3 bucket for ALB access logs"
+  value       = try(aws_s3_bucket.alb_access_logs[0].arn, null)
+}
+
+output "alb_connection_logs_bucket" {
+  description = "S3 bucket for ALB connection logs"
+  value       = try(aws_s3_bucket.alb_connection_logs[0].id, null)
+}
+
+output "alb_connection_logs_bucket_arn" {
+  description = "ARN of S3 bucket for ALB connection logs"
+  value       = try(aws_s3_bucket.alb_connection_logs[0].arn, null)
+}

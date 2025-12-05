@@ -45,21 +45,21 @@ resource "aws_lb" "main" {
   idle_timeout                    = var.alb_idle_timeout
   enable_waf_fail_open           = var.alb_enable_waf_fail_open
 
-  # Access logs
+  # Access logs - use internal bucket or external if provided
   dynamic "access_logs" {
     for_each = var.alb_access_logs_enabled ? [1] : []
     content {
-      bucket  = var.alb_access_logs_bucket
+      bucket  = var.alb_access_logs_bucket != "" ? var.alb_access_logs_bucket : aws_s3_bucket.alb_access_logs[0].id
       prefix  = var.alb_access_logs_prefix
       enabled = true
     }
   }
 
-  # Connection logs
+  # Connection logs - use internal bucket or external if provided
   dynamic "connection_logs" {
     for_each = var.alb_connection_logs_enabled ? [1] : []
     content {
-      bucket  = var.alb_connection_logs_bucket
+      bucket  = var.alb_connection_logs_bucket != "" ? var.alb_connection_logs_bucket : aws_s3_bucket.alb_connection_logs[0].id
       prefix  = var.alb_connection_logs_prefix
       enabled = true
     }
@@ -69,6 +69,11 @@ resource "aws_lb" "main" {
     Name      = "${local.name_prefix}-alb"
     Component = "LoadBalancer"
   })
+
+  depends_on = [
+    aws_s3_bucket_policy.alb_access_logs,
+    aws_s3_bucket_policy.alb_connection_logs
+  ]
 }
 
 ################################################################################
