@@ -111,6 +111,79 @@ module "vpc" {
 #   depends_on = [module.vpc]
 # }
 
+# DocumentDB Module - HIPAA Compliant Database
+module "documentdb" {
+  source = "../../modules/documentdb"
+
+  cluster_name = var.cluster_name
+  environment  = var.environment
+  vpc_id       = module.vpc.vpc_id
+  subnet_ids   = module.vpc.database_subnets  # Use database subnets for DocumentDB
+
+  # Cluster Configuration
+  cluster_size   = var.documentdb_cluster_size
+  instance_class = var.documentdb_instance_class
+  engine_version = var.documentdb_engine_version
+  cluster_family = var.documentdb_cluster_family
+
+  # Authentication
+  master_username = var.documentdb_master_username
+  master_password = var.documentdb_master_password
+
+  # Security - Allow access from VPC CIDR and ECS security groups
+  create_security_group      = true
+  allowed_cidr_blocks        = [module.vpc.vpc_cidr_block]
+  allowed_security_group_ids = []  # Will be populated by ECS module if needed
+
+  # Encryption (HIPAA Compliance)
+  create_kms_key          = var.documentdb_create_kms_key
+  kms_key_enable_rotation = true
+  tls_enabled             = true  # Required for HIPAA - encryption in transit
+
+  # Backup Configuration
+  backup_retention_period = var.documentdb_backup_retention_period
+  preferred_backup_window = var.documentdb_preferred_backup_window
+  skip_final_snapshot     = var.documentdb_skip_final_snapshot
+
+  # Maintenance
+  preferred_maintenance_window = var.documentdb_preferred_maintenance_window
+  apply_immediately            = var.documentdb_apply_immediately
+  auto_minor_version_upgrade   = var.documentdb_auto_minor_version_upgrade
+  deletion_protection          = var.documentdb_deletion_protection
+
+  # Logging (HIPAA Compliance)
+  enabled_cloudwatch_logs_exports = var.documentdb_enabled_cloudwatch_logs_exports
+  cloudwatch_log_retention_days   = var.documentdb_cloudwatch_log_retention_days
+  audit_logs_enabled              = true  # Required for HIPAA
+  profiler_enabled                = var.documentdb_profiler_enabled
+  profiler_threshold_ms           = var.documentdb_profiler_threshold_ms
+
+  # SSM and Secrets Manager
+  ssm_parameter_enabled    = var.documentdb_ssm_parameter_enabled
+  secrets_manager_enabled  = var.documentdb_secrets_manager_enabled
+
+  # IAM Policy for ECS access
+  create_iam_policy = true
+
+  # CloudWatch Alarms
+  create_cloudwatch_alarms = var.documentdb_create_cloudwatch_alarms
+  alarm_actions            = var.alarm_actions
+
+  tags = merge(
+    var.tags,
+    {
+      "Environment" = var.environment
+      "Project"     = "10xR-Agents"
+      "Component"   = "DocumentDB"
+      "Platform"    = "AWS"
+      "Terraform"   = "true"
+      "HIPAA"       = "true"
+    }
+  )
+
+  depends_on = [module.vpc]
+}
+
 # ECS Cluster Module
 module "ecs" {
   source = "../../modules/ecs"
@@ -145,7 +218,7 @@ module "ecs" {
     }
   )
 
-  depends_on = [module.redis, module.certs]
+  depends_on = [module.documentdb, module.certs]
 }
 
 # Networking Module (NEW - replaces the NLB resources)

@@ -617,3 +617,134 @@ variable "app_dns_records" {
   }))
   default = {}
 }
+
+################################################################################
+# DocumentDB Configuration Variables
+################################################################################
+
+variable "documentdb_cluster_size" {
+  description = "Number of DocumentDB instances in the cluster"
+  type        = number
+  default     = 2
+}
+
+variable "documentdb_instance_class" {
+  description = "Instance class for DocumentDB instances"
+  type        = string
+  default     = "db.r6g.large"
+}
+
+variable "documentdb_engine_version" {
+  description = "DocumentDB engine version"
+  type        = string
+  default     = "5.0.0"
+}
+
+variable "documentdb_cluster_family" {
+  description = "DocumentDB cluster parameter group family"
+  type        = string
+  default     = "docdb5.0"
+}
+
+variable "documentdb_master_username" {
+  description = "Master username for DocumentDB"
+  type        = string
+  default     = "docdbadmin"
+}
+
+variable "documentdb_master_password" {
+  description = "Master password for DocumentDB. If empty, a random password will be generated"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "documentdb_create_kms_key" {
+  description = "Whether to create a KMS key for DocumentDB encryption"
+  type        = bool
+  default     = true
+}
+
+variable "documentdb_backup_retention_period" {
+  description = "Number of days to retain DocumentDB backups"
+  type        = number
+  default     = 7
+}
+
+variable "documentdb_preferred_backup_window" {
+  description = "Daily time range for DocumentDB automated backups (UTC)"
+  type        = string
+  default     = "03:00-05:00"
+}
+
+variable "documentdb_skip_final_snapshot" {
+  description = "Skip final snapshot when DocumentDB cluster is deleted"
+  type        = bool
+  default     = false
+}
+
+variable "documentdb_preferred_maintenance_window" {
+  description = "Weekly time range for DocumentDB maintenance (UTC)"
+  type        = string
+  default     = "sun:05:00-sun:07:00"
+}
+
+variable "documentdb_apply_immediately" {
+  description = "Apply DocumentDB changes immediately or during maintenance window"
+  type        = bool
+  default     = false
+}
+
+variable "documentdb_auto_minor_version_upgrade" {
+  description = "Enable automatic minor version upgrades for DocumentDB"
+  type        = bool
+  default     = true
+}
+
+variable "documentdb_deletion_protection" {
+  description = "Enable deletion protection for DocumentDB"
+  type        = bool
+  default     = true
+}
+
+variable "documentdb_enabled_cloudwatch_logs_exports" {
+  description = "List of log types to export to CloudWatch for DocumentDB"
+  type        = list(string)
+  default     = ["audit", "profiler"]
+}
+
+variable "documentdb_cloudwatch_log_retention_days" {
+  description = "Number of days to retain DocumentDB CloudWatch logs"
+  type        = number
+  default     = 90
+}
+
+variable "documentdb_profiler_enabled" {
+  description = "Enable profiler for DocumentDB slow query logging"
+  type        = bool
+  default     = true
+}
+
+variable "documentdb_profiler_threshold_ms" {
+  description = "DocumentDB profiler threshold in milliseconds"
+  type        = number
+  default     = 100
+}
+
+variable "documentdb_ssm_parameter_enabled" {
+  description = "Store DocumentDB connection details in SSM Parameter Store"
+  type        = bool
+  default     = true
+}
+
+variable "documentdb_secrets_manager_enabled" {
+  description = "Store DocumentDB credentials in AWS Secrets Manager"
+  type        = bool
+  default     = true
+}
+
+variable "documentdb_create_cloudwatch_alarms" {
+  description = "Create CloudWatch alarms for DocumentDB monitoring"
+  type        = bool
+  default     = true
+}

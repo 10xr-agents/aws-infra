@@ -219,3 +219,65 @@ output "redis_parameters_check" {
   description = "Redis parameters that might affect connectivity"
   value = var.redis_parameters
 }
+
+################################################################################
+# DocumentDB Outputs
+################################################################################
+
+output "documentdb_cluster_id" {
+  description = "The DocumentDB cluster identifier"
+  value       = module.documentdb.cluster_id
+}
+
+output "documentdb_cluster_arn" {
+  description = "The ARN of the DocumentDB cluster"
+  value       = module.documentdb.cluster_arn
+}
+
+output "documentdb_endpoint" {
+  description = "The primary endpoint of the DocumentDB cluster"
+  value       = module.documentdb.endpoint
+}
+
+output "documentdb_reader_endpoint" {
+  description = "The reader endpoint of the DocumentDB cluster"
+  value       = module.documentdb.reader_endpoint
+}
+
+output "documentdb_port" {
+  description = "The port of the DocumentDB cluster"
+  value       = module.documentdb.port
+}
+
+output "documentdb_security_group_id" {
+  description = "The security group ID for DocumentDB"
+  value       = module.documentdb.security_group_id
+}
+
+output "documentdb_kms_key_arn" {
+  description = "The KMS key ARN used for DocumentDB encryption"
+  value       = module.documentdb.kms_key_arn
+}
+
+output "documentdb_secrets_manager_secret_arn" {
+  description = "The ARN of the Secrets Manager secret for DocumentDB"
+  value       = module.documentdb.secrets_manager_secret_arn
+}
+
+output "documentdb_iam_policy_arn" {
+  description = "The ARN of the IAM policy for DocumentDB access"
+  value       = module.documentdb.iam_policy_arn
+}
+
+output "documentdb_connection_info" {
+  description = "DocumentDB connection information (non-sensitive)"
+  value = {
+    cluster_identifier = module.documentdb.cluster_identifier
+    endpoint           = module.documentdb.endpoint
+    reader_endpoint    = module.documentdb.reader_endpoint
+    port               = module.documentdb.port
+    database_name      = local.documentdb_database_name
+    tls_enabled        = true
+    secrets_manager_arn = module.documentdb.secrets_manager_secret_arn
+  }
+}

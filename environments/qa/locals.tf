@@ -1,11 +1,12 @@
 # environments/qa/locals.tf
-locals {
 
+locals {
   ecs_services = var.ecs_services
 
-  mongodb_connection_string = "mongodb+srv://doadmin:2wP6eJ810Sa573WI@db-mongodb-nyc3-50305-ea8e643e.mongo.ondigitalocean.com/ten_xr_agents_qa?tls=true&authSource=admin&replicaSet=db-mongodb-nyc3-50305"
-
   acm_certificate_arn = module.certs.acm_certificate_arn
+
+  # DocumentDB database name
+  documentdb_database_name = "ten_xr_agents_${var.environment}"
 
   # You can also merge with environment-specific overrides
   ecs_services_with_overrides = {
@@ -19,39 +20,79 @@ locals {
             ENVIRONMENT            = var.environment
             ECS_ENVIRONMENT        = var.environment
             SPRING_PROFILES_ACTIVE = var.environment
-            CLUSTER_NAME = var.cluster_name
-            # Add Redis connection details to all services
-            REDIS_URL              = module.redis.redis_connection_string
-            REDIS_HOST             = module.redis.redis_primary_endpoint
-            REDIS_PORT             = tostring(module.redis.redis_port)
-            REDIS_USERNAME         = module.redis.redis_username
-            REDIS_TLS_ENABLED      = tostring(var.redis_transit_encryption_enabled)
+            CLUSTER_NAME           = var.cluster_name
 
-            SPRING_DATA_MONGODB_URI = local.mongodb_connection_string
-            MONGO_DB_URL            = local.mongodb_connection_string
-            MONGO_DB_URI            = local.mongodb_connection_string
-            MONGODB_DATABASE        = "ten_xr_agents_qa"
-            DATABASE_NAME           = "ten_xr_agents_qa"
-            MONGODB_PASSWORD        = "2wP6eJ810Sa573WI"
+            # Redis connection details (when Redis module is enabled)
+            # REDIS_URL              = module.redis.redis_connection_string
+            # REDIS_HOST             = module.redis.redis_primary_endpoint
+            # REDIS_PORT             = tostring(module.redis.redis_port)
+            # REDIS_USERNAME         = module.redis.redis_username
+            # REDIS_TLS_ENABLED      = tostring(var.redis_transit_encryption_enabled)
+
+            # DocumentDB connection details (replaces MongoDB)
+            DOCUMENTDB_HOST          = module.documentdb.endpoint
+            DOCUMENTDB_READER_HOST   = module.documentdb.reader_endpoint
+            DOCUMENTDB_PORT          = tostring(module.documentdb.port)
+            DOCUMENTDB_DATABASE      = local.documentdb_database_name
+            DOCUMENTDB_TLS_ENABLED   = "true"
+
+            # MongoDB-compatible environment variables pointing to DocumentDB
+            SPRING_DATA_MONGODB_URI  = ""  # Will be injected via secrets
+            MONGO_DB_URL             = ""  # Will be injected via secrets
+            MONGO_DB_URI             = ""  # Will be injected via secrets
+            MONGODB_DATABASE         = local.documentdb_database_name
+            DATABASE_NAME            = local.documentdb_database_name
           }
         )
-        # Add Redis auth token as a secret for all services that need it
+
+        # Add secrets for DocumentDB credentials
         secrets = concat(
           lookup(config, "secrets", []),
           [
+            # DocumentDB credentials from Secrets Manager
             {
-              name       = "REDIS_PASSWORD"
-              value_from = module.redis.ssm_parameter_redis_auth_token
+              name       = "DOCUMENTDB_USERNAME"
+              value_from = "${module.documentdb.secrets_manager_secret_arn}:username::"
+            },
+            {
+              name       = "DOCUMENTDB_PASSWORD"
+              value_from = "${module.documentdb.secrets_manager_secret_arn}:password::"
+            },
+            {
+              name       = "DOCUMENTDB_CONNECTION_STRING"
+              value_from = "${module.documentdb.secrets_manager_secret_arn}:connection_string::"
+            },
+            # MongoDB-compatible secret references (for applications using MongoDB driver)
+            {
+              name       = "SPRING_DATA_MONGODB_URI"
+              value_from = "${module.documentdb.secrets_manager_secret_arn}:connection_string::"
+            },
+            {
+              name       = "MONGO_DB_URL"
+              value_from = "${module.documentdb.secrets_manager_secret_arn}:connection_string::"
+            },
+            {
+              name       = "MONGO_DB_URI"
+              value_from = "${module.documentdb.secrets_manager_secret_arn}:connection_string::"
+            },
+            {
+              name       = "MONGODB_PASSWORD"
+              value_from = "${module.documentdb.secrets_manager_secret_arn}:password::"
             }
+            # Redis password (when Redis module is enabled)
+            # {
+            #   name       = "REDIS_PASSWORD"
+            #   value_from = module.redis.ssm_parameter_redis_auth_token
+            # }
           ]
         )
 
-        # ADD IAM permissions for Redis/ElastiCache
+        # ADD IAM permissions for DocumentDB and ElastiCache
         additional_task_policies = merge(
           lookup(config, "additional_task_policies", {}),
           {
+            "DocumentDBAccess"  = module.documentdb.iam_policy_arn
             "ElastiCacheAccess" = aws_iam_policy.ecs_elasticache_policy.arn
-            "MongoDBAccess"     = aws_iam_policy.ecs_mongodb_policy.arn
           }
         )
       }
@@ -93,10 +134,10 @@ resource "aws_iam_policy" "ecs_elasticache_policy" {
   tags = var.tags
 }
 
-# IAM Policy for MongoDB access
-resource "aws_iam_policy" "ecs_mongodb_policy" {
-  name        = "${local.cluster_name}-ecs-mongodb-policy"
-  description = "IAM policy for ECS tasks to access MongoDB resources"
+# IAM Policy for DocumentDB CloudWatch metrics (optional)
+resource "aws_iam_policy" "ecs_documentdb_monitoring_policy" {
+  name        = "${local.cluster_name}-ecs-documentdb-monitoring-policy"
+  description = "IAM policy for ECS tasks to access DocumentDB CloudWatch metrics"
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -104,24 +145,13 @@ resource "aws_iam_policy" "ecs_mongodb_policy" {
       {
         Effect = "Allow"
         Action = [
-          # EC2 permissions for MongoDB instances
-          "ec2:DescribeInstances",
-          "ec2:DescribeInstanceStatus",
-          "ec2:DescribeVolumes",
-          "ec2:DescribeSnapshots",
-          # SSM permissions for connection details
-          "ssm:GetParameter",
-          "ssm:GetParameters",
-          "ssm:GetParametersByPath",
-          # Secrets Manager permissions
-          "secretsmanager:GetSecretValue",
-          # KMS permissions for decryption
-          "kms:Decrypt",
-          "kms:DescribeKey",
-          # Route53 permissions for DNS resolution
-          "route53:ListHostedZones",
-          "route53:GetHostedZone",
-          "route53:ListResourceRecordSets"
+          "cloudwatch:GetMetricStatistics",
+          "cloudwatch:ListMetrics",
+          "cloudwatch:GetMetricData",
+          "logs:GetLogEvents",
+          "logs:FilterLogEvents",
+          "logs:DescribeLogGroups",
+          "logs:DescribeLogStreams"
         ]
         Resource = "*"
       }
