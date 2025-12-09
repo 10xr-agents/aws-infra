@@ -213,7 +213,7 @@ resource "aws_s3_bucket_lifecycle_configuration" "this" {
       prefix = ""
     }
 
-    # HIPAA: Retain data for 6 years minimum
+    # Retain data for configured retention period
     expiration {
       days = var.retention_days
     }
@@ -222,15 +222,21 @@ resource "aws_s3_bucket_lifecycle_configuration" "this" {
       noncurrent_days = var.retention_days
     }
 
-    # Cost optimization - move to cheaper storage
-    transition {
-      days          = 90
-      storage_class = "STANDARD_IA"
+    # Cost optimization - move to cheaper storage (only if retention > transition days)
+    dynamic "transition" {
+      for_each = var.retention_days > 90 ? [1] : []
+      content {
+        days          = 90
+        storage_class = "STANDARD_IA"
+      }
     }
 
-    transition {
-      days          = 365
-      storage_class = "GLACIER"
+    dynamic "transition" {
+      for_each = var.retention_days > 365 ? [1] : []
+      content {
+        days          = 365
+        storage_class = "GLACIER"
+      }
     }
 
     abort_incomplete_multipart_upload {
@@ -307,14 +313,21 @@ resource "aws_s3_bucket_lifecycle_configuration" "access_logs" {
       days = var.retention_days
     }
 
-    transition {
-      days          = 90
-      storage_class = "STANDARD_IA"
+    # Cost optimization - move to cheaper storage (only if retention > transition days)
+    dynamic "transition" {
+      for_each = var.retention_days > 90 ? [1] : []
+      content {
+        days          = 90
+        storage_class = "STANDARD_IA"
+      }
     }
 
-    transition {
-      days          = 365
-      storage_class = "GLACIER"
+    dynamic "transition" {
+      for_each = var.retention_days > 365 ? [1] : []
+      content {
+        days          = 365
+        storage_class = "GLACIER"
+      }
     }
   }
 

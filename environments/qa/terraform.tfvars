@@ -185,30 +185,12 @@ create_http_listener = true
 ################################################################################
 # Domain Configuration
 ################################################################################
-domain           = "qa.10xr.co"
-base_domain_name = "10xr.co"
+domain = "qa.10xr.co"
 
-# DNS Records for Route 53
-app_dns_records = {
-  "qa-hospice" = {
-    name    = "hospice.qa"
-    content = "" # Will be set by module to NLB DNS name
-    type    = "CNAME"
-    proxied = false
-    ttl     = 300
-    comment = "Hospice QA environment"
-    tags    = ["qa", "hospice"]
-  }
-  "qa-homehealth" = {
-    name    = "homehealth.qa"
-    content = "" # Will be set by module to NLB DNS name
-    type    = "CNAME"
-    proxied = false
-    ttl     = 300
-    comment = "HomeHealth QA environment"
-    tags    = ["qa", "homehealth"]
-  }
-}
+# DNS is managed externally in GoDaddy
+# Create CNAME records pointing to NLB DNS name (from terraform output nlb_dns_name):
+#   homehealth.qa.10xr.co -> <nlb-dns-name>
+#   hospice.qa.10xr.co    -> <nlb-dns-name>
 
 ################################################################################
 # HIPAA Configuration (Relaxed for QA/Staging)

@@ -222,7 +222,7 @@ resource "aws_s3_bucket_lifecycle_configuration" "alb_access_logs" {
       prefix = ""
     }
 
-    # HIPAA: Retain logs for 6 years (2192 days)
+    # Retain logs for configured retention period
     expiration {
       days = var.log_retention_days
     }
@@ -231,16 +231,21 @@ resource "aws_s3_bucket_lifecycle_configuration" "alb_access_logs" {
       noncurrent_days = var.log_retention_days
     }
 
-    # Transition to cheaper storage after 90 days
-    transition {
-      days          = 90
-      storage_class = "STANDARD_IA"
+    # Transition to cheaper storage (only if retention > transition days)
+    dynamic "transition" {
+      for_each = var.log_retention_days > 90 ? [1] : []
+      content {
+        days          = 90
+        storage_class = "STANDARD_IA"
+      }
     }
 
-    # Transition to Glacier after 365 days
-    transition {
-      days          = 365
-      storage_class = "GLACIER"
+    dynamic "transition" {
+      for_each = var.log_retention_days > 365 ? [1] : []
+      content {
+        days          = 365
+        storage_class = "GLACIER"
+      }
     }
 
     abort_incomplete_multipart_upload {
@@ -264,7 +269,7 @@ resource "aws_s3_bucket_lifecycle_configuration" "alb_connection_logs" {
       prefix = ""
     }
 
-    # HIPAA: Retain logs for 6 years (2192 days)
+    # Retain logs for configured retention period
     expiration {
       days = var.log_retention_days
     }
@@ -273,16 +278,21 @@ resource "aws_s3_bucket_lifecycle_configuration" "alb_connection_logs" {
       noncurrent_days = var.log_retention_days
     }
 
-    # Transition to cheaper storage after 90 days
-    transition {
-      days          = 90
-      storage_class = "STANDARD_IA"
+    # Transition to cheaper storage (only if retention > transition days)
+    dynamic "transition" {
+      for_each = var.log_retention_days > 90 ? [1] : []
+      content {
+        days          = 90
+        storage_class = "STANDARD_IA"
+      }
     }
 
-    # Transition to Glacier after 365 days
-    transition {
-      days          = 365
-      storage_class = "GLACIER"
+    dynamic "transition" {
+      for_each = var.log_retention_days > 365 ? [1] : []
+      content {
+        days          = 365
+        storage_class = "GLACIER"
+      }
     }
 
     abort_incomplete_multipart_upload {

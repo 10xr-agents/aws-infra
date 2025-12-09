@@ -276,3 +276,35 @@ output "documentdb_connection_info" {
     database_name_hospice     = local.documentdb_database_hospice
   }
 }
+
+################################################################################
+# Outputs for Use in ECS Services
+################################################################################
+
+output "home_health_secrets_arn" {
+  description = "ARN of Home Health secrets in Secrets Manager"
+  value       = aws_secretsmanager_secret.home_health.arn
+}
+
+output "hospice_secrets_arn" {
+  description = "ARN of Hospice secrets in Secrets Manager"
+  value       = aws_secretsmanager_secret.hospice.arn
+}
+
+output "home_health_ssm_parameters" {
+  description = "SSM parameter ARNs for Home Health service"
+  value = {
+    base_url     = aws_ssm_parameter.home_health_base_url.arn
+    nextauth_url = aws_ssm_parameter.home_health_nextauth_url.arn
+    node_env     = aws_ssm_parameter.home_health_node_env.arn
+  }
+}
+
+output "hospice_ssm_parameters" {
+  description = "SSM parameter ARNs for Hospice service"
+  value = {
+    base_url     = aws_ssm_parameter.hospice_base_url.arn
+    nextauth_url = aws_ssm_parameter.hospice_nextauth_url.arn
+    node_env     = aws_ssm_parameter.hospice_node_env.arn
+  }
+}

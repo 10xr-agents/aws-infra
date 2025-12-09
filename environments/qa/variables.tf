@@ -442,24 +442,7 @@ variable "alarm_actions" {
   default     = []
 }
 
-################################################################################
-# Custom DNS Records
-################################################################################
-
-variable "app_dns_records" {
-  description = "Map of custom DNS records to create"
-  type = map(object({
-    name     = string
-    content  = string
-    type     = string
-    proxied  = optional(bool)
-    ttl      = optional(number)
-    priority = optional(number)
-    comment  = optional(string)
-    tags     = optional(list(string), [])
-  }))
-  default = {}
-}
+# DNS is managed externally in GoDaddy - no Route 53 variables needed
 
 ################################################################################
 # DocumentDB Configuration Variables
