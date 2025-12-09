@@ -170,9 +170,9 @@ resource "aws_docdb_subnet_group" "main" {
 ################################################################################
 
 resource "aws_docdb_cluster_parameter_group" "main" {
-  name        = "${local.name_prefix}-documentdb-params"
+  name        = "${local.name_prefix}-documentdb-${var.cluster_family}"
   family      = var.cluster_family
-  description = "DocumentDB cluster parameter group for ${local.name_prefix}"
+  description = "DocumentDB cluster parameter group for ${local.name_prefix} (${var.cluster_family})"
 
   # TLS enforcement for encryption in transit (HIPAA requirement)
   parameter {
