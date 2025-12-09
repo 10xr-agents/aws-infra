@@ -104,103 +104,16 @@ variable "enable_fargate_spot" {
   default     = true
 }
 
-variable "enable_ec2" {
-  description = "Whether to enable EC2 capacity provider"
-  type        = bool
-  default     = false
-}
-
-# EC2 Capacity Provider Configuration (if enabled)
-variable "ec2_asg_min_size" {
-  description = "Minimum size of the EC2 Auto Scaling Group"
-  type        = number
-  default     = 0
-}
-
-variable "ec2_asg_max_size" {
-  description = "Maximum size of the EC2 Auto Scaling Group"
-  type        = number
-  default     = 10
-}
-
-variable "ec2_asg_desired_capacity" {
-  description = "Desired capacity of the EC2 Auto Scaling Group"
-  type        = number
-  default     = 2
-}
-
-variable "ec2_instance_types" {
-  description = "List of EC2 instance types for the capacity provider"
-  type        = list(string)
-  default     = ["m5.large", "m5.xlarge"]
-}
-
-variable "ec2_ami_id" {
-  description = "AMI ID for EC2 instances (defaults to latest ECS-optimized AMI)"
-  type        = string
-  default     = ""
-}
-
 variable "enable_service_discovery" {
   description = "Whether to enable service discovery"
   type        = bool
   default     = true
 }
 
-# ALB Configuration
-variable "alb_enable_deletion_protection" {
-  description = "Whether to enable deletion protection on the ALB"
-  type        = bool
-  default     = false
-}
-
-variable "alb_enable_http2" {
-  description = "Whether to enable HTTP2 on the ALB"
-  type        = bool
-  default     = true
-}
-
-variable "alb_idle_timeout" {
-  description = "The time in seconds that the connection is allowed to be idle"
-  type        = number
-  default     = 60
-}
-
 variable "ssl_policy" {
   description = "SSL policy for the HTTPS listener"
   type        = string
   default     = "ELBSecurityPolicy-TLS-1-2-2017-01"
-}
-
-# Storage Configuration
-variable "efs_performance_mode" {
-  description = "Performance mode for EFS"
-  type        = string
-  default     = "generalPurpose"
-}
-
-variable "efs_throughput_mode" {
-  description = "Throughput mode for EFS"
-  type        = string
-  default     = "bursting"
-}
-
-variable "efs_provisioned_throughput" {
-  description = "Provisioned throughput in MiB/s (required if throughput_mode is provisioned)"
-  type        = number
-  default     = null
-}
-
-variable "create_recordings_bucket" {
-  description = "Whether to create S3 bucket for recordings"
-  type        = bool
-  default     = true
-}
-
-variable "recordings_expiration_days" {
-  description = "Number of days after which recordings expire"
-  type        = number
-  default     = 30
 }
 
 # Redis Configuration Variables
@@ -327,8 +240,8 @@ variable "ecs_services" {
     # Capacity provider strategy
     capacity_provider_strategy = list(object({
       capacity_provider = string
-      weight           = number
-      base             = number
+      weight            = number
+      base              = number
     }))
 
     # Health checks
@@ -350,10 +263,10 @@ variable "ecs_services" {
     }))
 
     # Auto scaling
-    enable_auto_scaling       = optional(bool, true)
-    auto_scaling_min_capacity = optional(number, 1)
-    auto_scaling_max_capacity = optional(number, 10)
-    auto_scaling_cpu_target   = optional(number, 70)
+    enable_auto_scaling        = optional(bool, true)
+    auto_scaling_min_capacity  = optional(number, 1)
+    auto_scaling_max_capacity  = optional(number, 10)
+    auto_scaling_cpu_target    = optional(number, 70)
     auto_scaling_memory_target = optional(number, 80)
 
     # Service discovery and load balancer
@@ -362,10 +275,10 @@ variable "ecs_services" {
     deregistration_delay     = optional(number, 30)
 
     # ALB routing
-    alb_priority      = optional(number)
-    alb_path_patterns = optional(list(string))
+    alb_priority           = optional(number)
+    alb_path_patterns      = optional(list(string))
     enable_default_routing = optional(bool, false),
-    alb_host_headers = optional(list(string))
+    alb_host_headers       = optional(list(string))
 
     # Additional configuration
     efs_config = optional(object({
@@ -373,9 +286,9 @@ variable "ecs_services" {
       mount_path = string
     }))
     additional_task_policies = optional(map(string), {})
-    memory_reservation      = optional(number)
-    linux_parameters        = optional(any)
-    ulimits                = optional(any)
+    memory_reservation       = optional(number)
+    linux_parameters         = optional(any)
+    ulimits                  = optional(any)
   }))
 }
 
@@ -401,11 +314,7 @@ variable "nlb_internal" {
   default     = false
 }
 
-variable "nlb_enable_deletion_protection" {
-  description = "Whether to enable deletion protection for the NLB"
-  type        = bool
-  default     = false
-}
+# Note: nlb_enable_deletion_protection is now controlled by hipaa_config.enable_deletion_protection
 
 variable "nlb_enable_cross_zone_load_balancing" {
   description = "Whether to enable cross-zone load balancing for the NLB"
@@ -516,87 +425,21 @@ variable "https_listener_protocol" {
   }
 }
 
-# NLB Access Logs
-variable "nlb_access_logs_enabled" {
-  description = "Whether to enable NLB access logs"
-  type        = bool
-  default     = false
-}
-
-# NLB Connection Logs
-variable "nlb_connection_logs_enabled" {
-  description = "Whether to enable NLB connection logs"
-  type        = bool
-  default     = false
-}
+# Note: nlb_access_logs_enabled and nlb_connection_logs_enabled are now controlled by hipaa_config.enable_access_logging
 
 # Security Groups (optional for NLB)
-variable "create_security_groups" {
-  description = "Whether to create security groups for NLB"
-  type        = bool
-  default     = false
-}
-
 variable "allowed_cidr_blocks" {
   description = "List of CIDR blocks allowed to access the NLB"
   type        = list(string)
   default     = ["0.0.0.0/0"]
 }
 
-variable "additional_ports" {
-  description = "List of additional ports to allow in security groups"
-  type        = list(number)
-  default     = []
-}
-
-# Route 53 Configuration (optional)
-variable "create_route53_record" {
-  description = "Whether to create Route 53 record for NLB"
-  type        = bool
-  default     = false
-}
-
-variable "route53_zone_id" {
-  description = "Route 53 hosted zone ID"
-  type        = string
-  default     = ""
-}
-
-variable "route53_record_name" {
-  description = "Route 53 record name"
-  type        = string
-  default     = ""
-}
-
-variable "route53_evaluate_target_health" {
-  description = "Whether to evaluate target health for Route 53 alias"
-  type        = bool
-  default     = true
-}
-
-# CloudWatch Monitoring (optional)
-variable "create_cloudwatch_alarms" {
-  description = "Whether to create CloudWatch alarms for NLB"
-  type        = bool
-  default     = false
-}
+# Note: create_cloudwatch_alarms is now controlled by hipaa_config.enable_cloudwatch_alarms
 
 variable "alarm_actions" {
   description = "List of ARNs to notify when alarms trigger"
   type        = list(string)
   default     = []
-}
-
-variable "healthy_host_count_threshold" {
-  description = "Threshold for healthy host count alarm"
-  type        = number
-  default     = 1
-}
-
-variable "unhealthy_host_count_threshold" {
-  description = "Threshold for unhealthy host count alarm"
-  type        = number
-  default     = 0
 }
 
 ################################################################################
@@ -665,11 +508,7 @@ variable "documentdb_create_kms_key" {
   default     = true
 }
 
-variable "documentdb_backup_retention_period" {
-  description = "Number of days to retain DocumentDB backups. HIPAA recommends at least 30 days."
-  type        = number
-  default     = 35  # 5 weeks - HIPAA best practice
-}
+# Note: documentdb_backup_retention_period is now controlled by hipaa_config.backup_retention_days
 
 variable "documentdb_preferred_backup_window" {
   description = "Daily time range for DocumentDB automated backups (UTC)"
@@ -677,11 +516,7 @@ variable "documentdb_preferred_backup_window" {
   default     = "03:00-05:00"
 }
 
-variable "documentdb_skip_final_snapshot" {
-  description = "Skip final snapshot when DocumentDB cluster is deleted"
-  type        = bool
-  default     = false
-}
+# Note: documentdb_skip_final_snapshot is now controlled by hipaa_config.skip_final_snapshot
 
 variable "documentdb_preferred_maintenance_window" {
   description = "Weekly time range for DocumentDB maintenance (UTC)"
@@ -701,11 +536,7 @@ variable "documentdb_auto_minor_version_upgrade" {
   default     = true
 }
 
-variable "documentdb_deletion_protection" {
-  description = "Enable deletion protection for DocumentDB"
-  type        = bool
-  default     = true
-}
+# Note: documentdb_deletion_protection is now controlled by hipaa_config.enable_deletion_protection
 
 variable "documentdb_enabled_cloudwatch_logs_exports" {
   description = "List of log types to export to CloudWatch for DocumentDB"
@@ -713,11 +544,7 @@ variable "documentdb_enabled_cloudwatch_logs_exports" {
   default     = ["audit", "profiler"]
 }
 
-variable "documentdb_cloudwatch_log_retention_days" {
-  description = "Number of days to retain DocumentDB CloudWatch logs. HIPAA requires 6 years (2192 days)."
-  type        = number
-  default     = 2192  # 6 years - HIPAA compliance requirement
-}
+# Note: documentdb_cloudwatch_log_retention_days is now controlled by hipaa_config.log_retention_days
 
 variable "documentdb_profiler_enabled" {
   description = "Enable profiler for DocumentDB slow query logging"
@@ -743,11 +570,7 @@ variable "documentdb_secrets_manager_enabled" {
   default     = true
 }
 
-variable "documentdb_create_cloudwatch_alarms" {
-  description = "Create CloudWatch alarms for DocumentDB monitoring"
-  type        = bool
-  default     = true
-}
+# Note: documentdb_create_cloudwatch_alarms is now controlled by hipaa_config.enable_cloudwatch_alarms
 
 variable "tags" {
   description = "Additional tags for all resources"
@@ -756,73 +579,92 @@ variable "tags" {
 }
 
 ################################################################################
+# HIPAA Compliance Configuration
+# These settings control HIPAA-related features across all modules.
+# Production environments should use strict settings (defaults).
+# QA/staging environments can use relaxed settings for cost optimization.
+################################################################################
+
+variable "hipaa_config" {
+  description = "HIPAA compliance configuration. Production should use strict defaults, QA can use relaxed settings."
+  type = object({
+    # Log retention in days (HIPAA requires 6 years = 2192 days for production)
+    log_retention_days = number
+
+    # Data retention in days for S3 buckets (HIPAA requires 6 years = 2192 days)
+    data_retention_days = number
+
+    # Database backup retention in days (HIPAA recommends at least 30 days)
+    backup_retention_days = number
+
+    # Enable deletion protection on critical resources (ALB, NLB, DocumentDB)
+    enable_deletion_protection = bool
+
+    # Allow force_destroy on S3 buckets (should be false in production)
+    s3_force_destroy = bool
+
+    # Skip final snapshot on database deletion (should be false in production)
+    skip_final_snapshot = bool
+
+    # Enable access logging for load balancers
+    enable_access_logging = bool
+
+    # Enable CloudWatch alarms for monitoring
+    enable_cloudwatch_alarms = bool
+
+    # Enable audit logging for databases
+    enable_audit_logging = bool
+  })
+
+  default = {
+    # HIPAA-compliant defaults (use these for production)
+    log_retention_days         = 2192 # 6 years
+    data_retention_days        = 2192 # 6 years
+    backup_retention_days      = 35   # 5 weeks
+    enable_deletion_protection = true
+    s3_force_destroy           = false
+    skip_final_snapshot        = false
+    enable_access_logging      = true
+    enable_cloudwatch_alarms   = true
+    enable_audit_logging       = true
+  }
+}
+
+################################################################################
 # Service Secrets - Home Health
 # These should be set in Terraform Cloud workspace variables (sensitive)
 ################################################################################
 
-variable "home_health_nextauth_secret" {
+variable "nextauth_secret" {
   description = "NextAuth secret for Home Health service"
   type        = string
   sensitive   = true
   default     = ""
 }
 
-variable "home_health_ontune_secret" {
+variable "ontune_secret" {
   description = "OnTune secret for Home Health service"
   type        = string
   sensitive   = true
   default     = ""
 }
 
-variable "home_health_admin_api_key" {
+variable "admin_api_key" {
   description = "Admin API key for Home Health service"
   type        = string
   sensitive   = true
   default     = ""
 }
 
-variable "home_health_gemini_api_key" {
+variable "gemini_api_key" {
   description = "Gemini API key for Home Health service"
   type        = string
   sensitive   = true
   default     = ""
 }
 
-variable "home_health_openai_api_key" {
+variable "openai_api_key" {
   description = "OpenAI API key for Home Health service"
-  type        = string
-  sensitive   = true
-  default     = ""
-}
-
-################################################################################
-# Service Secrets - Hospice
-# These should be set in Terraform Cloud workspace variables (sensitive)
-################################################################################
-
-variable "hospice_nextauth_secret" {
-  description = "NextAuth secret for Hospice service"
-  type        = string
-  sensitive   = true
-  default     = ""
-}
-
-variable "hospice_ontune_secret" {
-  description = "OnTune secret for Hospice service"
-  type        = string
-  sensitive   = true
-  default     = ""
-}
-
-variable "hospice_admin_api_key" {
-  description = "Admin API key for Hospice service"
-  type        = string
-  sensitive   = true
-  default     = ""
-}
-
-variable "hospice_gemini_api_key" {
-  description = "Gemini API key for Hospice service"
   type        = string
   sensitive   = true
   default     = ""

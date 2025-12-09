@@ -191,19 +191,19 @@ output "profiler_log_group_name" {
 output "ecs_environment_variables" {
   description = "Environment variables for ECS task definitions"
   value = {
-    DOCUMENTDB_HOST            = aws_docdb_cluster.main.endpoint
-    DOCUMENTDB_READER_HOST     = aws_docdb_cluster.main.reader_endpoint
-    DOCUMENTDB_PORT            = tostring(aws_docdb_cluster.main.port)
-    DOCUMENTDB_TLS_ENABLED     = var.tls_enabled ? "true" : "false"
-    DOCUMENTDB_DATABASE        = "admin"
+    DOCUMENTDB_HOST        = aws_docdb_cluster.main.endpoint
+    DOCUMENTDB_READER_HOST = aws_docdb_cluster.main.reader_endpoint
+    DOCUMENTDB_PORT        = tostring(aws_docdb_cluster.main.port)
+    DOCUMENTDB_TLS_ENABLED = var.tls_enabled ? "true" : "false"
+    DOCUMENTDB_DATABASE    = "admin"
   }
 }
 
 output "ecs_secrets" {
   description = "Secret references for ECS task definitions (Secrets Manager)"
   value = var.secrets_manager_enabled ? {
-    DOCUMENTDB_USERNAME = "${aws_secretsmanager_secret.documentdb[0].arn}:username::"
-    DOCUMENTDB_PASSWORD = "${aws_secretsmanager_secret.documentdb[0].arn}:password::"
+    DOCUMENTDB_USERNAME          = "${aws_secretsmanager_secret.documentdb[0].arn}:username::"
+    DOCUMENTDB_PASSWORD          = "${aws_secretsmanager_secret.documentdb[0].arn}:password::"
     DOCUMENTDB_CONNECTION_STRING = "${aws_secretsmanager_secret.documentdb[0].arn}:connection_string::"
   } : {}
 }
@@ -211,8 +211,8 @@ output "ecs_secrets" {
 output "ecs_secrets_ssm" {
   description = "Secret references for ECS task definitions (SSM Parameter Store)"
   value = var.ssm_parameter_enabled ? {
-    DOCUMENTDB_USERNAME = aws_ssm_parameter.documentdb_username[0].arn
-    DOCUMENTDB_PASSWORD = aws_ssm_parameter.documentdb_password[0].arn
+    DOCUMENTDB_USERNAME          = aws_ssm_parameter.documentdb_username[0].arn
+    DOCUMENTDB_PASSWORD          = aws_ssm_parameter.documentdb_password[0].arn
     DOCUMENTDB_CONNECTION_STRING = aws_ssm_parameter.documentdb_connection_string[0].arn
   } : {}
 }

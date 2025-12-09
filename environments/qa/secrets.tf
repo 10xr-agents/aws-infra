@@ -20,16 +20,16 @@ resource "aws_secretsmanager_secret" "home_health" {
 resource "aws_secretsmanager_secret_version" "home_health" {
   secret_id = aws_secretsmanager_secret.home_health.id
   secret_string = jsonencode({
-    NEXTAUTH_SECRET          = var.home_health_nextauth_secret
-    ONTUNE_SECRET            = var.home_health_ontune_secret
-    ADMIN_API_KEY            = var.home_health_admin_api_key
-    NEXT_PUBLIC_ADMIN_API_KEY = var.home_health_admin_api_key
-    GEMINI_API_KEY           = var.home_health_gemini_api_key
-    OPENAI_API_KEY           = var.home_health_openai_api_key
+    NEXTAUTH_SECRET           = var.nextauth_secret
+    ONTUNE_SECRET             = var.ontune_secret
+    ADMIN_API_KEY             = var.admin_api_key
+    NEXT_PUBLIC_ADMIN_API_KEY = var.admin_api_key
+    GEMINI_API_KEY            = var.gemini_api_key
+    OPENAI_API_KEY            = var.openai_api_key
   })
 
   lifecycle {
-    ignore_changes = [secret_string]  # Allow manual updates without Terraform override
+    ignore_changes = [secret_string] # Allow manual updates without Terraform override
   }
 }
 
@@ -51,15 +51,15 @@ resource "aws_secretsmanager_secret" "hospice" {
 resource "aws_secretsmanager_secret_version" "hospice" {
   secret_id = aws_secretsmanager_secret.hospice.id
   secret_string = jsonencode({
-    NEXTAUTH_SECRET          = var.hospice_nextauth_secret
-    ONTUNE_SECRET            = var.hospice_ontune_secret
-    ADMIN_API_KEY            = var.hospice_admin_api_key
-    NEXT_PUBLIC_ADMIN_API_KEY = var.hospice_admin_api_key
-    GEMINI_API_KEY           = var.hospice_gemini_api_key
+    NEXTAUTH_SECRET           = var.nextauth_secret
+    ONTUNE_SECRET             = var.ontune_secret
+    ADMIN_API_KEY             = var.admin_api_key
+    NEXT_PUBLIC_ADMIN_API_KEY = var.admin_api_key
+    GEMINI_API_KEY            = var.gemini_api_key
   })
 
   lifecycle {
-    ignore_changes = [secret_string]  # Allow manual updates without Terraform override
+    ignore_changes = [secret_string] # Allow manual updates without Terraform override
   }
 }
 

@@ -18,14 +18,14 @@ locals {
     config,
     {
       # Add computed values
-      task_role_name       = "${local.name_prefix}-${name}-task-role"
-      task_exec_role_name  = "${local.name_prefix}-${name}-exec-role"
-      log_group_name       = "/ecs/${local.name_prefix}/${name}"
-      security_group_name  = "${local.name_prefix}-${name}-sg"
-      target_group_name    = "${substr(local.name_prefix, 0, 15)}-${substr(name, 0, 10)}-tg"
+      task_role_name      = "${local.name_prefix}-${name}-task-role"
+      task_exec_role_name = "${local.name_prefix}-${name}-exec-role"
+      log_group_name      = "/ecs/${local.name_prefix}/${name}"
+      security_group_name = "${local.name_prefix}-${name}-sg"
+      target_group_name   = "${substr(local.name_prefix, 0, 15)}-${substr(name, 0, 10)}-tg"
 
     }
-  )}
+  ) }
 
   # Generate container definitions for each service directly in Terraform
   container_definitions = { for name, config in local.services_config : name =>
@@ -67,9 +67,9 @@ locals {
           ],
           [
             for key, value in lookup(config, "environment", {}) : {
-            name  = key
-            value = tostring(value)
-          }
+              name  = key
+              value = tostring(value)
+            }
           ]
         )
 
@@ -141,7 +141,7 @@ locals {
         dockerSecurityOptions = lookup(config, "docker_security_options", null)
 
         # Interactive and pseudo-TTY
-        interactive = lookup(config, "interactive", false)
+        interactive    = lookup(config, "interactive", false)
         pseudoTerminal = lookup(config, "pseudo_terminal", false)
 
         # Docker labels
@@ -218,9 +218,9 @@ locals {
             }
           ] : null
           initProcessEnabled = lookup(config.linux_parameters, "init_process_enabled", null)
-          maxSwap           = lookup(config.linux_parameters, "max_swap", null)
-          sharedMemorySize  = lookup(config.linux_parameters, "shared_memory_size", null)
-          swappiness        = lookup(config.linux_parameters, "swappiness", null)
+          maxSwap            = lookup(config.linux_parameters, "max_swap", null)
+          sharedMemorySize   = lookup(config.linux_parameters, "shared_memory_size", null)
+          swappiness         = lookup(config.linux_parameters, "swappiness", null)
           tmpfs = lookup(config.linux_parameters, "tmpfs", null) != null ? [
             for tmpf in config.linux_parameters.tmpfs : {
               containerPath = tmpf.container_path
@@ -521,7 +521,7 @@ resource "aws_ecs_task_definition" "service" {
   cpu                      = each.value.cpu
   memory                   = each.value.memory
   execution_role_arn       = aws_iam_role.task_execution_role[each.key].arn
-  task_role_arn           = aws_iam_role.task_role[each.key].arn
+  task_role_arn            = aws_iam_role.task_role[each.key].arn
 
   container_definitions = local.container_definitions[each.key]
 
@@ -531,8 +531,8 @@ resource "aws_ecs_task_definition" "service" {
     content {
       name = "efs-storage"
       efs_volume_configuration {
-        file_system_id = var.efs_file_system_id
-        root_directory = "/"
+        file_system_id     = var.efs_file_system_id
+        root_directory     = "/"
         transit_encryption = "ENABLED"
         authorization_config {
           access_point_id = var.efs_access_point_id
@@ -616,8 +616,8 @@ resource "aws_ecs_service" "service" {
     for_each = lookup(each.value, "capacity_provider_strategy", [])
     content {
       capacity_provider = capacity_provider_strategy.value.capacity_provider
-      weight           = capacity_provider_strategy.value.weight
-      base             = capacity_provider_strategy.value.base
+      weight            = capacity_provider_strategy.value.weight
+      base              = capacity_provider_strategy.value.base
     }
   }
 

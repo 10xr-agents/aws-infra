@@ -145,7 +145,7 @@ variable "create_default_target_group" {
 variable "alb_access_logs_enabled" {
   description = "Whether to enable ALB access logs. HIPAA requires access logging for audit trails."
   type        = bool
-  default     = true  # HIPAA compliance - access logging required
+  default     = true # HIPAA compliance - access logging required
 }
 
 variable "alb_access_logs_bucket" {
@@ -164,7 +164,7 @@ variable "alb_access_logs_prefix" {
 variable "alb_connection_logs_enabled" {
   description = "Whether to enable ALB connection logs. HIPAA requires connection logging for audit trails."
   type        = bool
-  default     = true  # HIPAA compliance - connection logging required
+  default     = true # HIPAA compliance - connection logging required
 }
 
 variable "alb_connection_logs_bucket" {
@@ -180,9 +180,15 @@ variable "alb_connection_logs_prefix" {
 }
 
 variable "log_retention_days" {
-  description = "Number of days to retain CloudWatch logs. HIPAA requires 6 years (2192 days) for audit logs."
+  description = "Number of days to retain CloudWatch logs. HIPAA requires 6 years (2192 days) for audit logs in production."
   type        = number
-  default     = 2192  # 6 years - HIPAA compliance requirement
+  default     = 2192 # 6 years - HIPAA compliance requirement (override for non-production)
+}
+
+variable "s3_force_destroy" {
+  description = "Allow S3 buckets to be destroyed even if not empty. Should be false in production for HIPAA compliance."
+  type        = bool
+  default     = false # HIPAA compliance - prevent accidental deletion
 }
 
 ################################################################################
@@ -192,7 +198,7 @@ variable "log_retention_days" {
 variable "kms_key_arns" {
   description = "List of KMS key ARNs that ECS tasks need access to (for decrypting secrets)"
   type        = list(string)
-  default     = ["*"]  # Default allows all KMS keys - restrict in production
+  default     = ["*"] # Default allows all KMS keys - restrict in production
 }
 
 variable "task_execution_policy_arns" {
@@ -254,8 +260,8 @@ variable "services" {
     # Capacity provider strategy (optional - uses cluster default if not specified)
     capacity_provider_strategy = optional(list(object({
       capacity_provider = string
-      weight           = number
-      base             = number
+      weight            = number
+      base              = number
     })), [])
 
     # Health check configuration
@@ -278,10 +284,10 @@ variable "services" {
     }))
 
     # Auto scaling configuration
-    enable_auto_scaling       = optional(bool, true)
-    auto_scaling_min_capacity = optional(number, 1)
-    auto_scaling_max_capacity = optional(number, 10)
-    auto_scaling_cpu_target   = optional(number, 70)
+    enable_auto_scaling        = optional(bool, true)
+    auto_scaling_min_capacity  = optional(number, 1)
+    auto_scaling_max_capacity  = optional(number, 10)
+    auto_scaling_cpu_target    = optional(number, 70)
     auto_scaling_memory_target = optional(number, 80)
 
     # Service discovery
@@ -293,9 +299,9 @@ variable "services" {
 
     # ALB routing configuration
     enable_default_routing = optional(bool, false),
-    alb_path_patterns = optional(list(string))
-    alb_host_headers  = optional(list(string))
-    alb_priority      = optional(number)
+    alb_path_patterns      = optional(list(string))
+    alb_host_headers       = optional(list(string))
+    alb_priority           = optional(number)
 
     # EFS configuration
     efs_config = optional(object({
@@ -309,7 +315,7 @@ variable "services" {
     # Advanced container settings
     memory_reservation = optional(number)
     linux_parameters   = optional(any)
-    ulimits           = optional(any)
+    ulimits            = optional(any)
 
     # Task definition placement constraints
     placement_constraints = optional(list(object({

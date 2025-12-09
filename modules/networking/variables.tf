@@ -60,13 +60,19 @@ variable "nlb_enable_cross_zone_load_balancing" {
 variable "nlb_access_logs_enabled" {
   description = "Whether to enable NLB access logs. HIPAA requires access logging for audit trails."
   type        = bool
-  default     = true  # HIPAA compliance - access logging required
+  default     = true # HIPAA compliance - access logging required
 }
 
 variable "nlb_logs_retention_days" {
-  description = "Number of days to retain NLB logs in S3. HIPAA requires 6 years (2192 days) for audit logs."
+  description = "Number of days to retain NLB logs in S3. HIPAA requires 6 years (2192 days) for audit logs in production."
   type        = number
-  default     = 2192  # 6 years - HIPAA compliance requirement
+  default     = 2192 # 6 years - HIPAA compliance requirement (override for non-production)
+}
+
+variable "s3_force_destroy" {
+  description = "Allow S3 buckets to be destroyed even if not empty. Should be false in production for HIPAA compliance."
+  type        = bool
+  default     = false # HIPAA compliance - prevent accidental deletion
 }
 
 ################################################################################
@@ -76,7 +82,7 @@ variable "nlb_logs_retention_days" {
 variable "nlb_connection_logs_enabled" {
   description = "Whether to enable NLB connection logs. HIPAA requires connection logging for audit trails."
   type        = bool
-  default     = true  # HIPAA compliance - connection logging required
+  default     = true # HIPAA compliance - connection logging required
 }
 
 ################################################################################
@@ -110,10 +116,10 @@ variable "deregistration_delay" {
 variable "custom_target_groups" {
   description = "Map of custom target groups to create"
   type = map(object({
-    port               = number
-    protocol           = optional(string, "TCP")
-    target_type        = optional(string, "alb")
-    target_id          = optional(string, "")
+    port                 = number
+    protocol             = optional(string, "TCP")
+    target_type          = optional(string, "alb")
+    target_id            = optional(string, "")
     deregistration_delay = optional(number, 300)
     health_check = optional(object({
       enabled             = optional(bool, true)
@@ -226,10 +232,10 @@ variable "certificate_arn" {
 variable "custom_listeners" {
   description = "Map of custom listeners to create"
   type = map(object({
-    port            = number
-    protocol        = string
-    ssl_policy      = optional(string)
-    certificate_arn = optional(string)
+    port             = number
+    protocol         = string
+    ssl_policy       = optional(string)
+    certificate_arn  = optional(string)
     target_group_arn = optional(string)
   }))
   default = {}
@@ -313,7 +319,7 @@ variable "route53_evaluate_target_health" {
 variable "create_cloudwatch_alarms" {
   description = "Whether to create CloudWatch alarms for NLB. HIPAA requires monitoring for availability."
   type        = bool
-  default     = true  # HIPAA compliance - monitoring required
+  default     = true # HIPAA compliance - monitoring required
 }
 
 variable "alarm_actions" {

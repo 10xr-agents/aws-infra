@@ -130,14 +130,14 @@ output "custom_target_group_names" {
 output "target_groups" {
   description = "Map of all target groups"
   value = merge(
-      var.create_nlb ? {
+    var.create_nlb ? {
       http = {
         arn  = aws_lb_target_group.alb_targets_http[0].arn
         name = aws_lb_target_group.alb_targets_http[0].name
         port = aws_lb_target_group.alb_targets_http[0].port
       }
     } : {},
-      var.create_nlb ? {
+    var.create_nlb ? {
       https = {
         arn  = aws_lb_target_group.alb_targets_https[0].arn
         name = aws_lb_target_group.alb_targets_https[0].name
@@ -146,10 +146,10 @@ output "target_groups" {
     } : {},
     {
       for name, tg in aws_lb_target_group.custom : name => {
-      arn  = tg.arn
-      name = tg.name
-      port = tg.port
-    }
+        arn  = tg.arn
+        name = tg.name
+        port = tg.port
+      }
     }
   )
 }
@@ -183,21 +183,21 @@ output "custom_listener_arns" {
 output "listeners" {
   description = "Map of all listeners"
   value = merge(
-      var.create_nlb ? {
+    var.create_nlb ? {
       http = {
         arn      = aws_lb_listener.public_nlb_http[0].arn
         port     = aws_lb_listener.public_nlb_http[0].port
         protocol = aws_lb_listener.public_nlb_http[0].protocol
       }
     } : {},
-      var.create_nlb && var.https_listener_protocol == "TCP" ? {
+    var.create_nlb && var.https_listener_protocol == "TCP" ? {
       https_tcp = {
         arn      = aws_lb_listener.public_nlb_https_tcp[0].arn
         port     = aws_lb_listener.public_nlb_https_tcp[0].port
         protocol = aws_lb_listener.public_nlb_https_tcp[0].protocol
       }
     } : {},
-      var.create_nlb && var.https_listener_protocol == "TLS" ? {
+    var.create_nlb && var.https_listener_protocol == "TLS" ? {
       https_tls = {
         arn      = aws_lb_listener.public_nlb_https_tls[0].arn
         port     = aws_lb_listener.public_nlb_https_tls[0].port
@@ -206,10 +206,10 @@ output "listeners" {
     } : {},
     {
       for name, listener in aws_lb_listener.custom : name => {
-      arn      = listener.arn
-      port     = listener.port
-      protocol = listener.protocol
-    }
+        arn      = listener.arn
+        port     = listener.port
+        protocol = listener.protocol
+      }
     }
   )
 }
@@ -263,14 +263,14 @@ output "unhealthy_host_count_alarm_arn" {
 output "nlb_connection_info" {
   description = "NLB connection information"
   value = var.create_nlb ? {
-    dns_name = aws_lb.public_nlb[0].dns_name
-    zone_id  = aws_lb.public_nlb[0].zone_id
-    arn      = aws_lb.public_nlb[0].arn
-    http_url = "http://${aws_lb.public_nlb[0].dns_name}"
+    dns_name  = aws_lb.public_nlb[0].dns_name
+    zone_id   = aws_lb.public_nlb[0].zone_id
+    arn       = aws_lb.public_nlb[0].arn
+    http_url  = "http://${aws_lb.public_nlb[0].dns_name}"
     https_url = "https://${aws_lb.public_nlb[0].dns_name}"
-    subnets  = aws_lb.public_nlb[0].subnets
-    vpc_id   = aws_lb.public_nlb[0].vpc_id
-    internal = aws_lb.public_nlb[0].internal
+    subnets   = aws_lb.public_nlb[0].subnets
+    vpc_id    = aws_lb.public_nlb[0].vpc_id
+    internal  = aws_lb.public_nlb[0].internal
   } : null
 }
 
@@ -281,20 +281,20 @@ output "nlb_connection_info" {
 output "nlb_configuration" {
   description = "Summary of NLB configuration"
   value = var.create_nlb ? {
-    name                             = aws_lb.public_nlb[0].name
-    internal                         = aws_lb.public_nlb[0].internal
-    load_balancer_type               = aws_lb.public_nlb[0].load_balancer_type
+    name                              = aws_lb.public_nlb[0].name
+    internal                          = aws_lb.public_nlb[0].internal
+    load_balancer_type                = aws_lb.public_nlb[0].load_balancer_type
     cross_zone_load_balancing_enabled = aws_lb.public_nlb[0].enable_cross_zone_load_balancing
-    deletion_protection_enabled      = aws_lb.public_nlb[0].enable_deletion_protection
-    access_logs_enabled              = var.nlb_access_logs_enabled
-    connection_logs_enabled          = var.nlb_connection_logs_enabled
-    http_listener_enabled            = true
-    https_listener_enabled           = true
-    https_listener_protocol          = var.https_listener_protocol
-    target_groups_created            = length(aws_lb_target_group.custom) + 2
-    custom_listeners_created         = length(aws_lb_listener.custom)
-    security_groups_created          = var.create_security_groups
-    route53_record_created           = var.create_route53_record
-    cloudwatch_alarms_created        = var.create_cloudwatch_alarms
+    deletion_protection_enabled       = aws_lb.public_nlb[0].enable_deletion_protection
+    access_logs_enabled               = var.nlb_access_logs_enabled
+    connection_logs_enabled           = var.nlb_connection_logs_enabled
+    http_listener_enabled             = true
+    https_listener_enabled            = true
+    https_listener_protocol           = var.https_listener_protocol
+    target_groups_created             = length(aws_lb_target_group.custom) + 2
+    custom_listeners_created          = length(aws_lb_listener.custom)
+    security_groups_created           = var.create_security_groups
+    route53_record_created            = var.create_route53_record
+    cloudwatch_alarms_created         = var.create_cloudwatch_alarms
   } : null
 }

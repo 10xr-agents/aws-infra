@@ -14,7 +14,7 @@ resource "aws_s3_bucket" "alb_access_logs" {
   count = var.create_alb && var.alb_access_logs_enabled ? 1 : 0
 
   bucket        = "${local.name_prefix}-alb-access-logs"
-  force_destroy = false  # HIPAA compliance - prevent accidental deletion of audit logs
+  force_destroy = var.s3_force_destroy # Configurable - should be false in production for HIPAA compliance
 
   tags = merge(local.common_tags, {
     Name      = "${local.name_prefix}-alb-access-logs"
@@ -29,7 +29,7 @@ resource "aws_s3_bucket" "alb_connection_logs" {
   count = var.create_alb && var.alb_connection_logs_enabled ? 1 : 0
 
   bucket        = "${local.name_prefix}-alb-connection-logs"
-  force_destroy = false  # HIPAA compliance - prevent accidental deletion of audit logs
+  force_destroy = var.s3_force_destroy # Configurable - should be false in production for HIPAA compliance
 
   tags = merge(local.common_tags, {
     Name      = "${local.name_prefix}-alb-connection-logs"

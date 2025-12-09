@@ -88,8 +88,8 @@ resource "aws_kms_alias" "documentdb" {
 resource "random_password" "master_password" {
   count = var.master_password == "" ? 1 : 0
 
-  length           = var.password_length
-  special          = false
+  length  = var.password_length
+  special = false
 }
 
 ################################################################################
@@ -431,12 +431,12 @@ resource "aws_secretsmanager_secret_version" "documentdb" {
 
   secret_id = aws_secretsmanager_secret.documentdb[0].id
   secret_string = jsonencode({
-    username          = var.master_username
-    password          = var.master_password != "" ? var.master_password : random_password.master_password[0].result
-    engine            = "docdb"
-    host              = aws_docdb_cluster.main.endpoint
-    reader_host       = aws_docdb_cluster.main.reader_endpoint
-    port              = var.db_port
+    username            = var.master_username
+    password            = var.master_password != "" ? var.master_password : random_password.master_password[0].result
+    engine              = "docdb"
+    host                = aws_docdb_cluster.main.endpoint
+    reader_host         = aws_docdb_cluster.main.reader_endpoint
+    port                = var.db_port
     dbClusterIdentifier = aws_docdb_cluster.main.cluster_identifier
     connection_string = format(
       "mongodb://%s:%s@%s:%s/?tls=true&tlsCAFile=global-bundle.pem&replicaSet=rs0&readPreference=secondaryPreferred&retryWrites=false",

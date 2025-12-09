@@ -165,7 +165,7 @@ output "network_architecture" {
   description = "Summary of the network architecture"
   value = {
     # Infrastructure Components
-    vpc_id = module.vpc.vpc_id
+    vpc_id   = module.vpc.vpc_id
     vpc_cidr = module.vpc.vpc_cidr_block
 
     # Load Balancers
@@ -183,8 +183,8 @@ output "network_architecture" {
 
     # SSL/TLS Configuration
     ssl_config = {
-      alb_https_enabled = local.acm_certificate_arn != ""
-      nlb_https_protocol = var.https_listener_protocol
+      alb_https_enabled     = local.acm_certificate_arn != ""
+      nlb_https_protocol    = var.https_listener_protocol
       ssl_termination_point = var.https_listener_protocol == "TLS" ? "NLB" : (local.acm_certificate_arn != "" ? "ALB" : "None")
     }
   }
@@ -198,20 +198,20 @@ output "application_urls" {
   description = "Complete summary of application access URLs"
   value = {
     # Direct ALB access
-    alb_dns_name = module.ecs.alb_dns_name
-    alb_http_url = "http://${module.ecs.alb_dns_name}"
+    alb_dns_name  = module.ecs.alb_dns_name
+    alb_http_url  = "http://${module.ecs.alb_dns_name}"
     alb_https_url = local.acm_certificate_arn != "" ? "https://${module.ecs.alb_dns_name}" : null
 
     # NLB access
-    nlb_dns_name = module.networking.nlb_dns_name
-    nlb_http_url = var.create_http_listener ? "http://${module.networking.nlb_dns_name}" : null
+    nlb_dns_name  = module.networking.nlb_dns_name
+    nlb_http_url  = var.create_http_listener ? "http://${module.networking.nlb_dns_name}" : null
     nlb_https_url = local.acm_certificate_arn != "" ? "https://${module.networking.nlb_dns_name}" : null
   }
 }
 
 output "redis_parameters_check" {
   description = "Redis parameters that might affect connectivity"
-  value = var.redis_parameters
+  value       = var.redis_parameters
 }
 
 ################################################################################
@@ -266,13 +266,13 @@ output "documentdb_iam_policy_arn" {
 output "documentdb_connection_info" {
   description = "DocumentDB connection information (non-sensitive)"
   value = {
-    cluster_identifier = module.documentdb.cluster_identifier
-    endpoint           = module.documentdb.endpoint
-    reader_endpoint    = module.documentdb.reader_endpoint
-    port               = module.documentdb.port
-    tls_enabled         = true
-    secrets_manager_arn = module.documentdb.secrets_manager_secret_arn
-    database_name_home_health  = local.documentdb_database_home_health
-    database_name_hospice      = local.documentdb_database_hospice
+    cluster_identifier        = module.documentdb.cluster_identifier
+    endpoint                  = module.documentdb.endpoint
+    reader_endpoint           = module.documentdb.reader_endpoint
+    port                      = module.documentdb.port
+    tls_enabled               = true
+    secrets_manager_arn       = module.documentdb.secrets_manager_secret_arn
+    database_name_home_health = local.documentdb_database_home_health
+    database_name_hospice     = local.documentdb_database_hospice
   }
 }

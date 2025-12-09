@@ -39,7 +39,7 @@ resource "tfe_variable" "variables" {
 
 resource "tfe_run_trigger" "sub_workspace_trigger" {
   count = var.enable_run_trigger ? 1 : 0
-  
+
   workspace_id  = data.tfe_workspace.sub_workspace.id
   sourceable_id = data.tfe_workspace.parent.id
 }

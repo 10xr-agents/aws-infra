@@ -631,7 +631,7 @@ All resources are tagged with:
 ```hcl
 tags = {
   Environment = "qa" | "prod"
-  Project     = "10xR-Agents"
+  Project     = "10xR-HealthCare"
   Component   = "VPC" | "ECS" | "Redis" | "Networking"
   Platform    = "AWS"
   Terraform   = "true"

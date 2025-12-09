@@ -16,7 +16,7 @@ resource "aws_s3_bucket" "nlb_access_logs" {
   count = var.nlb_access_logs_enabled ? 1 : 0
 
   bucket        = "${local.name_prefix}-nlb-access-logs"
-  force_destroy = false  # HIPAA compliance - prevent accidental deletion of audit logs
+  force_destroy = var.s3_force_destroy # Configurable - should be false in production for HIPAA compliance
 
   tags = merge(local.common_tags, {
     Name    = "${local.name_prefix}-nlb-access-logs"
@@ -29,7 +29,7 @@ resource "aws_s3_bucket" "nlb_connection_logs" {
   count = var.nlb_connection_logs_enabled ? 1 : 0
 
   bucket        = "${local.name_prefix}-nlb-connection-logs"
-  force_destroy = false  # HIPAA compliance - prevent accidental deletion of audit logs
+  force_destroy = var.s3_force_destroy # Configurable - should be false in production for HIPAA compliance
 
   tags = merge(local.common_tags, {
     Name    = "${local.name_prefix}-nlb-connection-logs"
@@ -121,7 +121,7 @@ resource "aws_s3_bucket_policy" "nlb_access_logs" {
         Principal = {
           AWS = data.aws_elb_service_account.main.arn
         }
-        Action = "s3:PutObject"
+        Action   = "s3:PutObject"
         Resource = "${aws_s3_bucket.nlb_access_logs[0].arn}/*"
         Condition = {
           StringEquals = {
@@ -134,7 +134,7 @@ resource "aws_s3_bucket_policy" "nlb_access_logs" {
         Principal = {
           Service = "delivery.logs.amazonaws.com"
         }
-        Action = "s3:PutObject"
+        Action   = "s3:PutObject"
         Resource = "${aws_s3_bucket.nlb_access_logs[0].arn}/*"
         Condition = {
           StringEquals = {
@@ -147,7 +147,7 @@ resource "aws_s3_bucket_policy" "nlb_access_logs" {
         Principal = {
           AWS = data.aws_elb_service_account.main.arn
         }
-        Action = "s3:GetBucketAcl"
+        Action   = "s3:GetBucketAcl"
         Resource = aws_s3_bucket.nlb_access_logs[0].arn
       },
       {
@@ -155,7 +155,7 @@ resource "aws_s3_bucket_policy" "nlb_access_logs" {
         Principal = {
           Service = "delivery.logs.amazonaws.com"
         }
-        Action = "s3:GetBucketAcl"
+        Action   = "s3:GetBucketAcl"
         Resource = aws_s3_bucket.nlb_access_logs[0].arn
       }
     ]
@@ -178,7 +178,7 @@ resource "aws_s3_bucket_policy" "nlb_connection_logs" {
         Principal = {
           AWS = data.aws_elb_service_account.main.arn
         }
-        Action = "s3:PutObject"
+        Action   = "s3:PutObject"
         Resource = "${aws_s3_bucket.nlb_connection_logs[0].arn}/*"
         Condition = {
           StringEquals = {
@@ -191,7 +191,7 @@ resource "aws_s3_bucket_policy" "nlb_connection_logs" {
         Principal = {
           Service = "delivery.logs.amazonaws.com"
         }
-        Action = "s3:PutObject"
+        Action   = "s3:PutObject"
         Resource = "${aws_s3_bucket.nlb_connection_logs[0].arn}/*"
         Condition = {
           StringEquals = {
@@ -204,7 +204,7 @@ resource "aws_s3_bucket_policy" "nlb_connection_logs" {
         Principal = {
           AWS = data.aws_elb_service_account.main.arn
         }
-        Action = "s3:GetBucketAcl"
+        Action   = "s3:GetBucketAcl"
         Resource = aws_s3_bucket.nlb_connection_logs[0].arn
       },
       {
@@ -212,7 +212,7 @@ resource "aws_s3_bucket_policy" "nlb_connection_logs" {
         Principal = {
           Service = "delivery.logs.amazonaws.com"
         }
-        Action = "s3:GetBucketAcl"
+        Action   = "s3:GetBucketAcl"
         Resource = aws_s3_bucket.nlb_connection_logs[0].arn
       }
     ]

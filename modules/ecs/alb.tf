@@ -10,10 +10,10 @@ locals {
   # Determine the default target group ARN based on enable_default_routing
   default_target_group_arn = var.default_target_group_arn != "" ? var.default_target_group_arn : (
     local.default_routing_service != null ? aws_lb_target_group.service[local.default_routing_service].arn : (
-    var.create_default_target_group ? aws_lb_target_group.alb_default[0].arn : (
-    length(aws_lb_target_group.service) > 0 ? values(aws_lb_target_group.service)[0].arn : null
-  )
-  )
+      var.create_default_target_group ? aws_lb_target_group.alb_default[0].arn : (
+        length(aws_lb_target_group.service) > 0 ? values(aws_lb_target_group.service)[0].arn : null
+      )
+    )
   )
 }
 
@@ -33,17 +33,17 @@ resource "aws_lb" "main" {
   subnets = var.alb_internal ? (
     length(var.private_subnet_ids) >= 2 ? var.private_subnet_ids :
     concat(var.private_subnet_ids, var.public_subnet_ids)
-  ) : (
+    ) : (
     length(var.public_subnet_ids) >= 2 ? var.public_subnet_ids :
     concat(var.public_subnet_ids, var.private_subnet_ids)
   )
 
   # ALB Configuration
   enable_deletion_protection       = var.alb_enable_deletion_protection
-  enable_http2                    = var.alb_enable_http2
+  enable_http2                     = var.alb_enable_http2
   enable_cross_zone_load_balancing = var.alb_enable_cross_zone_load_balancing
-  idle_timeout                    = var.alb_idle_timeout
-  enable_waf_fail_open           = var.alb_enable_waf_fail_open
+  idle_timeout                     = var.alb_idle_timeout
+  enable_waf_fail_open             = var.alb_enable_waf_fail_open
 
   # Access logs - use internal bucket or external if provided
   dynamic "access_logs" {

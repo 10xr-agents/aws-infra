@@ -26,14 +26,14 @@ output "services" {
   description = "Map of services created and their attributes"
   value = {
     for name, service in aws_ecs_service.service : name => {
-      id                = service.id
-      name              = service.name
-      cluster           = service.cluster
-      task_definition   = service.task_definition
-      desired_count     = service.desired_count
-      launch_type       = service.launch_type
-      platform_version  = service.platform_version
-      arn               = service.id
+      id               = service.id
+      name             = service.name
+      cluster          = service.cluster
+      task_definition  = service.task_definition
+      desired_count    = service.desired_count
+      launch_type      = service.launch_type
+      platform_version = service.platform_version
+      arn              = service.id
     }
   }
 }
@@ -180,15 +180,15 @@ output "service_details" {
   description = "Comprehensive details for all services"
   value = {
     for name, config in local.services_config : name => {
-      service_arn           = aws_ecs_service.service[name].id
-      task_definition_arn   = aws_ecs_task_definition.service[name].arn
+      service_arn              = aws_ecs_service.service[name].id
+      task_definition_arn      = aws_ecs_task_definition.service[name].arn
       task_definition_revision = aws_ecs_task_definition.service[name].revision
-      security_group_id     = aws_security_group.ecs_service[name].id
-      target_group_arn      = try(aws_lb_target_group.service[name].arn, null)
-      log_group_name        = config.log_group_name
-      service_url           = var.enable_service_discovery && lookup(config, "enable_service_discovery", true) ? "http://${name}.${local.name_prefix}.local:${config.port}" : null
-      task_execution_role_arn = aws_iam_role.task_execution_role[name].arn
-      task_role_arn          = aws_iam_role.task_role[name].arn
+      security_group_id        = aws_security_group.ecs_service[name].id
+      target_group_arn         = try(aws_lb_target_group.service[name].arn, null)
+      log_group_name           = config.log_group_name
+      service_url              = var.enable_service_discovery && lookup(config, "enable_service_discovery", true) ? "http://${name}.${local.name_prefix}.local:${config.port}" : null
+      task_execution_role_arn  = aws_iam_role.task_execution_role[name].arn
+      task_role_arn            = aws_iam_role.task_role[name].arn
     }
   }
 }

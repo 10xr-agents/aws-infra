@@ -63,7 +63,7 @@ variable "workspace_variables" {
   description = "Map of variables to set in the workspace"
   type = map(object({
     value       = string
-    category    = string  # "terraform" or "env"
+    category    = string # "terraform" or "env"
     description = string
     sensitive   = optional(bool, false)
     hcl         = optional(bool, false)

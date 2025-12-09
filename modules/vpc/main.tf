@@ -60,7 +60,7 @@ module "vpc" {
     {
       "Name"        = "${var.vpc_name}-default-sg"
       "Environment" = var.environment
-      "Project"     = "10xR-Agents"
+      "Project"     = "10xR-HealthCare"
       "Terraform"   = "true"
     }
   )
@@ -69,7 +69,7 @@ module "vpc" {
     var.tags,
     {
       "Environment" = var.environment
-      "Project"     = "10xR-Agents"
+      "Project"     = "10xR-HealthCare"
       "Terraform"   = "true"
     }
   )
@@ -121,17 +121,17 @@ module "vpc_endpoints" {
       route_table_ids     = flatten([module.vpc.private_route_table_ids, module.vpc.public_route_table_ids])
       tags                = { Name = "${module.vpc.name}-s3-vpc-endpoint" }
     }
-  }, {
+    }, {
     # Interface Endpoints (Essential for ECS/Fargate + HIPAA)
     for service in toset([
-      "ecr.api",        # Required: ECR API for image pulls
-      "ecr.dkr",        # Required: Docker registry for image pulls
-      "ecs",            # Required: ECS service API
-      "ecs-agent",      # Required: ECS agent communication
-      "sts",            # Required: IAM role assumption for tasks
-      "kms",            # Required: Encryption/decryption (HIPAA)
-      "logs",           # Required: CloudWatch Logs for containers
-      "secretsmanager"  # Required: DocumentDB credentials (HIPAA)
+      "ecr.api",       # Required: ECR API for image pulls
+      "ecr.dkr",       # Required: Docker registry for image pulls
+      "ecs",           # Required: ECS service API
+      "ecs-agent",     # Required: ECS agent communication
+      "sts",           # Required: IAM role assumption for tasks
+      "kms",           # Required: Encryption/decryption (HIPAA)
+      "logs",          # Required: CloudWatch Logs for containers
+      "secretsmanager" # Required: DocumentDB credentials (HIPAA)
     ]) :
     replace(service, ".", "_") => {
       service             = service

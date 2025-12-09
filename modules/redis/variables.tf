@@ -204,7 +204,7 @@ variable "create_cloudwatch_log_group" {
 variable "cloudwatch_log_retention_days" {
   description = "Number of days to retain CloudWatch logs. HIPAA requires 6 years (2192 days) for audit logs."
   type        = number
-  default     = 2192  # 6 years - HIPAA compliance requirement
+  default     = 2192 # 6 years - HIPAA compliance requirement
 }
 
 variable "redis_log_delivery_configuration" {

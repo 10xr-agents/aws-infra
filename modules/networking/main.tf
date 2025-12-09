@@ -41,7 +41,7 @@ resource "aws_lb" "public_nlb" {
   # Use appropriate subnets based on internal/external configuration
   subnets = var.nlb_internal ? var.private_subnet_ids : var.public_subnet_ids
 
-  enable_deletion_protection = var.nlb_enable_deletion_protection
+  enable_deletion_protection       = var.nlb_enable_deletion_protection
   enable_cross_zone_load_balancing = var.nlb_enable_cross_zone_load_balancing
 
   # Access logs configuration
@@ -334,11 +334,11 @@ resource "aws_security_group" "nlb" {
   dynamic "egress" {
     for_each = var.security_group_egress_rules
     content {
-      description = lookup(egress.value, "description", "")
-      from_port   = egress.value.from_port
-      to_port     = egress.value.to_port
-      protocol    = egress.value.protocol
-      cidr_blocks = lookup(egress.value, "cidr_blocks", [])
+      description     = lookup(egress.value, "description", "")
+      from_port       = egress.value.from_port
+      to_port         = egress.value.to_port
+      protocol        = egress.value.protocol
+      cidr_blocks     = lookup(egress.value, "cidr_blocks", [])
       security_groups = lookup(egress.value, "security_groups", [])
     }
   }

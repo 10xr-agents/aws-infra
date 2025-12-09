@@ -30,7 +30,7 @@ resource "aws_security_group" "ecs_service" {
 resource "aws_security_group_rule" "ecs_service_from_alb" {
   for_each = {
     for name, config in local.services_config : name => config
-    if (var.create_alb || var.alb_security_group_id != "") && lookup(config, "enable_load_balancer", true)
+    if(var.create_alb || var.alb_security_group_id != "") && lookup(config, "enable_load_balancer", true)
   }
 
   type                     = "ingress"

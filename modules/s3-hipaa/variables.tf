@@ -56,9 +56,15 @@ variable "ecs_task_role_arns" {
 ################################################################################
 
 variable "retention_days" {
-  description = "Number of days to retain objects. HIPAA requires 6 years (2192 days)."
+  description = "Number of days to retain objects. HIPAA requires 6 years (2192 days) in production."
   type        = number
-  default     = 2192  # 6 years - HIPAA compliance
+  default     = 2192 # 6 years - HIPAA compliance (override for non-production)
+}
+
+variable "force_destroy" {
+  description = "Allow S3 bucket to be destroyed even if not empty. Should be false in production for HIPAA compliance."
+  type        = bool
+  default     = false # HIPAA compliance - prevent accidental deletion
 }
 
 ################################################################################

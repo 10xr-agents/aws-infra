@@ -1,7 +1,7 @@
 # environments/qa/terraform.tfvars
 
 # AWS Region
-region = "us-east-1"
+region      = "us-east-1"
 environment = "qa"
 
 # Cluster Configuration
@@ -15,15 +15,15 @@ private_subnets  = ["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"]
 public_subnets   = ["10.0.101.0/24", "10.0.102.0/24", "10.0.103.0/24"]
 database_subnets = ["10.0.21.0/24", "10.0.22.0/24", "10.0.23.0/24"]
 
-enable_nat_gateway     = true
-single_nat_gateway     = false
-one_nat_gateway_per_az = true
+enable_nat_gateway      = true
+single_nat_gateway      = false
+one_nat_gateway_per_az  = true
 map_public_ip_on_launch = true
 
 # ECS Configuration
 enable_container_insights = true
-enable_fargate           = true
-enable_fargate_spot      = true
+enable_fargate            = true
+enable_fargate_spot       = true
 
 # SSL Configuration
 ssl_policy = "ELBSecurityPolicy-TLS-1-2-2017-01"
@@ -34,11 +34,11 @@ ssl_policy = "ELBSecurityPolicy-TLS-1-2-2017-01"
 ################################################################################
 ecs_services = {
   "home-health" = {
-    image     = "761018882607.dkr.ecr.us-east-1.amazonaws.com/10xr/home-health"
-    image_tag = "latest"
-    port      = 3000
-    cpu       = 1024
-    memory    = 2048
+    image         = "761018882607.dkr.ecr.us-east-1.amazonaws.com/10xr/home-health"
+    image_tag     = "latest"
+    port          = 3000
+    cpu           = 1024
+    memory        = 2048
     desired_count = 2
 
     environment = {
@@ -46,7 +46,7 @@ ecs_services = {
       PORT = "3000"
     }
 
-    secrets = []  # Secrets are injected via locals.tf
+    secrets = [] # Secrets are injected via locals.tf
 
     capacity_provider_strategy = [
       {
@@ -90,15 +90,15 @@ ecs_services = {
     enable_service_discovery = true
     deregistration_delay     = 30
 
-    additional_task_policies = {}  # IAM policies are added via locals.tf
+    additional_task_policies = {} # IAM policies are added via locals.tf
   }
 
   "hospice" = {
-    image     = "761018882607.dkr.ecr.us-east-1.amazonaws.com/10xr/hospice"
-    image_tag = "latest"
-    port      = 3000
-    cpu       = 1024
-    memory    = 2048
+    image         = "761018882607.dkr.ecr.us-east-1.amazonaws.com/10xr/hospice"
+    image_tag     = "latest"
+    port          = 3000
+    cpu           = 1024
+    memory        = 2048
     desired_count = 2
 
     environment = {
@@ -106,7 +106,7 @@ ecs_services = {
       PORT = "3000"
     }
 
-    secrets = []  # Secrets are injected via locals.tf
+    secrets = [] # Secrets are injected via locals.tf
 
     capacity_provider_strategy = [
       {
@@ -150,69 +150,97 @@ ecs_services = {
     enable_service_discovery = true
     deregistration_delay     = 30
 
-    additional_task_policies = {}  # IAM policies are added via locals.tf
+    additional_task_policies = {} # IAM policies are added via locals.tf
   }
 }
 
 ################################################################################
 # NLB Configuration
 ################################################################################
-create_nlb = true
-nlb_internal = false
-nlb_enable_deletion_protection = true  # HIPAA compliance
+create_nlb                           = true
+nlb_internal                         = false
 nlb_enable_cross_zone_load_balancing = true
 
 # Target Group Configuration
 create_http_target_group = true
-http_port = 80
-https_port = 443
-target_type = "alb"
-deregistration_delay = 30
+http_port                = 80
+https_port               = 443
+target_type              = "alb"
+deregistration_delay     = 30
 
 # Health Check Configuration
-health_check_enabled = true
-health_check_healthy_threshold = 2
-health_check_interval = 30
-health_check_port = "traffic-port"
-health_check_protocol = "HTTP"
-health_check_timeout = 6
+health_check_enabled             = true
+health_check_healthy_threshold   = 2
+health_check_interval            = 30
+health_check_port                = "traffic-port"
+health_check_protocol            = "HTTP"
+health_check_timeout             = 6
 health_check_unhealthy_threshold = 2
-health_check_path = "/"
-health_check_matcher = "200"
+health_check_path                = "/"
+health_check_matcher             = "200"
 
 # Listener Configuration
 create_http_listener = true
 
-# Access Logs (HIPAA compliance - enabled by default)
-nlb_access_logs_enabled = true
-nlb_connection_logs_enabled = true
-
 ################################################################################
 # Domain Configuration
 ################################################################################
-domain = "qa.10xr.co"
+domain           = "qa.10xr.co"
 base_domain_name = "10xr.co"
 
 # DNS Records for Route 53
 app_dns_records = {
   "qa-hospice" = {
-    name     = "hospice.qa"
-    content  = ""  # Will be set by module to NLB DNS name
-    type     = "CNAME"
-    proxied  = false
-    ttl      = 300
-    comment  = "Hospice QA environment"
-    tags     = ["qa", "hospice"]
+    name    = "hospice.qa"
+    content = "" # Will be set by module to NLB DNS name
+    type    = "CNAME"
+    proxied = false
+    ttl     = 300
+    comment = "Hospice QA environment"
+    tags    = ["qa", "hospice"]
   }
   "qa-homehealth" = {
-    name     = "homehealth.qa"
-    content  = ""  # Will be set by module to NLB DNS name
-    type     = "CNAME"
-    proxied  = false
-    ttl      = 300
-    comment  = "HomeHealth QA environment"
-    tags     = ["qa", "homehealth"]
+    name    = "homehealth.qa"
+    content = "" # Will be set by module to NLB DNS name
+    type    = "CNAME"
+    proxied = false
+    ttl     = 300
+    comment = "HomeHealth QA environment"
+    tags    = ["qa", "homehealth"]
   }
+}
+
+################################################################################
+# HIPAA Configuration (Relaxed for QA/Staging)
+# Production should use defaults (stricter settings)
+################################################################################
+hipaa_config = {
+  # Reduced log retention for QA (30 days instead of 6 years)
+  log_retention_days = 30
+
+  # Reduced data retention for QA (90 days instead of 6 years)
+  data_retention_days = 90
+
+  # Reduced backup retention for QA (7 days instead of 35)
+  backup_retention_days = 7
+
+  # Disable deletion protection in QA for easier teardown
+  enable_deletion_protection = false
+
+  # Allow S3 buckets to be destroyed in QA
+  s3_force_destroy = true
+
+  # Allow skipping final snapshot in QA
+  skip_final_snapshot = true
+
+  # Still enable access logging for debugging
+  enable_access_logging = true
+
+  # Still enable CloudWatch alarms for monitoring
+  enable_cloudwatch_alarms = true
+
+  # Still enable audit logging for debugging
+  enable_audit_logging = true
 }
 
 ################################################################################
@@ -223,5 +251,5 @@ tags = {
   Project     = "10xR HealthCare"
   Platform    = "Application"
   Terraform   = "true"
-  HIPAA       = "true"
+  HIPAA       = "false" # QA uses relaxed HIPAA settings
 }

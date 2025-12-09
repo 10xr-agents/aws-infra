@@ -1,7 +1,7 @@
 # environments/qa/main.tf
 
 locals {
-  vpc_name     = "${local.cluster_name}-${var.region}"
+  vpc_name = "${local.cluster_name}-${var.region}"
 }
 
 # Add this data source to the top of environments/qa/main.tf after the locals block
@@ -14,7 +14,7 @@ module "certs" {
   source = "../../modules/certs"
 
   environment = var.environment
-  domain = var.domain
+  domain      = var.domain
   subject_alternative_domains = [
     "*.${var.domain}",
     "homehealth.${var.domain}",
@@ -41,11 +41,14 @@ module "vpc" {
   # ECS specific tags
   cluster_name = local.cluster_name
 
+  # HIPAA Configuration - VPC Flow Logs retention
+  flow_log_cloudwatch_log_retention_days = var.hipaa_config.log_retention_days
+
   tags = merge(
     var.tags,
     {
       "Environment" = var.environment
-      "Project"     = "10xR-Agents"
+      "Project"     = "10xR-HealthCare"
       "Platform"    = "AWS"
       "Terraform"   = "true"
     }
@@ -97,7 +100,7 @@ module "vpc" {
 #     var.tags,
 #     {
 #       "Environment" = var.environment
-#       "Project"     = "10xR-Agents"
+#       "Project"     = "10xR-HealthCare"
 #       "Component"   = "Redis"
 #       "Platform"    = "AWS"
 #       "Terraform"   = "true"
@@ -121,14 +124,13 @@ module "s3_patients" {
 
   # ECS task roles that need access (will be populated after ECS module)
   ecs_task_role_arns = [
-    "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"  # Temporary - will update with actual task roles
+    "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root" # Temporary - will update with actual task roles
   ]
 
-  # HIPAA retention (6 years)
-  retention_days = 2192
-
-  # Enable access logging for audit trail
-  enable_access_logging = true
+  # HIPAA Configuration - configurable per environment
+  retention_days        = var.hipaa_config.data_retention_days
+  force_destroy         = var.hipaa_config.s3_force_destroy
+  enable_access_logging = var.hipaa_config.enable_access_logging
 
   tags = merge(var.tags, {
     "Component" = "S3"
@@ -146,7 +148,7 @@ module "documentdb" {
   cluster_name = var.cluster_name
   environment  = var.environment
   vpc_id       = module.vpc.vpc_id
-  subnet_ids   = module.vpc.database_subnets  # Use database subnets for DocumentDB
+  subnet_ids   = module.vpc.database_subnets # Use database subnets for DocumentDB
 
   # Cluster Configuration
   cluster_size   = var.documentdb_cluster_size
@@ -161,47 +163,47 @@ module "documentdb" {
   # Security - Allow access from VPC CIDR and ECS security groups
   create_security_group      = true
   allowed_cidr_blocks        = [module.vpc.vpc_cidr_block]
-  allowed_security_group_ids = []  # Will be populated by ECS module if needed
+  allowed_security_group_ids = [] # Will be populated by ECS module if needed
 
   # Encryption (HIPAA Compliance)
   create_kms_key          = var.documentdb_create_kms_key
   kms_key_enable_rotation = true
-  tls_enabled             = true  # Required for HIPAA - encryption in transit
+  tls_enabled             = true # Required for HIPAA - encryption in transit
 
-  # Backup Configuration
-  backup_retention_period = var.documentdb_backup_retention_period
-  preferred_backup_window = var.documentdb_preferred_backup_window
-  skip_final_snapshot     = var.documentdb_skip_final_snapshot
+  # HIPAA Configuration - configurable per environment
+  backup_retention_period       = var.hipaa_config.backup_retention_days
+  preferred_backup_window       = var.documentdb_preferred_backup_window
+  skip_final_snapshot           = var.hipaa_config.skip_final_snapshot
+  deletion_protection           = var.hipaa_config.enable_deletion_protection
+  cloudwatch_log_retention_days = var.hipaa_config.log_retention_days
+  audit_logs_enabled            = var.hipaa_config.enable_audit_logging
+  create_cloudwatch_alarms      = var.hipaa_config.enable_cloudwatch_alarms
 
   # Maintenance
   preferred_maintenance_window = var.documentdb_preferred_maintenance_window
   apply_immediately            = var.documentdb_apply_immediately
   auto_minor_version_upgrade   = var.documentdb_auto_minor_version_upgrade
-  deletion_protection          = var.documentdb_deletion_protection
 
   # Logging (HIPAA Compliance)
   enabled_cloudwatch_logs_exports = var.documentdb_enabled_cloudwatch_logs_exports
-  cloudwatch_log_retention_days   = var.documentdb_cloudwatch_log_retention_days
-  audit_logs_enabled              = true  # Required for HIPAA
   profiler_enabled                = var.documentdb_profiler_enabled
   profiler_threshold_ms           = var.documentdb_profiler_threshold_ms
 
   # SSM and Secrets Manager
-  ssm_parameter_enabled    = var.documentdb_ssm_parameter_enabled
-  secrets_manager_enabled  = var.documentdb_secrets_manager_enabled
+  ssm_parameter_enabled   = var.documentdb_ssm_parameter_enabled
+  secrets_manager_enabled = var.documentdb_secrets_manager_enabled
 
   # IAM Policy for ECS access
   create_iam_policy = true
 
   # CloudWatch Alarms
-  create_cloudwatch_alarms = var.documentdb_create_cloudwatch_alarms
-  alarm_actions            = var.alarm_actions
+  alarm_actions = var.alarm_actions
 
   tags = merge(
     var.tags,
     {
       "Environment" = var.environment
-      "Project"     = "10xR-Agents"
+      "Project"     = "10xR-HealthCare"
       "Component"   = "DocumentDB"
       "Platform"    = "AWS"
       "Terraform"   = "true"
@@ -230,15 +232,22 @@ module "ecs" {
   enable_execute_command    = var.enable_execute_command
   enable_service_discovery  = true
   create_alb                = true
-  alb_internal = true
+  alb_internal              = true
 
   # Pass the entire services configuration from variables
   services = local.ecs_services_with_overrides
 
+  # HIPAA Configuration - configurable per environment
+  alb_enable_deletion_protection = var.hipaa_config.enable_deletion_protection
+  alb_access_logs_enabled        = var.hipaa_config.enable_access_logging
+  alb_connection_logs_enabled    = var.hipaa_config.enable_access_logging
+  log_retention_days             = var.hipaa_config.log_retention_days
+  s3_force_destroy               = var.hipaa_config.s3_force_destroy
+
   # IAM and KMS Configuration for accessing secrets and encrypted resources
   kms_key_arns = [
-    module.documentdb.kms_key_arn,  # DocumentDB KMS key
-    module.s3_patients.kms_key_arn  # S3 HIPAA bucket KMS key
+    module.documentdb.kms_key_arn, # DocumentDB KMS key
+    module.s3_patients.kms_key_arn # S3 HIPAA bucket KMS key
   ]
 
   # Attach DocumentDB access policy to task execution roles (for pulling secrets at startup)
@@ -260,7 +269,7 @@ module "ecs" {
     var.tags,
     {
       "Environment" = var.environment
-      "Project"     = "10xR-Agents"
+      "Project"     = "10xR-HealthCare"
       "Component"   = "ECS"
       "Platform"    = "AWS"
       "Terraform"   = "true"
@@ -278,25 +287,32 @@ module "networking" {
   environment  = var.environment
   vpc_id       = module.vpc.vpc_id
 
-  public_subnet_ids = module.vpc.public_subnets
+  public_subnet_ids  = module.vpc.public_subnets
   private_subnet_ids = module.vpc.private_subnets
 
   # NLB Configuration
-  create_nlb                     = var.create_nlb
-  nlb_internal                   = var.nlb_internal
-  nlb_enable_deletion_protection = var.nlb_enable_deletion_protection
+  create_nlb                           = var.create_nlb
+  nlb_internal                         = var.nlb_internal
   nlb_enable_cross_zone_load_balancing = var.nlb_enable_cross_zone_load_balancing
 
+  # HIPAA Configuration - configurable per environment
+  nlb_enable_deletion_protection = var.hipaa_config.enable_deletion_protection
+  nlb_access_logs_enabled        = var.hipaa_config.enable_access_logging
+  nlb_connection_logs_enabled    = var.hipaa_config.enable_access_logging
+  nlb_logs_retention_days        = var.hipaa_config.log_retention_days
+  s3_force_destroy               = var.hipaa_config.s3_force_destroy
+  create_cloudwatch_alarms       = var.hipaa_config.enable_cloudwatch_alarms
+
   # Target Group Configuration
-  http_port                 = var.http_port
-  https_port                = var.https_port
+  http_port   = var.http_port
+  https_port  = var.https_port
   target_type = var.target_type
 
   # Target Configuration
   alb_arn = module.ecs.alb_arn
 
   custom_target_groups = {}
-  custom_listeners = {}
+  custom_listeners     = {}
 
   # Health Check Configuration
   health_check_enabled             = var.health_check_enabled
@@ -308,24 +324,18 @@ module "networking" {
   health_check_unhealthy_threshold = var.health_check_unhealthy_threshold
   health_check_path                = var.health_check_path
   health_check_matcher             = var.health_check_matcher
-  deregistration_delay = var.deregistration_delay
+  deregistration_delay             = var.deregistration_delay
 
   # Listener Configuration
   https_listener_protocol = var.https_listener_protocol
   ssl_policy              = var.ssl_policy
-  certificate_arn = local.acm_certificate_arn
-
-  # Access Logs
-  nlb_access_logs_enabled = var.nlb_access_logs_enabled
-
-  # Connection Logs
-  nlb_connection_logs_enabled = var.nlb_connection_logs_enabled
+  certificate_arn         = local.acm_certificate_arn
 
   tags = merge(
     var.tags,
     {
       "Environment" = var.environment
-      "Project"     = "10xR-Agents"
+      "Project"     = "10xR-HealthCare"
       "Component"   = "Networking"
       "Platform"    = "AWS"
       "Terraform"   = "true"

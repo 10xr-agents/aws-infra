@@ -130,7 +130,7 @@ resource "aws_elasticache_replication_group" "redis" {
 
   # Backup settings - minimal for temporary data
   snapshot_retention_limit = var.redis_snapshot_retention_limit
-  snapshot_window         = var.redis_snapshot_window
+  snapshot_window          = var.redis_snapshot_window
 
   # Maintenance
   maintenance_window = var.redis_maintenance_window
@@ -254,8 +254,8 @@ resource "aws_ssm_parameter" "redis_auth_token" {
 resource "aws_ssm_parameter" "redis_connection_string" {
   count = var.store_connection_details_in_ssm ? 1 : 0
 
-  name  = "/${var.environment}/${var.cluster_name}/redis/connection_string"
-  type  = "SecureString"
+  name = "/${var.environment}/${var.cluster_name}/redis/connection_string"
+  type = "SecureString"
   value = (
     var.auth_token_enabled ?
     "redis://default:${random_password.redis_auth_token[0].result}@${aws_elasticache_replication_group.redis.primary_endpoint_address}:${var.redis_port}" :

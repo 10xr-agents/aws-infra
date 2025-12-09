@@ -25,7 +25,7 @@ resource "aws_kms_key" "s3" {
 
   description             = "KMS key for S3 bucket encryption - ${var.bucket_name}"
   deletion_window_in_days = var.kms_key_deletion_window
-  enable_key_rotation     = true  # HIPAA requirement
+  enable_key_rotation     = true # HIPAA requirement
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -90,7 +90,7 @@ resource "aws_kms_alias" "s3" {
 
 resource "aws_s3_bucket" "this" {
   bucket        = "${local.name_prefix}-${var.bucket_name}"
-  force_destroy = false  # HIPAA compliance - prevent accidental deletion
+  force_destroy = var.force_destroy # Configurable - should be false in production for HIPAA compliance
 
   tags = merge(local.common_tags, {
     Name = "${local.name_prefix}-${var.bucket_name}"
@@ -105,7 +105,7 @@ resource "aws_s3_bucket_versioning" "this" {
   bucket = aws_s3_bucket.this.id
 
   versioning_configuration {
-    status = "Enabled"  # HIPAA requirement - maintain audit trail
+    status = "Enabled" # HIPAA requirement - maintain audit trail
   }
 }
 
@@ -121,7 +121,7 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "this" {
       kms_master_key_id = var.create_kms_key ? aws_kms_key.s3[0].arn : var.kms_key_arn
       sse_algorithm     = "aws:kms"
     }
-    bucket_key_enabled = true  # Cost optimization
+    bucket_key_enabled = true # Cost optimization
   }
 }
 
@@ -249,7 +249,7 @@ resource "aws_s3_bucket" "access_logs" {
   count = var.enable_access_logging ? 1 : 0
 
   bucket        = "${local.name_prefix}-${var.bucket_name}-access-logs"
-  force_destroy = false
+  force_destroy = var.force_destroy # Configurable - should be false in production for HIPAA compliance
 
   tags = merge(local.common_tags, {
     Name    = "${local.name_prefix}-${var.bucket_name}-access-logs"
