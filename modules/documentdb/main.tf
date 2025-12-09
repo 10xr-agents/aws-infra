@@ -170,7 +170,7 @@ resource "aws_docdb_subnet_group" "main" {
 ################################################################################
 
 resource "aws_docdb_cluster_parameter_group" "main" {
-  name        = "${local.name_prefix}-documentdb-${var.cluster_family}"
+  name        = "${local.name_prefix}-documentdb-${replace(var.cluster_family, ".", "-")}"
   family      = var.cluster_family
   description = "DocumentDB cluster parameter group for ${local.name_prefix} (${var.cluster_family})"
 
