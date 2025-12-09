@@ -60,7 +60,7 @@ variable "cluster_size" {
 variable "instance_class" {
   description = "Instance class for DocumentDB instances"
   type        = string
-  default     = "db.r6g.large"
+  default     = "db.t3.medium"
 }
 
 variable "engine" {
@@ -72,7 +72,7 @@ variable "engine" {
 variable "engine_version" {
   description = "DocumentDB engine version"
   type        = string
-  default     = "5.0.0"
+  default     = "8.0.0"
 }
 
 variable "db_port" {
@@ -84,7 +84,7 @@ variable "db_port" {
 variable "cluster_family" {
   description = "DocumentDB cluster parameter group family"
   type        = string
-  default     = "docdb5.0"
+  default     = "docdb8.0"
 }
 
 variable "storage_type" {

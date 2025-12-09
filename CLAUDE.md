@@ -155,7 +155,7 @@ terraform state list
 │  │                              (10.0.201.0/24, 10.0.202.0/24, 10.0.203.0/24)                             │  │
 │  │  ┌─────────────────────────────────────────────────────────────────────────────────────────────────┐  │  │
 │  │  │                              AMAZON DOCUMENTDB                                                   │  │  │
-│  │  │                   (MongoDB 5.0 Compatible, Multi-AZ, HIPAA Compliant)                           │  │  │
+│  │  │                   (MongoDB 8.0 Compatible, Multi-AZ, HIPAA Compliant)                           │  │  │
 │  │  │                 Encryption: KMS (at-rest) | TLS 1.2+ (in-transit)                               │  │  │
 │  │  │                 Audit Logs: CloudWatch | Credentials: Secrets Manager                           │  │  │
 │  │  │                 Instance: db.r6g.large | Cluster Size: 2 (Primary + Replica)                    │  │  │
@@ -659,7 +659,7 @@ Environment-specific `locals.tf` merges base service configs with:
 - **ECR Region**: us-east-1 (761018882607.dkr.ecr.us-east-1.amazonaws.com)
 - **DNS Provider**: AWS Route 53 (US-only deployment)
 - **Certificate Validation**: ACM with Route 53 DNS validation
-- **DocumentDB Engine**: MongoDB 5.0 compatible (docdb5.0 parameter family)
+- **DocumentDB Engine**: MongoDB 8.0 compatible (docdb8.0 parameter family)
 - **DocumentDB TLS**: Required - applications must use TLS and include CA certificate
 
 ---
