@@ -652,3 +652,19 @@ variable "openai_api_key" {
   sensitive   = true
   default     = ""
 }
+
+################################################################################
+# Bastion Host Configuration
+################################################################################
+
+variable "enable_bastion_host" {
+  description = "Whether to create a bastion host for secure access to VPC resources via SSM Session Manager"
+  type        = bool
+  default     = false
+}
+
+variable "bastion_instance_type" {
+  description = "EC2 instance type for the bastion host"
+  type        = string
+  default     = "t3.micro"
+}

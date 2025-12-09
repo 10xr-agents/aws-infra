@@ -344,3 +344,38 @@ module "networking" {
 
   depends_on = [module.ecs]
 }
+
+################################################################################
+# Bastion Host Module - Secure access to VPC resources via SSM
+################################################################################
+
+module "bastion" {
+  source = "../../modules/bastion"
+  count  = var.enable_bastion_host ? 1 : 0
+
+  cluster_name = var.cluster_name
+  environment  = var.environment
+  vpc_id       = module.vpc.vpc_id
+  subnet_id    = module.vpc.private_subnets[0] # Deploy in first private subnet
+
+  # Instance configuration
+  instance_type              = var.bastion_instance_type
+  enable_detailed_monitoring = false
+
+  # Logging
+  enable_session_logging = true
+  log_retention_days     = var.hipaa_config.log_retention_days
+
+  tags = merge(
+    var.tags,
+    {
+      "Environment" = var.environment
+      "Project"     = "10xR-HealthCare"
+      "Component"   = "Bastion"
+      "Platform"    = "AWS"
+      "Terraform"   = "true"
+    }
+  )
+
+  depends_on = [module.vpc]
+}

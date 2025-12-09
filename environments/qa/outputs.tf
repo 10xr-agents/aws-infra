@@ -308,3 +308,36 @@ output "hospice_ssm_parameters" {
     node_env     = aws_ssm_parameter.hospice_node_env.arn
   }
 }
+
+################################################################################
+# Bastion Host Outputs
+################################################################################
+
+output "bastion_instance_id" {
+  description = "ID of the bastion EC2 instance"
+  value       = var.enable_bastion_host ? module.bastion[0].instance_id : null
+}
+
+output "bastion_private_ip" {
+  description = "Private IP address of the bastion host"
+  value       = var.enable_bastion_host ? module.bastion[0].private_ip : null
+}
+
+output "bastion_ssm_command" {
+  description = "AWS CLI command to connect to the bastion host via SSM"
+  value       = var.enable_bastion_host ? module.bastion[0].ssm_start_session_command : "Bastion host is not enabled. Set enable_bastion_host = true to enable."
+}
+
+output "bastion_connection_info" {
+  description = "Connection information for the bastion host"
+  value = var.enable_bastion_host ? {
+    instance_id                     = module.bastion[0].instance_id
+    private_ip                      = module.bastion[0].private_ip
+    ssm_session_command             = module.bastion[0].ssm_start_session_command
+    documentdb_port_forward_command = module.bastion[0].ssm_port_forward_documentdb_command
+    redis_port_forward_command      = module.bastion[0].ssm_port_forward_redis_command
+    documentdb_endpoint             = module.documentdb.endpoint
+    documentdb_port                 = module.documentdb.port
+    documentdb_secrets_manager_arn  = module.documentdb.secrets_manager_secret_arn
+  } : null
+}
