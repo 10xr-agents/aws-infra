@@ -182,6 +182,8 @@ health_check_matcher             = "200"
 # Listener Configuration
 create_http_listener = true
 
+enable_bastion_host = true
+
 ################################################################################
 # Domain Configuration
 ################################################################################
