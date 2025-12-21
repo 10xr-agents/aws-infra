@@ -17,6 +17,7 @@ module "certs" {
   domain      = var.domain
   subject_alternative_domains = [
     "*.${var.domain}",
+    "*.n8n.${var.domain}",
     "homehealth.${var.domain}",
     "hospice.${var.domain}"
   ]
