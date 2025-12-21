@@ -116,6 +116,7 @@ module "n8n" {
   db_skip_final_snapshot   = var.hipaa_config.skip_final_snapshot
 
   # Redis Configuration (from n8n_redis module)
+  enable_redis                = true
   redis_host                  = module.n8n_redis.redis_primary_endpoint
   redis_port                  = 6379
   redis_security_group_id     = module.n8n_redis.redis_security_group_id

@@ -131,6 +131,12 @@ variable "db_skip_final_snapshot" {
 # Redis Configuration
 #------------------------------------------------------------------------------
 
+variable "enable_redis" {
+  description = "Enable Redis integration (set to true when providing Redis configuration)"
+  type        = bool
+  default     = true
+}
+
 variable "redis_endpoint" {
   description = "Redis endpoint (host:port) - if using existing Redis"
   type        = string

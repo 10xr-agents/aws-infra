@@ -670,6 +670,24 @@ variable "bastion_instance_type" {
 }
 
 ################################################################################
+# MongoDB Atlas Variables (set in Terraform Cloud, not used in this workspace)
+################################################################################
+
+variable "mongodb_atlas_public_key" {
+  description = "MongoDB Atlas public API key (not used in this workspace)"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "mongodb_atlas_private_key" {
+  description = "MongoDB Atlas private API key (not used in this workspace)"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+################################################################################
 # n8n Workflow Automation Configuration
 # Unified architecture: Production-ready from Day 1, scale via variable changes
 ################################################################################

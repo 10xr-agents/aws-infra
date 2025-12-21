@@ -72,7 +72,7 @@ resource "aws_iam_role_policy" "ecs_execution_secrets" {
 
 # Add Redis secret access if provided
 resource "aws_iam_role_policy" "ecs_execution_redis_secrets" {
-  count = var.redis_auth_token_secret_arn != null ? 1 : 0
+  count = var.enable_redis ? 1 : 0
 
   name = "${local.name_prefix}-execution-redis-secrets"
   role = aws_iam_role.ecs_execution_role.id

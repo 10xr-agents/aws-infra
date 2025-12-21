@@ -99,12 +99,9 @@ module "rds" {
   deletion_protection = var.db_deletion_protection
   skip_final_snapshot = var.db_skip_final_snapshot
 
-  # Allow connections from n8n services
-  allowed_security_group_ids = [
-    aws_security_group.n8n_main.id,
-    aws_security_group.n8n_webhook.id,
-    aws_security_group.n8n_worker.id
-  ]
+  # Allow connections from VPC CIDR (n8n services are in private subnets)
+  # Using CIDR instead of security group IDs to avoid plan-time unknown value issues
+  allowed_cidr_blocks = [data.aws_vpc.selected.cidr_block]
 
   # HIPAA compliance
   cloudwatch_log_retention_days = var.log_retention_days

@@ -52,7 +52,7 @@ resource "aws_vpc_security_group_egress_rule" "n8n_main_to_postgres" {
 
 # Egress: To Redis
 resource "aws_vpc_security_group_egress_rule" "n8n_main_to_redis" {
-  count = var.redis_security_group_id != null ? 1 : 0
+  count = var.enable_redis ? 1 : 0
 
   security_group_id            = aws_security_group.n8n_main.id
   description                  = "Redis for queue"
@@ -133,7 +133,7 @@ resource "aws_vpc_security_group_egress_rule" "n8n_webhook_to_postgres" {
 
 # Egress: To Redis
 resource "aws_vpc_security_group_egress_rule" "n8n_webhook_to_redis" {
-  count = var.redis_security_group_id != null ? 1 : 0
+  count = var.enable_redis ? 1 : 0
 
   security_group_id            = aws_security_group.n8n_webhook.id
   description                  = "Redis for queue"
@@ -204,7 +204,7 @@ resource "aws_vpc_security_group_egress_rule" "n8n_worker_to_postgres" {
 
 # Egress: To Redis
 resource "aws_vpc_security_group_egress_rule" "n8n_worker_to_redis" {
-  count = var.redis_security_group_id != null ? 1 : 0
+  count = var.enable_redis ? 1 : 0
 
   security_group_id            = aws_security_group.n8n_worker.id
   description                  = "Redis for queue"
