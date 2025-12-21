@@ -87,6 +87,7 @@ module "n8n" {
 
   # Network Configuration
   vpc_id              = module.vpc.vpc_id
+  vpc_cidr_block      = var.vpc_cidr
   private_subnet_ids  = module.vpc.private_subnets
   database_subnet_ids = module.vpc.database_subnets
 

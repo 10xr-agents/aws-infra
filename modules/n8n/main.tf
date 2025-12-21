@@ -101,7 +101,7 @@ module "rds" {
 
   # Allow connections from VPC CIDR (n8n services are in private subnets)
   # Using CIDR instead of security group IDs to avoid plan-time unknown value issues
-  allowed_cidr_blocks = [data.aws_vpc.selected.cidr_block]
+  allowed_cidr_blocks = [var.vpc_cidr_block]
 
   # HIPAA compliance
   cloudwatch_log_retention_days = var.log_retention_days

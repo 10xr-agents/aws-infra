@@ -22,6 +22,11 @@ variable "vpc_id" {
   type        = string
 }
 
+variable "vpc_cidr_block" {
+  description = "VPC CIDR block for security group rules"
+  type        = string
+}
+
 variable "private_subnet_ids" {
   description = "List of private subnet IDs for ECS services"
   type        = list(string)

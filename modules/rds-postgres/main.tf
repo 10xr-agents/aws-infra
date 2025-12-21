@@ -71,14 +71,14 @@ resource "aws_vpc_security_group_ingress_rule" "rds_from_sg" {
 }
 
 resource "aws_vpc_security_group_ingress_rule" "rds_from_cidr" {
-  for_each = toset(var.allowed_cidr_blocks)
+  count = length(var.allowed_cidr_blocks)
 
   security_group_id = aws_security_group.rds.id
   description       = "PostgreSQL from allowed CIDR blocks"
   from_port         = var.port
   to_port           = var.port
   ip_protocol       = "tcp"
-  cidr_ipv4         = each.value
+  cidr_ipv4         = var.allowed_cidr_blocks[count.index]
 
   tags = local.default_tags
 }
