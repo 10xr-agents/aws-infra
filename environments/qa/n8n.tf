@@ -105,8 +105,8 @@ module "n8n" {
   webhook_host_header = var.n8n_config.webhook_host_header
 
   # Listener rule priorities (ensure no conflicts with existing services)
-  listener_rule_priority_main    = 100
-  listener_rule_priority_webhook = 101
+  listener_rule_priority_main    = 200
+  listener_rule_priority_webhook = 201
 
   # RDS PostgreSQL Configuration
   db_instance_class        = var.n8n_config.db_instance_class

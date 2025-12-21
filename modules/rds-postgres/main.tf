@@ -300,7 +300,8 @@ resource "aws_cloudwatch_log_group" "rds" {
 
   name              = "/aws/rds/instance/${local.name_prefix}/${each.value}"
   retention_in_days = var.cloudwatch_log_retention_days
-  kms_key_id        = local.kms_key_id
+  # Note: CloudWatch Logs are encrypted with AWS-managed keys by default
+  # Custom KMS keys require additional IAM permissions for the logs service
 
   tags = merge(local.default_tags, {
     Name = "${local.name_prefix}-${each.value}-logs"

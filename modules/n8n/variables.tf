@@ -83,13 +83,13 @@ variable "webhook_host_header" {
 variable "listener_rule_priority_main" {
   description = "Priority for n8n main listener rule"
   type        = number
-  default     = 100
+  default     = 200
 }
 
 variable "listener_rule_priority_webhook" {
   description = "Priority for n8n webhook listener rule"
   type        = number
-  default     = 101
+  default     = 201
 }
 
 #------------------------------------------------------------------------------
