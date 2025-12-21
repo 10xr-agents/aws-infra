@@ -668,3 +668,105 @@ variable "bastion_instance_type" {
   type        = string
   default     = "t3.micro"
 }
+
+################################################################################
+# n8n Workflow Automation Configuration
+# Unified architecture: Production-ready from Day 1, scale via variable changes
+################################################################################
+
+variable "n8n_config" {
+  description = "n8n workflow automation configuration. Unified architecture that scales via variable changes."
+  type = object({
+    # Host headers for ALB routing (no Route 53)
+    main_host_header    = string
+    webhook_host_header = string
+
+    # RDS PostgreSQL Configuration
+    db_instance_class        = string
+    db_allocated_storage     = number
+    db_max_allocated_storage = number
+    db_multi_az              = bool
+
+    # Redis Configuration
+    redis_node_type          = string
+    redis_num_cache_clusters = number
+    redis_multi_az           = bool
+
+    # n8n Main Service (UI and API)
+    main_cpu                 = number
+    main_memory              = number
+    main_desired_count       = number
+    main_min_capacity        = number
+    main_max_capacity        = number
+    main_enable_auto_scaling = bool
+
+    # n8n Webhook Service
+    webhook_cpu                 = number
+    webhook_memory              = number
+    webhook_desired_count       = number
+    webhook_min_capacity        = number
+    webhook_max_capacity        = number
+    webhook_enable_auto_scaling = bool
+
+    # n8n Worker Service
+    worker_cpu                 = number
+    worker_memory              = number
+    worker_desired_count       = number
+    worker_min_capacity        = number
+    worker_max_capacity        = number
+    worker_enable_auto_scaling = bool
+    worker_concurrency         = number
+
+    # n8n Application
+    n8n_image     = string
+    n8n_image_tag = string
+    n8n_timezone  = string
+  })
+
+  default = {
+    # Host headers for ALB routing
+    main_host_header    = "n8n.qa.10xr.co"
+    webhook_host_header = "webhook.n8n.qa.10xr.co"
+
+    # RDS PostgreSQL - Starter tier
+    db_instance_class        = "db.t3.micro"
+    db_allocated_storage     = 20
+    db_max_allocated_storage = 100
+    db_multi_az              = false
+
+    # Redis - Starter tier
+    redis_node_type          = "cache.t3.micro"
+    redis_num_cache_clusters = 1
+    redis_multi_az           = false
+
+    # n8n Main Service - Starter tier
+    main_cpu                 = 512
+    main_memory              = 1024
+    main_desired_count       = 1
+    main_min_capacity        = 1
+    main_max_capacity        = 3
+    main_enable_auto_scaling = true
+
+    # n8n Webhook Service - Starter tier
+    webhook_cpu                 = 256
+    webhook_memory              = 512
+    webhook_desired_count       = 1
+    webhook_min_capacity        = 1
+    webhook_max_capacity        = 4
+    webhook_enable_auto_scaling = true
+
+    # n8n Worker Service - Starter tier
+    worker_cpu                 = 512
+    worker_memory              = 1024
+    worker_desired_count       = 1
+    worker_min_capacity        = 1
+    worker_max_capacity        = 6
+    worker_enable_auto_scaling = true
+    worker_concurrency         = 5
+
+    # n8n Application
+    n8n_image     = "n8nio/n8n"
+    n8n_image_tag = "latest"
+    n8n_timezone  = "America/New_York"
+  }
+}

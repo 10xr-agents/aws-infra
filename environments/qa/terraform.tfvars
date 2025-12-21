@@ -228,6 +228,57 @@ hipaa_config = {
 }
 
 ################################################################################
+# n8n Workflow Automation Configuration (Starter Tier)
+# Scale to Growth/Production by changing these values
+################################################################################
+n8n_config = {
+  # Host headers for ALB routing (configure external DNS to point to NLB)
+  main_host_header    = "n8n.qa.10xr.co"
+  webhook_host_header = "webhook.n8n.qa.10xr.co"
+
+  # RDS PostgreSQL - Starter tier (~$15/month)
+  db_instance_class        = "db.t3.micro"
+  db_allocated_storage     = 20
+  db_max_allocated_storage = 100
+  db_multi_az              = false
+
+  # Redis - Starter tier (~$13/month)
+  redis_node_type          = "cache.t3.micro"
+  redis_num_cache_clusters = 1
+  redis_multi_az           = false
+
+  # n8n Main Service - Starter tier
+  main_cpu                 = 512
+  main_memory              = 1024
+  main_desired_count       = 1
+  main_min_capacity        = 1
+  main_max_capacity        = 3
+  main_enable_auto_scaling = true
+
+  # n8n Webhook Service - Starter tier
+  webhook_cpu                 = 256
+  webhook_memory              = 512
+  webhook_desired_count       = 1
+  webhook_min_capacity        = 1
+  webhook_max_capacity        = 4
+  webhook_enable_auto_scaling = true
+
+  # n8n Worker Service - Starter tier
+  worker_cpu                 = 512
+  worker_memory              = 1024
+  worker_desired_count       = 1
+  worker_min_capacity        = 1
+  worker_max_capacity        = 6
+  worker_enable_auto_scaling = true
+  worker_concurrency         = 5
+
+  # n8n Application
+  n8n_image     = "n8nio/n8n"
+  n8n_image_tag = "latest"
+  n8n_timezone  = "America/New_York"
+}
+
+################################################################################
 # Tags
 ################################################################################
 tags = {
