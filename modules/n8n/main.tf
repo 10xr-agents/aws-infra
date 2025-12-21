@@ -25,6 +25,8 @@ locals {
     DB_POSTGRESDB_PORT        = tostring(module.rds.port)
     DB_POSTGRESDB_DATABASE    = module.rds.database_name
     DB_POSTGRESDB_SSL_ENABLED = "true"
+    # Accept RDS SSL certificate (RDS uses Amazon-issued certificates)
+    DB_POSTGRESDB_SSL_REJECT_UNAUTHORIZED = "false"
 
     # Redis Queue
     QUEUE_BULL_REDIS_HOST = var.redis_host
