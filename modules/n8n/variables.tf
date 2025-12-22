@@ -76,7 +76,7 @@ variable "main_host_header" {
 }
 
 variable "webhook_host_header" {
-  description = "Host header for n8n webhooks (e.g., webhook.n8n.qa.10xr.co)"
+  description = "Host header for n8n webhooks (e.g., webhook-n8n.qa.10xr.co)"
   type        = string
 }
 
