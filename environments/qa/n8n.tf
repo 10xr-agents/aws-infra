@@ -122,6 +122,7 @@ module "n8n" {
   redis_port                  = 6379
   redis_security_group_id     = module.n8n_redis.redis_security_group_id
   redis_auth_token_secret_arn = aws_secretsmanager_secret.n8n_redis_auth.arn
+  enable_redis_tls            = true # Must match redis_transit_encryption_enabled on n8n_redis module
 
   # n8n Main Service
   main_cpu                 = var.n8n_config.main_cpu

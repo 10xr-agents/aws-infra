@@ -28,9 +28,10 @@ locals {
     # Accept RDS SSL certificate (RDS uses Amazon-issued certificates)
     DB_POSTGRESDB_SSL_REJECT_UNAUTHORIZED = "false"
 
-    # Redis Queue
+    # Redis Queue (with TLS when enabled)
     QUEUE_BULL_REDIS_HOST = var.redis_host
     QUEUE_BULL_REDIS_PORT = tostring(var.redis_port)
+    QUEUE_BULL_REDIS_TLS  = var.enable_redis_tls ? "true" : "false"
 
     # Execution mode
     EXECUTIONS_MODE = "queue"

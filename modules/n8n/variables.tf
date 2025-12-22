@@ -172,6 +172,12 @@ variable "redis_auth_token_secret_arn" {
   default     = null
 }
 
+variable "enable_redis_tls" {
+  description = "Enable TLS for Redis connection (must match Redis cluster transit encryption setting)"
+  type        = bool
+  default     = true
+}
+
 #------------------------------------------------------------------------------
 # n8n Main Service Configuration
 #------------------------------------------------------------------------------

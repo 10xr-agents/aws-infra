@@ -102,15 +102,13 @@ module "vpc_endpoints" {
   security_group_tags = var.tags
 
   # Essential VPC Endpoints for HIPAA-compliant ECS/Fargate workloads
-  # Cost-optimized: ~$176/month (8 endpoints × 3 AZs) vs ~$307/month (15 endpoints)
+  # Cost: ~$242/month (11 endpoints × 3 AZs × $0.01/hour + data processing)
   #
   # Removed (will use NAT Gateway instead):
   # - ecs-telemetry: Optional telemetry, not critical
   # - autoscaling: Only needed for EC2 auto-scaling groups
   # - ec2: Only needed for EC2 instance API calls
-  # - ec2messages: Only needed for SSM Session Manager to EC2
   # - elasticloadbalancing: ALB/NLB API calls are infrequent
-  # - ssmmessages: Only needed for SSM Session Manager
 
   endpoints = merge({
     # Gateway Endpoint (FREE) - Required for ECR image layers
@@ -122,16 +120,19 @@ module "vpc_endpoints" {
       tags                = { Name = "${module.vpc.name}-s3-vpc-endpoint" }
     }
     }, {
-    # Interface Endpoints (Essential for ECS/Fargate + HIPAA)
+    # Interface Endpoints (Essential for ECS/Fargate + HIPAA + SSM)
     for service in toset([
-      "ecr.api",       # Required: ECR API for image pulls
-      "ecr.dkr",       # Required: Docker registry for image pulls
-      "ecs",           # Required: ECS service API
-      "ecs-agent",     # Required: ECS agent communication
-      "sts",           # Required: IAM role assumption for tasks
-      "kms",           # Required: Encryption/decryption (HIPAA)
-      "logs",          # Required: CloudWatch Logs for containers
-      "secretsmanager" # Required: DocumentDB credentials (HIPAA)
+      "ecr.api",        # Required: ECR API for image pulls
+      "ecr.dkr",        # Required: Docker registry for image pulls
+      "ecs",            # Required: ECS service API
+      "ecs-agent",      # Required: ECS agent communication
+      "sts",            # Required: IAM role assumption for tasks
+      "kms",            # Required: Encryption/decryption (HIPAA)
+      "logs",           # Required: CloudWatch Logs for containers
+      "secretsmanager", # Required: DocumentDB credentials (HIPAA)
+      "ssm",            # Required: SSM API for Session Manager (bastion host)
+      "ssmmessages",    # Required: SSM Session Manager messages (bastion host)
+      "ec2messages"     # Required: EC2 messages for SSM on EC2 instances (bastion host)
     ]) :
     replace(service, ".", "_") => {
       service             = service
