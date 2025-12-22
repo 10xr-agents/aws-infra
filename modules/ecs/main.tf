@@ -58,7 +58,7 @@ locals {
             },
             {
               name  = "AWS_REGION"
-              value = data.aws_region.current.name
+              value = data.aws_region.current.region
             },
             {
               name  = "SERVICE_NAME"
@@ -86,7 +86,7 @@ locals {
           logDriver = "awslogs"
           options = {
             "awslogs-group"         = config.log_group_name
-            "awslogs-region"        = data.aws_region.current.name
+            "awslogs-region"        = data.aws_region.current.region
             "awslogs-stream-prefix" = "ecs"
           }
         }

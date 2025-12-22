@@ -56,7 +56,7 @@ resource "aws_ecs_task_definition" "n8n_main" {
         logDriver = "awslogs"
         options = {
           "awslogs-group"         = aws_cloudwatch_log_group.n8n_main.name
-          "awslogs-region"        = data.aws_region.current.name
+          "awslogs-region"        = data.aws_region.current.region
           "awslogs-stream-prefix" = "n8n-main"
         }
       }
@@ -167,7 +167,7 @@ resource "aws_ecs_task_definition" "n8n_webhook" {
         logDriver = "awslogs"
         options = {
           "awslogs-group"         = aws_cloudwatch_log_group.n8n_webhook.name
-          "awslogs-region"        = data.aws_region.current.name
+          "awslogs-region"        = data.aws_region.current.region
           "awslogs-stream-prefix" = "n8n-webhook"
         }
       }
@@ -272,7 +272,7 @@ resource "aws_ecs_task_definition" "n8n_worker" {
         logDriver = "awslogs"
         options = {
           "awslogs-group"         = aws_cloudwatch_log_group.n8n_worker.name
-          "awslogs-region"        = data.aws_region.current.name
+          "awslogs-region"        = data.aws_region.current.region
           "awslogs-stream-prefix" = "n8n-worker"
         }
       }

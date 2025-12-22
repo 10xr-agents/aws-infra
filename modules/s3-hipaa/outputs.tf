@@ -26,7 +26,7 @@ output "bucket_regional_domain_name" {
 
 output "bucket_region" {
   description = "The AWS region the bucket resides in"
-  value       = data.aws_region.current.name
+  value       = data.aws_region.current.region
 }
 
 ################################################################################
@@ -85,6 +85,6 @@ output "ecs_environment_variables" {
   value = {
     S3_BUCKET_NAME   = aws_s3_bucket.this.id
     S3_BUCKET_ARN    = aws_s3_bucket.this.arn
-    S3_BUCKET_REGION = data.aws_region.current.name
+    S3_BUCKET_REGION = data.aws_region.current.region
   }
 }

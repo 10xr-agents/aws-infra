@@ -157,7 +157,7 @@ resource "aws_iam_policy" "ecs_task_access" {
         ]
         Condition = {
           StringEquals = {
-            "kms:ViaService" = "secretsmanager.${data.aws_region.current.name}.amazonaws.com"
+            "kms:ViaService" = "secretsmanager.${data.aws_region.current.region}.amazonaws.com"
           }
         }
       }

@@ -472,8 +472,8 @@ resource "aws_iam_policy" "documentdb_access" {
         ]
         Resource = [
           aws_docdb_cluster.main.arn,
-          "arn:aws:rds:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:cluster:${aws_docdb_cluster.main.cluster_identifier}",
-          "arn:aws:rds:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:subgrp:${aws_docdb_subnet_group.main.name}"
+          "arn:aws:rds:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:cluster:${aws_docdb_cluster.main.cluster_identifier}",
+          "arn:aws:rds:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:subgrp:${aws_docdb_subnet_group.main.name}"
         ]
       },
       {
@@ -485,7 +485,7 @@ resource "aws_iam_policy" "documentdb_access" {
           "ssm:GetParametersByPath"
         ]
         Resource = [
-          "arn:aws:ssm:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:parameter/${var.environment}/${var.cluster_name}/documentdb/*"
+          "arn:aws:ssm:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:parameter/${var.environment}/${var.cluster_name}/documentdb/*"
         ]
       },
       {

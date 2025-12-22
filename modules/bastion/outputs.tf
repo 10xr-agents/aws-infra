@@ -63,7 +63,7 @@ output "instance_profile_arn" {
 
 output "ssm_start_session_command" {
   description = "AWS CLI command to start an SSM session to the bastion host"
-  value       = "aws ssm start-session --target ${aws_instance.bastion.id} --region ${data.aws_region.current.name}"
+  value       = "aws ssm start-session --target ${aws_instance.bastion.id} --region ${data.aws_region.current.region}"
 }
 
 output "ssm_port_forward_documentdb_command" {
@@ -73,7 +73,7 @@ output "ssm_port_forward_documentdb_command" {
       --target ${aws_instance.bastion.id} \
       --document-name AWS-StartPortForwardingSessionToRemoteHost \
       --parameters '{"host":["<DOCUMENTDB_ENDPOINT>"],"portNumber":["27017"],"localPortNumber":["27017"]}' \
-      --region ${data.aws_region.current.name}
+      --region ${data.aws_region.current.region}
   EOT
 }
 
@@ -84,7 +84,7 @@ output "ssm_port_forward_redis_command" {
       --target ${aws_instance.bastion.id} \
       --document-name AWS-StartPortForwardingSessionToRemoteHost \
       --parameters '{"host":["<REDIS_ENDPOINT>"],"portNumber":["6379"],"localPortNumber":["6379"]}' \
-      --region ${data.aws_region.current.name}
+      --region ${data.aws_region.current.region}
   EOT
 }
 
