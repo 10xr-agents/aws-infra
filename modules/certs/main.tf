@@ -31,18 +31,20 @@ resource "aws_acm_certificate" "main" {
 ################################################################################
 
 resource "cloudflare_dns_record" "acm_validation" {
+  # Deduplicate by resource_record_name since wildcard and base domain share the same validation record
+  # e.g., qa.10xr.co and *.qa.10xr.co both use _51e42db8eb04c31f186f8fe853418f8b.qa.10xr.co
   for_each = var.enable_cloudflare_validation ? {
-    for opt in aws_acm_certificate.main.domain_validation_options : opt.domain_name => opt
+    for opt in aws_acm_certificate.main.domain_validation_options : opt.resource_record_name => opt...
   } : {}
 
   zone_id = var.cloudflare_zone_id
-  name    = each.value.resource_record_name
-  type    = each.value.resource_record_type
-  content = trimsuffix(each.value.resource_record_value, ".")
+  name    = each.value[0].resource_record_name
+  type    = each.value[0].resource_record_type
+  content = trimsuffix(each.value[0].resource_record_value, ".")
   ttl     = 60
   proxied = false # Must be DNS Only for ACM validation
 
-  comment = "ACM certificate validation for ${each.value.domain_name} - Managed by Terraform"
+  comment = "ACM certificate validation - Managed by Terraform"
 
   lifecycle {
     create_before_destroy = true
