@@ -9,7 +9,7 @@
 # Creates CNAME records pointing to NLB for each service
 ################################################################################
 
-resource "cloudflare_record" "service" {
+resource "cloudflare_dns_record" "service" {
   for_each = var.dns_records
 
   zone_id = var.zone_id
@@ -31,7 +31,7 @@ resource "cloudflare_record" "service" {
 # Points *.{domain} to NLB for catch-all routing
 ################################################################################
 
-resource "cloudflare_record" "wildcard" {
+resource "cloudflare_dns_record" "wildcard" {
   count = var.create_wildcard_record ? 1 : 0
 
   zone_id = var.zone_id

@@ -30,7 +30,7 @@ resource "aws_acm_certificate" "main" {
 # Creates CNAME records in Cloudflare for ACM certificate validation
 ################################################################################
 
-resource "cloudflare_record" "acm_validation" {
+resource "cloudflare_dns_record" "acm_validation" {
   for_each = var.enable_cloudflare_validation ? {
     for opt in aws_acm_certificate.main.domain_validation_options : opt.domain_name => opt
   } : {}
@@ -63,5 +63,5 @@ resource "aws_acm_certificate_validation" "main" {
     create = var.validation_timeout
   }
 
-  depends_on = [cloudflare_record.acm_validation]
+  depends_on = [cloudflare_dns_record.acm_validation]
 }

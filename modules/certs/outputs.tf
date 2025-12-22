@@ -23,7 +23,7 @@ output "validated_certificate_arn" {
 output "cloudflare_validation_records" {
   description = "Cloudflare DNS records created for ACM validation"
   value = var.enable_cloudflare_validation ? {
-    for k, v in cloudflare_record.acm_validation : k => {
+    for k, v in cloudflare_dns_record.acm_validation : k => {
       id      = v.id
       name    = v.name
       type    = v.type
