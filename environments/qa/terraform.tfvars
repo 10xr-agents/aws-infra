@@ -25,6 +25,10 @@ enable_container_insights = true
 enable_fargate            = true
 enable_fargate_spot       = true
 
+# HTTPS Listener - Set to false during initial deploy while certificate validates
+# After certificate is validated, set to true and re-apply
+create_https_listener = false
+
 # SSL Configuration
 ssl_policy = "ELBSecurityPolicy-TLS-1-2-2017-01"
 
