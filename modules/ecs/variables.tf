@@ -15,6 +15,11 @@ variable "vpc_id" {
   type        = string
 }
 
+variable "vpc_cidr_block" {
+  description = "CIDR block of the VPC (passed explicitly to avoid plan-time data source issues)"
+  type        = string
+}
+
 variable "public_subnet_ids" {
   description = "List of public subnet IDs for ALB (required if create_alb is true and alb_internal is false)"
   type        = list(string)

@@ -52,7 +52,7 @@ resource "aws_security_group_rule" "ecs_service_from_vpc" {
   from_port         = 0
   to_port           = 65535
   protocol          = "tcp"
-  cidr_blocks       = [data.aws_vpc.main.cidr_block]
+  cidr_blocks       = [var.vpc_cidr_block]
   security_group_id = aws_security_group.ecs_service[each.key].id
   description       = "Service to service communication within VPC"
 
@@ -193,7 +193,7 @@ resource "aws_security_group_rule" "alb_to_ecs_services" {
   from_port         = 0
   to_port           = 65535
   protocol          = "tcp"
-  cidr_blocks       = [data.aws_vpc.main.cidr_block]
+  cidr_blocks       = [var.vpc_cidr_block]
   security_group_id = aws_security_group.alb[0].id
   description       = "To ECS services"
 
