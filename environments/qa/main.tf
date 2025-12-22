@@ -22,8 +22,7 @@ module "certs" {
   environment = var.environment
   domain      = var.domain
   subject_alternative_domains = [
-    "*.${var.domain}",
-    "*.n8n.${var.domain}",
+    "*.${var.domain}",        # Covers n8n.qa, webhook-n8n.qa, worker-n8n.qa, etc.
     "homehealth.${var.domain}",
     "hospice.${var.domain}"
   ]
@@ -387,7 +386,7 @@ module "cloudflare_dns" {
       proxied = false
     }
     webhook-n8n = {
-      name    = "webhook.n8n"
+      name    = "webhook-n8n"  # Hyphen notation instead of nested subdomain
       proxied = false
     }
   }

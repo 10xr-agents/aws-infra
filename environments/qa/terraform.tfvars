@@ -196,7 +196,7 @@ enable_cloudflare_dns = true
 domain = "qa.10xr.co"
 
 # DNS is managed automatically via Cloudflare (see cloudflare_dns module)
-# Records created: *.qa.10xr.co, homehealth.qa.10xr.co, hospice.qa.10xr.co, n8n.qa.10xr.co, webhook.n8n.qa.10xr.co
+# Records created: *.qa.10xr.co, homehealth.qa.10xr.co, hospice.qa.10xr.co, n8n.qa.10xr.co, webhook-n8n.qa.10xr.co
 
 ################################################################################
 # HIPAA Configuration (Relaxed for QA/Staging)
@@ -237,8 +237,9 @@ hipaa_config = {
 ################################################################################
 n8n_config = {
   # Host headers for ALB routing (configure external DNS to point to NLB)
+  # Using hyphen notation instead of nested subdomains (webhook-n8n vs webhook.n8n)
   main_host_header    = "n8n.qa.10xr.co"
-  webhook_host_header = "webhook.n8n.qa.10xr.co"
+  webhook_host_header = "webhook-n8n.qa.10xr.co"
 
   # RDS PostgreSQL - Starter tier (~$15/month)
   db_instance_class        = "db.t3.micro"
