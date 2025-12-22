@@ -65,7 +65,8 @@ resource "aws_acm_certificate_validation" "main" {
   count = var.enable_cloudflare_validation ? 1 : 0
 
   certificate_arn         = aws_acm_certificate.main.arn
-  validation_record_fqdns = [for record in cloudflare_dns_record.acm_validation : record.hostname]
+  # Use the FQDN from ACM validation options (stored in for_each values)
+  validation_record_fqdns = [for k, v in cloudflare_dns_record.acm_validation : trimsuffix(v.name, ".")]
 
   timeouts {
     create = var.validation_timeout
