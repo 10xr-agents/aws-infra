@@ -44,10 +44,10 @@ variable "acm_certificate_arn" {
   default     = ""
 }
 
-variable "certificate_validation_id" {
-  description = "ID of the certificate validation resource - creates implicit dependency to wait for cert validation"
-  type        = string
-  default     = null
+variable "create_https_listener" {
+  description = "Whether to create/update the HTTPS listener. Set to false during initial deploy while certificate validates."
+  type        = bool
+  default     = true
 }
 
 variable "enable_container_insights" {

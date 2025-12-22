@@ -226,8 +226,9 @@ module "ecs" {
   private_subnet_ids = module.vpc.private_subnets
   public_subnet_ids  = module.vpc.public_subnets
 
-  acm_certificate_arn = local.acm_certificate_arn
-  create_alb_rules    = true
+  acm_certificate_arn   = local.acm_certificate_arn
+  create_https_listener = var.create_https_listener
+  create_alb_rules      = true
 
   enable_container_insights = var.enable_container_insights
   enable_execute_command    = var.enable_execute_command

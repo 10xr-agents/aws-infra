@@ -92,6 +92,12 @@ variable "enable_container_insights" {
   default     = true
 }
 
+variable "create_https_listener" {
+  description = "Whether to create/update the HTTPS listener. Set to false during initial deploy while certificate validates."
+  type        = bool
+  default     = true
+}
+
 variable "enable_fargate" {
   description = "Whether to enable Fargate capacity provider"
   type        = bool
