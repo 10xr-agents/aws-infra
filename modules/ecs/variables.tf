@@ -44,12 +44,6 @@ variable "acm_certificate_arn" {
   default     = ""
 }
 
-variable "create_https_listener" {
-  description = "Whether to create/update the HTTPS listener. Set to false during initial deploy while certificate validates."
-  type        = bool
-  default     = true
-}
-
 variable "enable_container_insights" {
   description = "Whether to enable Container Insights for the ECS cluster"
   type        = bool

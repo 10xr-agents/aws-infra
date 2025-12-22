@@ -10,6 +10,12 @@ data "aws_region" "current" {}
 
 data "aws_caller_identity" "current" {}
 
+################################################################################
+# ACM Certificate with Cloudflare DNS Validation
+# This runs FIRST - no dependencies on ECS, ALB, or NLB
+# Certificate is validated before any other infrastructure is created
+################################################################################
+
 module "certs" {
   source = "../../modules/certs"
 
@@ -21,6 +27,11 @@ module "certs" {
     "homehealth.${var.domain}",
     "hospice.${var.domain}"
   ]
+
+  # Cloudflare validation - creates DNS records and waits for validation
+  enable_cloudflare_validation = var.enable_cloudflare_dns
+  cloudflare_zone_id           = var.cloudflare_zone_id
+  validation_timeout           = "30m"
 }
 
 # VPC Module - Reuse existing VPC module
@@ -226,9 +237,8 @@ module "ecs" {
   private_subnet_ids = module.vpc.private_subnets
   public_subnet_ids  = module.vpc.public_subnets
 
-  acm_certificate_arn   = local.acm_certificate_arn
-  create_https_listener = var.create_https_listener
-  create_alb_rules      = true
+  acm_certificate_arn = local.acm_certificate_arn
+  create_alb_rules    = true
 
   enable_container_insights = var.enable_container_insights
   enable_execute_command    = var.enable_execute_command
@@ -348,8 +358,9 @@ module "networking" {
 }
 
 ################################################################################
-# Cloudflare DNS Module
-# Creates DNS records for services and automates ACM certificate validation
+# Cloudflare DNS Module - Service Records
+# Creates DNS records pointing services to NLB
+# NOTE: ACM validation is handled by the certs module (runs first)
 ################################################################################
 
 module "cloudflare_dns" {
@@ -360,9 +371,6 @@ module "cloudflare_dns" {
   environment  = var.environment
   domain       = var.domain
   nlb_dns_name = module.networking.nlb_dns_name
-
-  # ACM certificate validation records
-  acm_certificate_domain_validation_options = module.certs.acm_certificate_domain_validation_options
 
   # Service DNS records (all pointing to NLB)
   dns_records = {
@@ -390,28 +398,7 @@ module "cloudflare_dns" {
 
   tags = var.tags
 
-  # Note: Only depends on networking (for NLB DNS name)
-  # The implicit dependency via acm_certificate_domain_validation_options is sufficient
   depends_on = [module.networking]
-}
-
-################################################################################
-# ACM Certificate Validation
-# Waits for certificate to be validated AFTER Cloudflare creates DNS records
-# This resource is here (not in certs module) to ensure proper dependency ordering
-################################################################################
-
-resource "aws_acm_certificate_validation" "main" {
-  count = var.enable_cloudflare_dns ? 1 : 0
-
-  certificate_arn = module.certs.acm_certificate_arn
-
-  timeouts {
-    create = "30m"
-  }
-
-  # Explicit dependency on Cloudflare DNS module to ensure validation records exist
-  depends_on = [module.cloudflare_dns]
 }
 
 ################################################################################

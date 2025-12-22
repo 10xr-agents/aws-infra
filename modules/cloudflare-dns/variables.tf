@@ -25,21 +25,6 @@ variable "nlb_dns_name" {
 }
 
 ################################################################################
-# ACM Certificate Validation
-################################################################################
-
-variable "acm_certificate_domain_validation_options" {
-  description = "ACM certificate DNS validation options from aws_acm_certificate resource"
-  type = set(object({
-    domain_name           = string
-    resource_record_name  = string
-    resource_record_type  = string
-    resource_record_value = string
-  }))
-  default = []
-}
-
-################################################################################
 # DNS Records Configuration
 ################################################################################
 

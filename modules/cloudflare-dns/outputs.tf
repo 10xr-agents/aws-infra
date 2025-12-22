@@ -1,27 +1,6 @@
 # modules/cloudflare-dns/outputs.tf
 
 ################################################################################
-# ACM Validation Records
-################################################################################
-
-output "acm_validation_records" {
-  description = "ACM validation DNS records created in Cloudflare"
-  value = {
-    for k, v in cloudflare_record.acm_validation : k => {
-      id      = v.id
-      name    = v.name
-      type    = v.type
-      content = v.content
-    }
-  }
-}
-
-output "acm_validation_record_ids" {
-  description = "List of ACM validation record IDs"
-  value       = [for r in cloudflare_record.acm_validation : r.id]
-}
-
-################################################################################
 # Service DNS Records
 ################################################################################
 
@@ -72,9 +51,8 @@ output "dns_summary" {
     zone_id                 = var.zone_id
     domain                  = var.domain
     nlb_target              = var.nlb_dns_name
-    acm_validation_count    = length(cloudflare_record.acm_validation)
     service_record_count    = length(cloudflare_record.service)
     wildcard_record_created = var.create_wildcard_record
-    total_records_created   = length(cloudflare_record.acm_validation) + length(cloudflare_record.service) + (var.create_wildcard_record ? 1 : 0)
+    total_records_created   = length(cloudflare_record.service) + (var.create_wildcard_record ? 1 : 0)
   }
 }

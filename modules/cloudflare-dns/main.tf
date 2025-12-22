@@ -1,31 +1,8 @@
 # modules/cloudflare-dns/main.tf
 #
-# Cloudflare DNS Module for 10xR Healthcare Platform
-# Creates DNS records for services and handles ACM certificate validation
-
-################################################################################
-# ACM Certificate DNS Validation Records
-# Creates Cloudflare DNS records required for ACM certificate validation
-################################################################################
-
-resource "cloudflare_record" "acm_validation" {
-  for_each = {
-    for opt in var.acm_certificate_domain_validation_options : opt.domain_name => opt
-  }
-
-  zone_id = var.zone_id
-  name    = each.value.resource_record_name
-  type    = each.value.resource_record_type
-  content = trimsuffix(each.value.resource_record_value, ".")
-  ttl     = 60
-  proxied = false # Must be DNS Only for ACM validation
-
-  comment = "ACM certificate validation for ${each.value.domain_name} - Managed by Terraform"
-
-  lifecycle {
-    create_before_destroy = true
-  }
-}
+# Cloudflare DNS Module - Service Records Only
+# Creates DNS records pointing services to NLB
+# NOTE: ACM validation is handled by the certs module
 
 ################################################################################
 # Service DNS Records

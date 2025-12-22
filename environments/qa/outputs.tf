@@ -358,7 +358,7 @@ output "cloudflare_service_urls" {
 
 output "cloudflare_acm_validation_records" {
   description = "ACM certificate validation records in Cloudflare"
-  value       = var.enable_cloudflare_dns ? module.cloudflare_dns[0].acm_validation_records : null
+  value       = var.enable_cloudflare_dns ? module.certs.cloudflare_validation_records : null
 }
 
 output "cloudflare_dns_summary" {
