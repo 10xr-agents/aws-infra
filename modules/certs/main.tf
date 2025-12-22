@@ -35,12 +35,13 @@ resource "cloudflare_dns_record" "acm_validation" {
     for opt in aws_acm_certificate.main.domain_validation_options : opt.domain_name => opt
   } : {}
 
-  zone_id = var.cloudflare_zone_id
-  name    = each.value.resource_record_name
-  type    = each.value.resource_record_type
-  content = trimsuffix(each.value.resource_record_value, ".")
-  ttl     = 60
-  proxied = false # Must be DNS Only for ACM validation
+  zone_id         = var.cloudflare_zone_id
+  name            = each.value.resource_record_name
+  type            = each.value.resource_record_type
+  content         = trimsuffix(each.value.resource_record_value, ".")
+  ttl             = 60
+  proxied         = false # Must be DNS Only for ACM validation
+  allow_overwrite = true  # Allow overwriting existing records
 
   comment = "ACM certificate validation for ${each.value.domain_name} - Managed by Terraform"
 

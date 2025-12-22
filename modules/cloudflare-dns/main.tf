@@ -12,12 +12,13 @@
 resource "cloudflare_dns_record" "service" {
   for_each = var.dns_records
 
-  zone_id = var.zone_id
-  name    = each.value.name
-  type    = each.value.type
-  content = var.nlb_dns_name
-  ttl     = each.value.proxied ? 1 : each.value.ttl # Auto TTL (1) when proxied
-  proxied = each.value.proxied
+  zone_id         = var.zone_id
+  name            = each.value.name
+  type            = each.value.type
+  content         = var.nlb_dns_name
+  ttl             = each.value.proxied ? 1 : each.value.ttl # Auto TTL (1) when proxied
+  proxied         = each.value.proxied
+  allow_overwrite = true # Allow overwriting existing records
 
   comment = coalesce(each.value.comment, "DNS record for ${each.key} service - Managed by Terraform")
 
@@ -34,12 +35,13 @@ resource "cloudflare_dns_record" "service" {
 resource "cloudflare_dns_record" "wildcard" {
   count = var.create_wildcard_record ? 1 : 0
 
-  zone_id = var.zone_id
-  name    = "*"
-  type    = "CNAME"
-  content = var.nlb_dns_name
-  ttl     = var.wildcard_proxied ? 1 : 300
-  proxied = var.wildcard_proxied
+  zone_id         = var.zone_id
+  name            = "*"
+  type            = "CNAME"
+  content         = var.nlb_dns_name
+  ttl             = var.wildcard_proxied ? 1 : 300
+  proxied         = var.wildcard_proxied
+  allow_overwrite = true # Allow overwriting existing records
 
   comment = "Wildcard DNS record for ${var.domain} - Managed by Terraform"
 

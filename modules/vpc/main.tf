@@ -2,7 +2,7 @@
 
 module "vpc" {
   source  = "terraform-aws-modules/vpc/aws"
-  version = "~> 5.17"
+  version = "~> 6.5"
 
   name = var.vpc_name
   cidr = var.vpc_cidr
@@ -78,7 +78,7 @@ module "vpc" {
 # VPC Endpoints for AWS services to reduce NAT Gateway costs and improve security
 module "vpc_endpoints" {
   source  = "terraform-aws-modules/vpc/aws//modules/vpc-endpoints"
-  version = "~> 5.17"
+  version = "~> 6.5"
 
   vpc_id = module.vpc.vpc_id
 
