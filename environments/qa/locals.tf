@@ -10,8 +10,9 @@ locals {
   # Get ECS services from tfvars
   ecs_services = var.ecs_services
 
-  # ACM certificate ARN
-  acm_certificate_arn = module.certs.acm_certificate_arn
+  # ACM certificate ARN - use validated cert when Cloudflare DNS is enabled
+  # The certificate must be validated before use (Cloudflare creates validation records)
+  acm_certificate_arn = var.enable_cloudflare_dns ? module.certs.validated_certificate_arn : module.certs.acm_certificate_arn
 
   # DocumentDB database names per service
   documentdb_database_home_health = "10XR_Home_Health_${var.environment}"

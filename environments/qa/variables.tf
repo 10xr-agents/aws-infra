@@ -788,3 +788,30 @@ variable "n8n_config" {
     n8n_timezone  = "America/New_York"
   }
 }
+
+################################################################################
+# Cloudflare Configuration
+################################################################################
+
+variable "cloudflare_api_token" {
+  description = "Cloudflare API token with Zone:DNS:Edit permissions. Store in Terraform Cloud as sensitive variable."
+  type        = string
+  sensitive   = true
+}
+
+variable "cloudflare_zone_id" {
+  description = "Cloudflare zone ID for 10xr.co"
+  type        = string
+}
+
+variable "cloudflare_account_id" {
+  description = "Cloudflare account ID"
+  type        = string
+  default     = ""
+}
+
+variable "enable_cloudflare_dns" {
+  description = "Whether to create Cloudflare DNS records"
+  type        = bool
+  default     = true
+}

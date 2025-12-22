@@ -165,3 +165,36 @@ resource "aws_cloudwatch_log_group" "n8n_worker" {
     Service = "n8n-worker"
   })
 }
+
+#------------------------------------------------------------------------------
+# Route 53 DNS Records
+# Creates alias records pointing to NLB for n8n main and webhook services
+#------------------------------------------------------------------------------
+
+resource "aws_route53_record" "n8n_main" {
+  count = var.create_route53_records && var.route53_zone_id != null ? 1 : 0
+
+  zone_id = var.route53_zone_id
+  name    = var.main_host_header
+  type    = "A"
+
+  alias {
+    name                   = var.nlb_dns_name
+    zone_id                = var.nlb_zone_id
+    evaluate_target_health = true
+  }
+}
+
+resource "aws_route53_record" "n8n_webhook" {
+  count = var.create_route53_records && var.route53_zone_id != null ? 1 : 0
+
+  zone_id = var.route53_zone_id
+  name    = var.webhook_host_header
+  type    = "A"
+
+  alias {
+    name                   = var.nlb_dns_name
+    zone_id                = var.nlb_zone_id
+    evaluate_target_health = true
+  }
+}

@@ -403,6 +403,34 @@ variable "health_check_unhealthy_threshold" {
 }
 
 #------------------------------------------------------------------------------
+# Route 53 DNS Configuration
+#------------------------------------------------------------------------------
+
+variable "create_route53_records" {
+  description = "Whether to create Route 53 DNS records for n8n services"
+  type        = bool
+  default     = true
+}
+
+variable "route53_zone_id" {
+  description = "Route 53 hosted zone ID for DNS records"
+  type        = string
+  default     = null
+}
+
+variable "nlb_dns_name" {
+  description = "NLB DNS name for Route 53 alias records"
+  type        = string
+  default     = null
+}
+
+variable "nlb_zone_id" {
+  description = "NLB hosted zone ID for Route 53 alias records"
+  type        = string
+  default     = null
+}
+
+#------------------------------------------------------------------------------
 # Tags
 #------------------------------------------------------------------------------
 

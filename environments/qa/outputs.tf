@@ -341,3 +341,27 @@ output "bastion_connection_info" {
     documentdb_secrets_manager_arn  = module.documentdb.secrets_manager_secret_arn
   } : null
 }
+
+################################################################################
+# Cloudflare DNS Outputs
+################################################################################
+
+output "cloudflare_dns_records" {
+  description = "Cloudflare DNS records created for services"
+  value       = var.enable_cloudflare_dns ? module.cloudflare_dns[0].service_records : null
+}
+
+output "cloudflare_service_urls" {
+  description = "URLs for all services via Cloudflare DNS"
+  value       = var.enable_cloudflare_dns ? module.cloudflare_dns[0].service_urls : null
+}
+
+output "cloudflare_acm_validation_records" {
+  description = "ACM certificate validation records in Cloudflare"
+  value       = var.enable_cloudflare_dns ? module.cloudflare_dns[0].acm_validation_records : null
+}
+
+output "cloudflare_dns_summary" {
+  description = "Summary of Cloudflare DNS configuration"
+  value       = var.enable_cloudflare_dns ? module.cloudflare_dns[0].dns_summary : null
+}

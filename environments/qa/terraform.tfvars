@@ -184,15 +184,18 @@ create_http_listener = true
 
 enable_bastion_host = true
 
-################################################################################
+# Cloudflare Configuration
+# NOTE: cloudflare_api_token is stored in Terraform Cloud as a sensitive variable
+cloudflare_zone_id    = "3ae048b26df2c81c175c609f802feafb"
+cloudflare_account_id = "929c1d893cb7bb8455e151ae08f3b538"
+enable_cloudflare_dns = true
+
 # Domain Configuration
 ################################################################################
 domain = "qa.10xr.co"
 
-# DNS is managed externally in GoDaddy
-# Create CNAME records pointing to NLB DNS name (from terraform output nlb_dns_name):
-#   homehealth.qa.10xr.co -> <nlb-dns-name>
-#   hospice.qa.10xr.co    -> <nlb-dns-name>
+# DNS is managed automatically via Cloudflare (see cloudflare_dns module)
+# Records created: *.qa.10xr.co, homehealth.qa.10xr.co, hospice.qa.10xr.co, n8n.qa.10xr.co, webhook.n8n.qa.10xr.co
 
 ################################################################################
 # HIPAA Configuration (Relaxed for QA/Staging)

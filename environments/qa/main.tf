@@ -21,6 +21,11 @@ module "certs" {
     "homehealth.${var.domain}",
     "hospice.${var.domain}"
   ]
+
+  # Enable validation wait when using Cloudflare DNS
+  # The cloudflare_dns module will create the validation records
+  wait_for_validation = var.enable_cloudflare_dns
+  validation_timeout  = "30m"
 }
 
 # VPC Module - Reuse existing VPC module
@@ -344,6 +349,55 @@ module "networking" {
   )
 
   depends_on = [module.ecs]
+}
+
+################################################################################
+# Cloudflare DNS Module
+# Creates DNS records for services and automates ACM certificate validation
+################################################################################
+
+module "cloudflare_dns" {
+  source = "../../modules/cloudflare-dns"
+  count  = var.enable_cloudflare_dns ? 1 : 0
+
+  zone_id      = var.cloudflare_zone_id
+  environment  = var.environment
+  domain       = var.domain
+  nlb_dns_name = module.networking.nlb_dns_name
+
+  # ACM certificate validation records
+  acm_certificate_domain_validation_options = module.certs.acm_certificate_domain_validation_options
+
+  # Service DNS records (all pointing to NLB)
+  dns_records = {
+    homehealth = {
+      name    = "homehealth"
+      proxied = false
+    }
+    hospice = {
+      name    = "hospice"
+      proxied = false
+    }
+    n8n = {
+      name    = "n8n"
+      proxied = false
+    }
+    webhook-n8n = {
+      name    = "webhook.n8n"
+      proxied = false
+    }
+  }
+
+  # Create wildcard record for catch-all
+  create_wildcard_record = true
+  wildcard_proxied       = false
+
+  tags = var.tags
+
+  # Note: Only depends on networking (for NLB DNS name)
+  # Do NOT add module.certs here - it creates a deadlock since certs waits for validation
+  # The implicit dependency via acm_certificate_domain_validation_options is sufficient
+  depends_on = [module.networking]
 }
 
 ################################################################################

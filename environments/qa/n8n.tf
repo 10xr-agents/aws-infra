@@ -100,9 +100,12 @@ module "n8n" {
   alb_security_group_id = module.ecs.alb_security_group_id
   alb_listener_arn      = module.ecs.alb_listener_arns.https
 
-  # Host headers for routing (DNS managed externally)
+  # Host headers for routing (DNS managed in GoDaddy - see docs/DNS_RECORDS.md)
   main_host_header    = var.n8n_config.main_host_header
   webhook_host_header = var.n8n_config.webhook_host_header
+
+  # DNS records are managed externally in GoDaddy
+  create_route53_records = false
 
   # Listener rule priorities (ensure no conflicts with existing services)
   listener_rule_priority_main    = 200
