@@ -7,6 +7,31 @@
 data "aws_region" "current" {}
 
 ################################################################################
+# Local Variables
+################################################################################
+
+locals {
+  # All domains that need certificates (primary + SANs)
+  all_domains = concat([var.domain], var.subject_alternative_domains)
+
+  # Filter out wildcards - they share validation records with their base domain
+  # e.g., *.qa.10xr.co shares validation record with qa.10xr.co
+  non_wildcard_domains = [
+    for domain in local.all_domains : domain
+    if !startswith(domain, "*.")
+  ]
+
+  # Create a map from domain name to validation options (for lookup)
+  # This allows us to use static domain names as for_each keys
+  domain_validation_map = var.enable_cloudflare_validation ? {
+    for opt in aws_acm_certificate.main.domain_validation_options : opt.domain_name => {
+      name  = opt.resource_record_name
+      value = opt.resource_record_value
+    }
+  } : {}
+}
+
+################################################################################
 # ACM Certificate
 ################################################################################
 
@@ -28,23 +53,21 @@ resource "aws_acm_certificate" "main" {
 ################################################################################
 # Cloudflare DNS Validation Records
 # Creates CNAME records in Cloudflare for ACM certificate validation
+# Wildcards share validation records with their base domain, so we skip them
 ################################################################################
 
 resource "cloudflare_dns_record" "acm_validation" {
-  # Deduplicate by resource_record_name since wildcard and base domain share the same validation record
-  # e.g., qa.10xr.co and *.qa.10xr.co both use _51e42db8eb04c31f186f8fe853418f8b.qa.10xr.co
-  for_each = var.enable_cloudflare_validation ? {
-    for opt in aws_acm_certificate.main.domain_validation_options : opt.resource_record_name => opt...
-  } : {}
+  # Use static domain names as keys (known at plan time)
+  for_each = var.enable_cloudflare_validation ? toset(local.non_wildcard_domains) : toset([])
 
   zone_id = var.cloudflare_zone_id
-  name    = each.value[0].resource_record_name
-  type    = each.value[0].resource_record_type
-  content = trimsuffix(each.value[0].resource_record_value, ".")
+  name    = local.domain_validation_map[each.value].name
+  type    = "CNAME"
+  content = trimsuffix(local.domain_validation_map[each.value].value, ".")
   ttl     = 60
   proxied = false # Must be DNS Only for ACM validation
 
-  comment = "ACM certificate validation - Managed by Terraform"
+  comment = "ACM certificate validation for ${each.value} - Managed by Terraform"
 
   lifecycle {
     create_before_destroy = true
