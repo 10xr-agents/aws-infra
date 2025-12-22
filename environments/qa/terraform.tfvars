@@ -188,6 +188,7 @@ enable_bastion_host = true
 # NOTE: cloudflare_api_token is stored in Terraform Cloud as a sensitive variable
 cloudflare_zone_id    = "3ae048b26df2c81c175c609f802feafb"
 cloudflare_account_id = "929c1d893cb7bb8455e151ae08f3b538"
+cloudflare_email      = "jaswanth@10xr.co"
 enable_cloudflare_dns = true
 
 # Domain Configuration
