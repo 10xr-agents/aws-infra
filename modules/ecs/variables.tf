@@ -44,6 +44,12 @@ variable "acm_certificate_arn" {
   default     = ""
 }
 
+variable "enable_https" {
+  description = "Whether to enable HTTPS listener (must be known at plan time)"
+  type        = bool
+  default     = true
+}
+
 variable "enable_container_insights" {
   description = "Whether to enable Container Insights for the ECS cluster"
   type        = bool

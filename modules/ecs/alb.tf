@@ -122,12 +122,12 @@ resource "aws_lb_listener" "http" {
   port              = "80"
   protocol          = "HTTP"
 
-  # Default action - redirect to HTTPS if certificate provided, otherwise forward
+  # Default action - redirect to HTTPS if enabled, otherwise forward
   default_action {
-    type = var.acm_certificate_arn != "" ? "redirect" : "forward"
+    type = var.enable_https ? "redirect" : "forward"
 
     dynamic "redirect" {
-      for_each = var.acm_certificate_arn != "" ? [1] : []
+      for_each = var.enable_https ? [1] : []
       content {
         port        = "443"
         protocol    = "HTTPS"
@@ -136,7 +136,7 @@ resource "aws_lb_listener" "http" {
     }
 
     dynamic "forward" {
-      for_each = var.acm_certificate_arn == "" ? [1] : []
+      for_each = !var.enable_https ? [1] : []
       content {
         target_group {
           arn = local.default_target_group_arn
@@ -156,7 +156,7 @@ resource "aws_lb_listener" "http" {
 ################################################################################
 
 resource "aws_lb_listener" "https" {
-  count = var.create_alb && var.acm_certificate_arn != "" ? 1 : 0
+  count = var.create_alb && var.enable_https ? 1 : 0
 
   load_balancer_arn = aws_lb.main[0].arn
   port              = "443"

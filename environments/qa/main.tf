@@ -237,6 +237,7 @@ module "ecs" {
   public_subnet_ids  = module.vpc.public_subnets
 
   acm_certificate_arn = local.acm_certificate_arn
+  enable_https        = true  # Must be static for plan-time evaluation
   create_alb_rules    = true
 
   enable_container_insights = var.enable_container_insights

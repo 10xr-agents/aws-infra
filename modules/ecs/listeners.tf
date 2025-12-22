@@ -55,7 +55,7 @@ resource "aws_lb_listener_rule" "service_http_host_rule" {
 ################################################################################
 
 resource "aws_lb_listener_rule" "service_https_host_rule" {
-  for_each = var.create_alb && var.acm_certificate_arn != "" ? local.services_with_host_headers : {}
+  for_each = var.create_alb && var.enable_https ? local.services_with_host_headers : {}
 
   listener_arn = aws_lb_listener.https[0].arn
   priority     = local.service_priorities[each.key]
@@ -130,7 +130,7 @@ resource "aws_lb_listener_rule" "service_http_path_rule" {
 }
 
 resource "aws_lb_listener_rule" "service_https_path_rule" {
-  for_each = var.create_alb && var.acm_certificate_arn != "" ? local.services_with_path_patterns : {}
+  for_each = var.create_alb && var.enable_https ? local.services_with_path_patterns : {}
 
   listener_arn = aws_lb_listener.https[0].arn
   priority     = local.path_service_priorities[each.key]
