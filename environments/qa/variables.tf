@@ -797,6 +797,20 @@ variable "cloudflare_api_token" {
   description = "Cloudflare API token with Zone:DNS:Edit permissions. Store in Terraform Cloud as sensitive variable."
   type        = string
   sensitive   = true
+  default     = ""
+}
+
+variable "cloudflare_api_key" {
+  description = "Cloudflare Global API key (alternative to api_token). Requires cloudflare_email."
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "cloudflare_email" {
+  description = "Cloudflare account email (required when using api_key instead of api_token)"
+  type        = string
+  default     = ""
 }
 
 variable "cloudflare_zone_id" {
