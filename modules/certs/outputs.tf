@@ -14,8 +14,3 @@ output "acm_certificate_status" {
   description = "Status of the ACM certificate"
   value       = aws_acm_certificate.main.status
 }
-
-output "validated_certificate_arn" {
-  description = "ARN of the validated certificate (available after validation completes)"
-  value       = var.wait_for_validation ? aws_acm_certificate_validation.main[0].certificate_arn : aws_acm_certificate.main.arn
-}

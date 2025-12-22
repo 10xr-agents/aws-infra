@@ -18,18 +18,6 @@ variable "subject_alternative_domains" {
   default     = []
 }
 
-variable "wait_for_validation" {
-  description = "Whether to wait for certificate validation to complete"
-  type        = bool
-  default     = true
-}
-
-variable "validation_timeout" {
-  description = "Timeout for certificate validation"
-  type        = string
-  default     = "45m"
-}
-
 variable "tags" {
   description = "Tags to apply to resources"
   type        = map(string)

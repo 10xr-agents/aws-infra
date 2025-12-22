@@ -21,17 +21,5 @@ resource "aws_acm_certificate" "main" {
   }
 }
 
-################################################################################
-# Certificate Validation
-# Waits for certificate to be validated (after DNS records are created)
-################################################################################
-
-resource "aws_acm_certificate_validation" "main" {
-  count = var.wait_for_validation ? 1 : 0
-
-  certificate_arn = aws_acm_certificate.main.arn
-
-  timeouts {
-    create = var.validation_timeout
-  }
-}
+# Note: Certificate validation is handled in the environment's main.tf
+# This allows proper dependency ordering with DNS modules (Cloudflare/Route53)

@@ -21,11 +21,6 @@ module "certs" {
     "homehealth.${var.domain}",
     "hospice.${var.domain}"
   ]
-
-  # Enable validation wait when using Cloudflare DNS
-  # The cloudflare_dns module will create the validation records
-  wait_for_validation = var.enable_cloudflare_dns
-  validation_timeout  = "30m"
 }
 
 # VPC Module - Reuse existing VPC module
@@ -395,9 +390,27 @@ module "cloudflare_dns" {
   tags = var.tags
 
   # Note: Only depends on networking (for NLB DNS name)
-  # Do NOT add module.certs here - it creates a deadlock since certs waits for validation
   # The implicit dependency via acm_certificate_domain_validation_options is sufficient
   depends_on = [module.networking]
+}
+
+################################################################################
+# ACM Certificate Validation
+# Waits for certificate to be validated AFTER Cloudflare creates DNS records
+# This resource is here (not in certs module) to ensure proper dependency ordering
+################################################################################
+
+resource "aws_acm_certificate_validation" "main" {
+  count = var.enable_cloudflare_dns ? 1 : 0
+
+  certificate_arn = module.certs.acm_certificate_arn
+
+  timeouts {
+    create = "30m"
+  }
+
+  # Explicit dependency on Cloudflare DNS module to ensure validation records exist
+  depends_on = [module.cloudflare_dns]
 }
 
 ################################################################################

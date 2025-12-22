@@ -44,6 +44,12 @@ variable "acm_certificate_arn" {
   default     = ""
 }
 
+variable "certificate_validation_id" {
+  description = "ID of the certificate validation resource - creates implicit dependency to wait for cert validation"
+  type        = string
+  default     = null
+}
+
 variable "enable_container_insights" {
   description = "Whether to enable Container Insights for the ECS cluster"
   type        = bool
