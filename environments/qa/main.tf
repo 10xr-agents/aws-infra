@@ -392,9 +392,8 @@ module "cloudflare_dns" {
     }
   }
 
-  # Create wildcard record for catch-all
-  create_wildcard_record = true
-  wildcard_proxied       = false
+  # No wildcard record - only create explicit service records
+  create_wildcard_record = false
 
   tags = var.tags
 
