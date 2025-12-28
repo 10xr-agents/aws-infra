@@ -4,79 +4,9 @@
 #------------------------------------------------------------------------------
 
 #------------------------------------------------------------------------------
-# Redis for n8n Queue Mode
-# Required for distributed job processing in queue mode
-#------------------------------------------------------------------------------
-
-module "n8n_redis" {
-  source = "../../modules/redis"
-
-  cluster_name = "${var.cluster_name}-n8n"
-  environment  = var.environment
-  vpc_id       = module.vpc.vpc_id
-  subnet_ids   = module.vpc.private_subnets
-
-  # Redis Configuration - Starter tier
-  redis_node_type          = var.n8n_config.redis_node_type
-  redis_engine_version     = "7.1"
-  redis_num_cache_clusters = var.n8n_config.redis_num_cache_clusters
-
-  # High Availability - Disabled for starter tier, enable for growth/production
-  redis_multi_az_enabled           = var.n8n_config.redis_multi_az
-  redis_automatic_failover_enabled = var.n8n_config.redis_multi_az
-  redis_snapshot_retention_limit   = 7
-  redis_snapshot_window            = "03:00-05:00"
-  redis_maintenance_window         = "Mon:05:00-Mon:07:00"
-
-  # Security Configuration
-  create_security_group = true
-  allowed_cidr_blocks   = [module.vpc.vpc_cidr_block]
-
-  # Auth and Encryption (HIPAA)
-  auth_token_enabled               = true
-  redis_transit_encryption_enabled = true
-  redis_at_rest_encryption_enabled = true
-
-  # Monitoring
-  store_connection_details_in_ssm = true
-  create_cloudwatch_log_group     = true
-  cloudwatch_log_retention_days   = var.hipaa_config.log_retention_days
-
-  tags = merge(
-    var.tags,
-    {
-      "Environment" = var.environment
-      "Project"     = "10xR-HealthCare"
-      "Component"   = "n8n-Redis"
-      "Platform"    = "AWS"
-      "Terraform"   = "true"
-    }
-  )
-
-  depends_on = [module.vpc]
-}
-
-#------------------------------------------------------------------------------
-# Redis Auth Token in Secrets Manager (for ECS task injection)
-#------------------------------------------------------------------------------
-
-resource "aws_secretsmanager_secret" "n8n_redis_auth" {
-  name_prefix = "${var.cluster_name}-${var.environment}-n8n-redis-auth-"
-  description = "Redis auth token for n8n services"
-
-  tags = merge(var.tags, {
-    Component = "n8n-Redis"
-  })
-}
-
-resource "aws_secretsmanager_secret_version" "n8n_redis_auth" {
-  secret_id     = aws_secretsmanager_secret.n8n_redis_auth.id
-  secret_string = module.n8n_redis.redis_auth_token
-}
-
-#------------------------------------------------------------------------------
 # n8n Module
 # Workflow automation with queue mode (main, webhook, worker services)
+# Uses shared Redis cluster (module.redis) for all services
 #------------------------------------------------------------------------------
 
 module "n8n" {
@@ -100,11 +30,11 @@ module "n8n" {
   alb_security_group_id = module.ecs.alb_security_group_id
   alb_listener_arn      = module.ecs.alb_listener_arns.https
 
-  # Host headers for routing (DNS managed in GoDaddy - see docs/DNS_RECORDS.md)
+  # Host headers for routing
   main_host_header    = var.n8n_config.main_host_header
   webhook_host_header = var.n8n_config.webhook_host_header
 
-  # DNS records are managed externally in GoDaddy
+  # DNS records are managed via Cloudflare
   create_route53_records = false
 
   # Listener rule priorities (ensure no conflicts with existing services)
@@ -119,13 +49,13 @@ module "n8n" {
   db_deletion_protection   = var.hipaa_config.enable_deletion_protection
   db_skip_final_snapshot   = var.hipaa_config.skip_final_snapshot
 
-  # Redis Configuration (from n8n_redis module)
+  # Redis Configuration - Uses shared Redis cluster (TLS enabled)
   enable_redis                = true
-  redis_host                  = module.n8n_redis.redis_primary_endpoint
+  redis_host                  = module.redis.redis_primary_endpoint
   redis_port                  = 6379
-  redis_security_group_id     = module.n8n_redis.redis_security_group_id
-  redis_auth_token_secret_arn = aws_secretsmanager_secret.n8n_redis_auth.arn
-  enable_redis_tls            = true # Must match redis_transit_encryption_enabled on n8n_redis module
+  redis_security_group_id     = module.redis.redis_security_group_id
+  redis_auth_token_secret_arn = aws_secretsmanager_secret.redis_auth.arn
+  enable_redis_tls            = true # TLS enabled on shared Redis cluster
 
   # n8n Main Service
   main_cpu                 = var.n8n_config.main_cpu
@@ -171,7 +101,7 @@ module "n8n" {
     }
   )
 
-  depends_on = [module.ecs, module.n8n_redis]
+  depends_on = [module.ecs, module.redis]
 }
 
 #------------------------------------------------------------------------------
@@ -191,9 +121,4 @@ output "n8n_webhook_url" {
 output "n8n_rds_endpoint" {
   description = "n8n RDS PostgreSQL endpoint"
   value       = module.n8n.rds_endpoint
-}
-
-output "n8n_redis_endpoint" {
-  description = "n8n Redis endpoint"
-  value       = module.n8n_redis.redis_primary_endpoint
 }

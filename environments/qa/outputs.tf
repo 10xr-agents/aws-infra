@@ -209,9 +209,31 @@ output "application_urls" {
   }
 }
 
-output "redis_parameters_check" {
-  description = "Redis parameters that might affect connectivity"
-  value       = var.redis_parameters
+################################################################################
+# Redis Outputs (TLS-enabled for home-health & hospice)
+################################################################################
+
+output "redis_endpoint" {
+  description = "Redis primary endpoint for ECS services"
+  value       = module.redis.redis_primary_endpoint
+}
+
+output "redis_port" {
+  description = "Redis port"
+  value       = module.redis.redis_port
+}
+
+output "redis_connection_info" {
+  description = "Redis connection information"
+  value = {
+    primary_endpoint           = module.redis.redis_primary_endpoint
+    reader_endpoint            = module.redis.redis_reader_endpoint
+    port                       = module.redis.redis_port
+    tls_enabled                = module.redis.redis_transit_encryption_enabled
+    at_rest_encryption_enabled = module.redis.redis_at_rest_encryption_enabled
+    auth_token_enabled         = true
+    secrets_manager_arn        = aws_secretsmanager_secret.redis_auth.arn
+  }
 }
 
 ################################################################################

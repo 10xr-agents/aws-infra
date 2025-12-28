@@ -66,60 +66,74 @@ module "vpc" {
   )
 }
 
-# # Redis Module
-# module "redis" {
-#   source = "../../modules/redis"
-#
-#   cluster_name = local.cluster_name
-#   environment  = var.environment
-#   vpc_id       = module.vpc.vpc_id
-#   subnet_ids   = module.vpc.private_subnets  # Use private subnets for Redis
-#
-#   # Redis Configuration
-#   redis_node_type      = var.redis_node_type
-#   redis_engine_version = var.redis_engine_version
-#   redis_num_cache_clusters = var.redis_num_cache_clusters
-#
-#   # High Availability
-#   redis_multi_az_enabled           = var.redis_multi_az_enabled
-#   redis_automatic_failover_enabled = var.redis_automatic_failover_enabled
-#   redis_snapshot_retention_limit   = var.redis_snapshot_retention_limit
-#   redis_snapshot_window            = var.redis_snapshot_window
-#   redis_maintenance_window = var.redis_maintenance_window
-#
-#   # Security Configuration
-#   create_security_group = true
-#   allowed_cidr_blocks = [module.vpc.vpc_cidr_block]
-#
-#   # Auth and Encryption
-#   auth_token_enabled               = var.redis_auth_token_enabled
-#   redis_transit_encryption_enabled = var.redis_transit_encryption_enabled
-#   redis_at_rest_encryption_enabled = var.redis_at_rest_encryption_enabled
-#
-#   # Parameter customization
-#   redis_parameters = var.redis_parameters
-#
-#   # Monitoring and SSM
-#   store_connection_details_in_ssm = var.redis_store_connection_details_in_ssm
-#   create_cloudwatch_log_group     = var.redis_create_cloudwatch_log_group
-#   cloudwatch_log_retention_days = var.redis_cloudwatch_log_retention_days
-#
-#   # ADD THIS: Allow access from ECS security groups
-#   allowed_security_group_ids = []
-#
-#   tags = merge(
-#     var.tags,
-#     {
-#       "Environment" = var.environment
-#       "Project"     = "10xR-HealthCare"
-#       "Component"   = "Redis"
-#       "Platform"    = "AWS"
-#       "Terraform"   = "true"
-#     }
-#   )
-#
-#   depends_on = [module.vpc]
-# }
+################################################################################
+# Redis Module - TLS Encrypted for ECS Services (home-health, hospice)
+# NOTE: n8n has its own Redis without TLS (n8n doesn't support TLS Redis)
+################################################################################
+
+module "redis" {
+  source = "../../modules/redis"
+
+  cluster_name = local.cluster_name
+  environment  = var.environment
+  vpc_id       = module.vpc.vpc_id
+  subnet_ids   = module.vpc.private_subnets
+
+  # Redis Configuration
+  redis_node_type          = "cache.t3.micro" # Starter tier for QA
+  redis_engine_version     = "7.1"
+  redis_num_cache_clusters = 2
+
+  # High Availability
+  redis_multi_az_enabled           = true
+  redis_automatic_failover_enabled = true
+  redis_snapshot_retention_limit   = 7
+  redis_snapshot_window            = "03:00-05:00"
+  redis_maintenance_window         = "Mon:05:00-Mon:07:00"
+
+  # Security Configuration
+  create_security_group = true
+  allowed_cidr_blocks   = [module.vpc.vpc_cidr_block]
+
+  # Auth and Encryption - TLS ENABLED for HIPAA compliance
+  auth_token_enabled               = true
+  redis_transit_encryption_enabled = true # TLS enabled for home-health & hospice
+  redis_at_rest_encryption_enabled = true
+
+  # Monitoring and SSM
+  store_connection_details_in_ssm = true
+  create_cloudwatch_log_group     = true
+  cloudwatch_log_retention_days   = var.hipaa_config.log_retention_days
+
+  tags = merge(
+    var.tags,
+    {
+      "Environment" = var.environment
+      "Project"     = "10xR-HealthCare"
+      "Component"   = "Redis"
+      "Platform"    = "AWS"
+      "Terraform"   = "true"
+      "HIPAA"       = "true"
+    }
+  )
+
+  depends_on = [module.vpc]
+}
+
+# Redis Auth Token in Secrets Manager (for ECS task injection)
+resource "aws_secretsmanager_secret" "redis_auth" {
+  name_prefix = "${local.cluster_name}-redis-auth-"
+  description = "Redis auth token for ECS services (home-health, hospice)"
+
+  tags = merge(var.tags, {
+    Component = "Redis"
+  })
+}
+
+resource "aws_secretsmanager_secret_version" "redis_auth" {
+  secret_id     = aws_secretsmanager_secret.redis_auth.id
+  secret_string = module.redis.redis_auth_token
+}
 
 # HIPAA-Compliant S3 Bucket for Patient Data
 module "s3_patients" {

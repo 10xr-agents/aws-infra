@@ -49,6 +49,11 @@ locals {
             # S3 Configuration (using IAM roles instead of access keys)
             S3_BUCKET_NAME = module.s3_patients.bucket_id
             AWS_REGION     = var.region
+
+            # Redis Configuration (TLS enabled for HIPAA compliance)
+            REDIS_HOST        = module.redis.redis_primary_endpoint
+            REDIS_PORT        = "6379"
+            REDIS_TLS_ENABLED = "true"
           }
         )
 
@@ -102,6 +107,15 @@ locals {
             {
               name       = "GEMINI_API_KEY"
               value_from = name == "home-health" ? "${aws_secretsmanager_secret.home_health.arn}:GEMINI_API_KEY::" : "${aws_secretsmanager_secret.hospice.arn}:GEMINI_API_KEY::"
+            },
+            # Redis auth token (TLS Redis)
+            {
+              name       = "REDIS_PASSWORD"
+              value_from = aws_secretsmanager_secret.redis_auth.arn
+            },
+            {
+              name       = "REDIS_AUTH_TOKEN"
+              value_from = aws_secretsmanager_secret.redis_auth.arn
             }
           ],
           # Add OpenAI API key only for home-health
@@ -145,7 +159,8 @@ resource "aws_iam_policy" "ecs_secrets_policy" {
         Resource = [
           aws_secretsmanager_secret.home_health.arn,
           aws_secretsmanager_secret.hospice.arn,
-          module.documentdb.secrets_manager_secret_arn
+          module.documentdb.secrets_manager_secret_arn,
+          aws_secretsmanager_secret.redis_auth.arn
         ]
       },
       {
