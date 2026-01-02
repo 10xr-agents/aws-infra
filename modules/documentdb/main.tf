@@ -24,8 +24,6 @@ locals {
 # Data Sources
 ################################################################################
 
-data "aws_region" "current" {}
-
 data "aws_caller_identity" "current" {}
 
 ################################################################################
@@ -138,7 +136,7 @@ resource "aws_security_group_rule" "documentdb_ingress_sg" {
   description              = "DocumentDB access from security group ${each.value}"
 }
 
-# Egress - allow all outbound
+# Egress - restrict to VPC CIDR for security (DocumentDB doesn't need internet access)
 resource "aws_security_group_rule" "documentdb_egress" {
   count = var.create_security_group ? 1 : 0
 
@@ -146,9 +144,9 @@ resource "aws_security_group_rule" "documentdb_egress" {
   from_port         = 0
   to_port           = 0
   protocol          = "-1"
-  cidr_blocks       = ["0.0.0.0/0"]
+  cidr_blocks       = var.allowed_cidr_blocks # Restrict egress to VPC CIDR
   security_group_id = aws_security_group.documentdb[0].id
-  description       = "All outbound traffic"
+  description       = "Outbound traffic restricted to VPC"
 }
 
 ################################################################################
@@ -313,6 +311,64 @@ resource "aws_docdb_cluster_instance" "main" {
 }
 
 ################################################################################
+# KMS Key for CloudWatch Logs Encryption
+################################################################################
+
+resource "aws_kms_key" "cloudwatch_logs" {
+  count = var.create_kms_key ? 1 : 0
+
+  description             = "KMS key for DocumentDB CloudWatch logs encryption - ${local.name_prefix}"
+  deletion_window_in_days = var.kms_key_deletion_window
+  enable_key_rotation     = var.kms_key_enable_rotation
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "Enable IAM User Permissions"
+        Effect = "Allow"
+        Principal = {
+          AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
+        }
+        Action   = "kms:*"
+        Resource = "*"
+      },
+      {
+        Sid    = "Allow CloudWatch Logs"
+        Effect = "Allow"
+        Principal = {
+          Service = "logs.${var.region}.amazonaws.com"
+        }
+        Action = [
+          "kms:Encrypt*",
+          "kms:Decrypt*",
+          "kms:ReEncrypt*",
+          "kms:GenerateDataKey*",
+          "kms:Describe*"
+        ]
+        Resource = "*"
+        Condition = {
+          ArnLike = {
+            "kms:EncryptionContext:aws:logs:arn" = "arn:aws:logs:${var.region}:${data.aws_caller_identity.current.account_id}:log-group:/aws/docdb/${local.name_prefix}-documentdb/*"
+          }
+        }
+      }
+    ]
+  })
+
+  tags = merge(local.common_tags, {
+    Name = "${local.name_prefix}-documentdb-cloudwatch-kms"
+  })
+}
+
+resource "aws_kms_alias" "cloudwatch_logs" {
+  count = var.create_kms_key ? 1 : 0
+
+  name          = "alias/${local.name_prefix}-documentdb-cloudwatch"
+  target_key_id = aws_kms_key.cloudwatch_logs[0].key_id
+}
+
+################################################################################
 # CloudWatch Log Groups
 ################################################################################
 
@@ -321,6 +377,7 @@ resource "aws_cloudwatch_log_group" "documentdb_audit" {
 
   name              = "/aws/docdb/${local.name_prefix}-documentdb/audit"
   retention_in_days = var.cloudwatch_log_retention_days
+  kms_key_id        = var.create_kms_key ? aws_kms_key.cloudwatch_logs[0].arn : null
 
   tags = merge(local.common_tags, {
     Name = "${local.name_prefix}-documentdb-audit-logs"
@@ -332,6 +389,7 @@ resource "aws_cloudwatch_log_group" "documentdb_profiler" {
 
   name              = "/aws/docdb/${local.name_prefix}-documentdb/profiler"
   retention_in_days = var.cloudwatch_log_retention_days
+  kms_key_id        = var.create_kms_key ? aws_kms_key.cloudwatch_logs[0].arn : null
 
   tags = merge(local.common_tags, {
     Name = "${local.name_prefix}-documentdb-profiler-logs"
@@ -472,8 +530,8 @@ resource "aws_iam_policy" "documentdb_access" {
         ]
         Resource = [
           aws_docdb_cluster.main.arn,
-          "arn:aws:rds:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:cluster:${aws_docdb_cluster.main.cluster_identifier}",
-          "arn:aws:rds:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:subgrp:${aws_docdb_subnet_group.main.name}"
+          "arn:aws:rds:${var.region}:${data.aws_caller_identity.current.account_id}:cluster:${aws_docdb_cluster.main.cluster_identifier}",
+          "arn:aws:rds:${var.region}:${data.aws_caller_identity.current.account_id}:subgrp:${aws_docdb_subnet_group.main.name}"
         ]
       },
       {
@@ -485,7 +543,7 @@ resource "aws_iam_policy" "documentdb_access" {
           "ssm:GetParametersByPath"
         ]
         Resource = [
-          "arn:aws:ssm:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:parameter/${var.environment}/${var.cluster_name}/documentdb/*"
+          "arn:aws:ssm:${var.region}:${data.aws_caller_identity.current.account_id}:parameter/${var.environment}/${var.cluster_name}/documentdb/*"
         ]
       },
       {

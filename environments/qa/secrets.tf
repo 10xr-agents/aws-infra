@@ -274,6 +274,8 @@ resource "aws_secretsmanager_secret_version" "livekit_agent" {
     CARTESIA_API_KEY = var.cartesia_api_key
     ELEVEN_API_KEY   = var.eleven_api_key
     GOOGLE_API_KEY   = var.google_api_key
+    ONTUNE_SECRET    = var.ontune_secret
+    OPENAI_API_KEY   = var.openai_api_key
   })
 
   lifecycle {

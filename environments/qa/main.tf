@@ -207,6 +207,7 @@ module "documentdb" {
 
   cluster_name = var.cluster_name
   environment  = var.environment
+  region       = var.region
   vpc_id       = module.vpc.vpc_id
   subnet_ids   = module.vpc.database_subnets # Use database subnets for DocumentDB
 

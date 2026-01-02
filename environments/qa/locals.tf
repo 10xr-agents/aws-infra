@@ -228,6 +228,14 @@ locals {
             {
               name       = "GOOGLE_API_KEY"
               value_from = "${aws_secretsmanager_secret.livekit_agent.arn}:GOOGLE_API_KEY::"
+            },
+            {
+              name       = "ONTUNE_SECRET"
+              value_from = "${aws_secretsmanager_secret.livekit_agent.arn}:ONTUNE_SECRET::"
+            },
+            {
+              name       = "OPENAI_API_KEY"
+              value_from = "${aws_secretsmanager_secret.livekit_agent.arn}:OPENAI_API_KEY::"
             }
           ] : []
         )

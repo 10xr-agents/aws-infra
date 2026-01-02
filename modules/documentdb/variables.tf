@@ -24,6 +24,11 @@ variable "subnet_ids" {
   type        = list(string)
 }
 
+variable "region" {
+  description = "AWS region for the DocumentDB cluster"
+  type        = string
+}
+
 ################################################################################
 # Authentication
 ################################################################################

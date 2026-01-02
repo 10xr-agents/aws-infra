@@ -45,6 +45,9 @@ resource "aws_lb" "main" {
   idle_timeout                     = var.alb_idle_timeout
   enable_waf_fail_open             = var.alb_enable_waf_fail_open
 
+  # Security: Drop invalid HTTP headers to prevent header injection attacks
+  drop_invalid_header_fields = true
+
   # Access logs - use internal bucket or external if provided
   dynamic "access_logs" {
     for_each = var.alb_access_logs_enabled ? [1] : []
