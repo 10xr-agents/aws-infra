@@ -230,12 +230,14 @@ locals {
               value_from = "${aws_secretsmanager_secret.livekit_agent.arn}:GOOGLE_API_KEY::"
             },
             {
+              # Reference from home_health secret (same value used across services)
               name       = "ONTUNE_SECRET"
-              value_from = "${aws_secretsmanager_secret.livekit_agent.arn}:ONTUNE_SECRET::"
+              value_from = "${aws_secretsmanager_secret.home_health.arn}:ONTUNE_SECRET::"
             },
             {
+              # Reference from voice_ai secret (same value used across services)
               name       = "OPENAI_API_KEY"
-              value_from = "${aws_secretsmanager_secret.livekit_agent.arn}:OPENAI_API_KEY::"
+              value_from = "${aws_secretsmanager_secret.voice_ai.arn}:OPENAI_API_KEY::"
             }
           ] : []
         )
