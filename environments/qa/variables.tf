@@ -857,3 +857,36 @@ variable "agent_name" {
   type        = string
   default     = ""
 }
+
+################################################################################
+# LiveKit Agent API Keys
+# These should be set in Terraform Cloud workspace variables (sensitive)
+################################################################################
+
+variable "deepgram_api_key" {
+  description = "Deepgram API key for speech-to-text"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "cartesia_api_key" {
+  description = "Cartesia API key for text-to-speech"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "eleven_api_key" {
+  description = "ElevenLabs API key for text-to-speech"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "google_api_key" {
+  description = "Google API key for AI services"
+  type        = string
+  sensitive   = true
+  default     = ""
+}

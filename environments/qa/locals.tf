@@ -15,10 +15,10 @@ locals {
   acm_certificate_arn = var.enable_cloudflare_dns ? module.certs.validated_certificate_arn : module.certs.acm_certificate_arn
 
   # DocumentDB database names per service
-  documentdb_database_home_health  = "10XR_Home_Health_${var.environment}"
-  documentdb_database_hospice      = "10XR_Hospice_${var.environment}"
-  documentdb_database_voice_ai     = "10XR_Voice_AI_${var.environment}"
-  documentdb_database_livekit      = "10XR_LiveKit_${var.environment}"
+  documentdb_database_home_health = "10XR_Home_Health_${var.environment}"
+  documentdb_database_hospice     = "10XR_Hospice_${var.environment}"
+  documentdb_database_voice_ai    = "10XR_Voice_AI_${var.environment}"
+  documentdb_database_livekit     = "10XR_LiveKit_${var.environment}"
 
   # Map service names to their database names
   service_database_map = {
@@ -91,6 +91,10 @@ locals {
           contains(local.services_with_livekit_s3, name) ? {
             LIVEKIT_AWS_BUCKET = module.s3_livekit.bucket_id
             LIVEKIT_AWS_REGION = var.region
+          } : {},
+          # livekit-agent specific environment variables
+          name == "livekit-agent" ? {
+            APP_URL = "https://voice.${var.domain}" # Points to voice-ai service
           } : {}
         )
 
@@ -206,9 +210,26 @@ locals {
               name       = "OPENAI_API_KEY"
               value_from = "${aws_secretsmanager_secret.voice_ai.arn}:OPENAI_API_KEY::"
             }
+          ] : [],
+          # livekit-agent specific secrets (AI provider API keys)
+          name == "livekit-agent" ? [
+            {
+              name       = "DEEPGRAM_API_KEY"
+              value_from = "${aws_secretsmanager_secret.livekit_agent.arn}:DEEPGRAM_API_KEY::"
+            },
+            {
+              name       = "CARTESIA_API_KEY"
+              value_from = "${aws_secretsmanager_secret.livekit_agent.arn}:CARTESIA_API_KEY::"
+            },
+            {
+              name       = "ELEVEN_API_KEY"
+              value_from = "${aws_secretsmanager_secret.livekit_agent.arn}:ELEVEN_API_KEY::"
+            },
+            {
+              name       = "GOOGLE_API_KEY"
+              value_from = "${aws_secretsmanager_secret.livekit_agent.arn}:GOOGLE_API_KEY::"
+            }
           ] : []
-          # Note: livekit-agent gets LiveKit secrets via common livekit secret (already included above)
-          # and MongoDB credentials via services_with_database
         )
 
         # IAM policies for accessing DocumentDB, S3, and Secrets Manager
@@ -250,6 +271,7 @@ resource "aws_iam_policy" "ecs_secrets_policy" {
           aws_secretsmanager_secret.hospice.arn,
           aws_secretsmanager_secret.voice_ai.arn,
           aws_secretsmanager_secret.livekit.arn,
+          aws_secretsmanager_secret.livekit_agent.arn,
           module.documentdb.secrets_manager_secret_arn,
           aws_secretsmanager_secret.redis_auth.arn
         ]

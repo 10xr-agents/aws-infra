@@ -252,3 +252,31 @@ resource "aws_ssm_parameter" "agent_name" {
     Shared    = "true"
   })
 }
+
+################################################################################
+# LiveKit Agent Service Secrets
+################################################################################
+
+resource "aws_secretsmanager_secret" "livekit_agent" {
+  name                    = "${local.secret_prefix}/livekit-agent/secrets"
+  description             = "Secrets for LiveKit Agent service (AI provider API keys)"
+  recovery_window_in_days = 30
+
+  tags = merge(var.tags, {
+    Service = "livekit-agent"
+  })
+}
+
+resource "aws_secretsmanager_secret_version" "livekit_agent" {
+  secret_id = aws_secretsmanager_secret.livekit_agent.id
+  secret_string = jsonencode({
+    DEEPGRAM_API_KEY = var.deepgram_api_key
+    CARTESIA_API_KEY = var.cartesia_api_key
+    ELEVEN_API_KEY   = var.eleven_api_key
+    GOOGLE_API_KEY   = var.google_api_key
+  })
+
+  lifecycle {
+    ignore_changes = [secret_string] # Allow manual updates without Terraform override
+  }
+}
