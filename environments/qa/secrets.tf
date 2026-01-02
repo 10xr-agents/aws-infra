@@ -197,3 +197,58 @@ resource "aws_ssm_parameter" "voice_ai_node_env" {
     Service = "voice-ai"
   })
 }
+
+################################################################################
+# Common LiveKit Secrets (Shared across all ECS services)
+################################################################################
+
+resource "aws_secretsmanager_secret" "livekit" {
+  name                    = "${local.secret_prefix}/common/livekit"
+  description             = "LiveKit credentials shared across all ECS services"
+  recovery_window_in_days = 30
+
+  tags = merge(var.tags, {
+    Component = "livekit"
+    Shared    = "true"
+  })
+}
+
+resource "aws_secretsmanager_secret_version" "livekit" {
+  secret_id = aws_secretsmanager_secret.livekit.id
+  secret_string = jsonencode({
+    LIVEKIT_API_KEY    = var.livekit_api_key
+    LIVEKIT_API_SECRET = var.livekit_api_secret
+  })
+
+  lifecycle {
+    ignore_changes = [secret_string] # Allow manual updates without Terraform override
+  }
+}
+
+################################################################################
+# Common SSM Parameters (Shared across all ECS services)
+################################################################################
+
+resource "aws_ssm_parameter" "livekit_url" {
+  name        = "/${local.secret_prefix}/common/LIVEKIT_URL"
+  description = "LiveKit server URL"
+  type        = "String"
+  value       = var.livekit_url
+
+  tags = merge(var.tags, {
+    Component = "livekit"
+    Shared    = "true"
+  })
+}
+
+resource "aws_ssm_parameter" "agent_name" {
+  name        = "/${local.secret_prefix}/common/AGENT_NAME"
+  description = "Agent name for service identification"
+  type        = "String"
+  value       = var.agent_name
+
+  tags = merge(var.tags, {
+    Component = "common"
+    Shared    = "true"
+  })
+}

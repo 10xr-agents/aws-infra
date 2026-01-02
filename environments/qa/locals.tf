@@ -39,6 +39,10 @@ locals {
             NODE_ENV        = "production"
             AWS_REGION      = var.region
 
+            # LiveKit Configuration (Real-time Communication) - Common to all services
+            LIVEKIT_URL = var.livekit_url
+            AGENT_NAME  = var.agent_name
+
             # Service-specific URLs based on service name
             NEXT_PUBLIC_BASE_URL = (
               name == "home-health" ? "https://homehealth.${var.domain}" :
@@ -77,6 +81,17 @@ locals {
         # Secrets from Secrets Manager
         secrets = concat(
           lookup(config, "secrets", []),
+          # LiveKit secrets - Common to ALL services
+          [
+            {
+              name       = "LIVEKIT_API_KEY"
+              value_from = "${aws_secretsmanager_secret.livekit.arn}:LIVEKIT_API_KEY::"
+            },
+            {
+              name       = "LIVEKIT_API_SECRET"
+              value_from = "${aws_secretsmanager_secret.livekit.arn}:LIVEKIT_API_SECRET::"
+            }
+          ],
           # Database secrets only for services that need them
           contains(local.services_with_database, name) ? [
             # DocumentDB credentials
@@ -156,15 +171,8 @@ locals {
             {
               name       = "OPENAI_API_KEY"
               value_from = "${aws_secretsmanager_secret.voice_ai.arn}:OPENAI_API_KEY::"
-            },
-            {
-              name       = "LIVEKIT_API_KEY"
-              value_from = "${aws_secretsmanager_secret.voice_ai.arn}:LIVEKIT_API_KEY::"
-            },
-            {
-              name       = "LIVEKIT_API_SECRET"
-              value_from = "${aws_secretsmanager_secret.voice_ai.arn}:LIVEKIT_API_SECRET::"
             }
+            # Note: LIVEKIT_API_KEY and LIVEKIT_API_SECRET are now injected via common livekit secret for all services
           ] : []
         )
 
@@ -203,6 +211,7 @@ resource "aws_iam_policy" "ecs_secrets_policy" {
           aws_secretsmanager_secret.home_health.arn,
           aws_secretsmanager_secret.hospice.arn,
           aws_secretsmanager_secret.voice_ai.arn,
+          aws_secretsmanager_secret.livekit.arn,
           module.documentdb.secrets_manager_secret_arn,
           aws_secretsmanager_secret.redis_auth.arn
         ]

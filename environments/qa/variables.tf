@@ -654,19 +654,19 @@ variable "openai_api_key" {
 }
 
 ################################################################################
-# Voice AI Service Secrets
+# LiveKit Credentials (Used by ALL ECS services)
 # These should be set in Terraform Cloud workspace variables (sensitive)
 ################################################################################
 
 variable "livekit_api_key" {
-  description = "LiveKit API key for Voice AI service"
+  description = "LiveKit API key (injected into all ECS services)"
   type        = string
   sensitive   = true
   default     = ""
 }
 
 variable "livekit_api_secret" {
-  description = "LiveKit API secret for Voice AI service"
+  description = "LiveKit API secret (injected into all ECS services)"
   type        = string
   sensitive   = true
   default     = ""
@@ -838,4 +838,22 @@ variable "enable_cloudflare_dns" {
   description = "Whether to create Cloudflare DNS records"
   type        = bool
   default     = true
+}
+
+################################################################################
+# LiveKit Configuration (Real-time Communication)
+# These are injected into ALL ECS services
+# Note: livekit_api_key and livekit_api_secret are defined in Voice AI section
+################################################################################
+
+variable "livekit_url" {
+  description = "LiveKit server URL for real-time communication"
+  type        = string
+  default     = ""
+}
+
+variable "agent_name" {
+  description = "Agent name for service identification"
+  type        = string
+  default     = ""
 }

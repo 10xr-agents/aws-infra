@@ -30,7 +30,7 @@ ssl_policy = "ELBSecurityPolicy-TLS-1-2-2017-01"
 
 ################################################################################
 # ECS Services Configuration
-# Only two services: Home Health and Hospice (Next.js applications)
+# Three services: Home Health, Hospice, and Voice AI (Next.js applications)
 ################################################################################
 ecs_services = {
   "home-health" = {

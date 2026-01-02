@@ -24,7 +24,8 @@ module "certs" {
   subject_alternative_domains = [
     "*.${var.domain}", # Covers n8n.qa, webhook-n8n.qa, worker-n8n.qa, etc.
     "homehealth.${var.domain}",
-    "hospice.${var.domain}"
+    "hospice.${var.domain}",
+    "voice.${var.domain}"
   ]
 
   # Cloudflare validation - creates DNS records and waits for validation
@@ -67,8 +68,8 @@ module "vpc" {
 }
 
 ################################################################################
-# Redis Module - TLS Encrypted for ECS Services (home-health, hospice)
-# NOTE: n8n has its own Redis without TLS (n8n doesn't support TLS Redis)
+# Redis Module - TLS Encrypted (Shared by ECS Services and n8n)
+# Used by: home-health, hospice, n8n (main, webhook, worker)
 ################################################################################
 
 module "redis" {
@@ -120,10 +121,10 @@ module "redis" {
   depends_on = [module.vpc]
 }
 
-# Redis Auth Token in Secrets Manager (for ECS task injection)
+# Redis Auth Token in Secrets Manager (shared by ECS services and n8n)
 resource "aws_secretsmanager_secret" "redis_auth" {
   name_prefix = "${local.cluster_name}-redis-auth-"
-  description = "Redis auth token for ECS services (home-health, hospice)"
+  description = "Redis auth token for ECS services and n8n (home-health, hospice, n8n)"
 
   tags = merge(var.tags, {
     Component = "Redis"
