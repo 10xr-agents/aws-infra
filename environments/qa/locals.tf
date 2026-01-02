@@ -23,6 +23,9 @@ locals {
   # voice-ai is a basic Next.js app that may not need these initially
   services_with_database = ["home-health", "hospice"]
 
+  # Services that need LiveKit S3 bucket access
+  services_with_livekit_s3 = ["livekit-agent"]
+
   # ECS services with all environment and secret overrides
   ecs_services_with_overrides = {
     for name, config in local.ecs_services : name => merge(
@@ -75,6 +78,11 @@ locals {
             REDIS_HOST        = module.redis.redis_primary_endpoint
             REDIS_PORT        = "6379"
             REDIS_TLS_ENABLED = "true"
+          } : {},
+          # LiveKit S3 bucket for livekit-agent
+          contains(local.services_with_livekit_s3, name) ? {
+            LIVEKIT_AWS_BUCKET = module.s3_livekit.bucket_id
+            LIVEKIT_AWS_REGION = var.region
           } : {}
         )
 
@@ -183,6 +191,9 @@ locals {
             "DocumentDBAccess" = module.documentdb.iam_policy_arn
             "S3PatientAccess"  = module.s3_patients.iam_policy_arn
           } : {},
+          contains(local.services_with_livekit_s3, name) ? {
+            "S3LiveKitAccess" = module.s3_livekit.iam_policy_arn
+          } : {},
           {
             "SecretsAccess" = aws_iam_policy.ecs_secrets_policy.arn
           }
@@ -233,11 +244,14 @@ resource "aws_iam_policy" "ecs_secrets_policy" {
         Effect = "Allow"
         Action = [
           "kms:Decrypt",
-          "kms:DescribeKey"
+          "kms:DescribeKey",
+          "kms:Encrypt",
+          "kms:GenerateDataKey*"
         ]
         Resource = [
           module.documentdb.kms_key_arn,
-          module.s3_patients.kms_key_arn
+          module.s3_patients.kms_key_arn,
+          module.s3_livekit.kms_key_arn
         ]
       }
     ]

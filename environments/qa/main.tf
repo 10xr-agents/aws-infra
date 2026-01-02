@@ -167,6 +167,40 @@ module "s3_patients" {
   depends_on = [module.vpc]
 }
 
+################################################################################
+# S3 Bucket for LiveKit Agent (Recording/Media Storage)
+################################################################################
+
+module "s3_livekit" {
+  source = "../../modules/s3-hipaa"
+
+  cluster_name = "ten-xr" # Fixed prefix for bucket name: ten-xr-livekit
+  environment  = ""       # No environment suffix for this bucket
+  bucket_name  = "livekit"
+
+  # KMS encryption
+  create_kms_key          = true
+  kms_key_deletion_window = 30
+
+  # ECS task roles that need access
+  ecs_task_role_arns = [
+    "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
+  ]
+
+  # Configuration - not PHI data, so relaxed retention
+  retention_days        = var.hipaa_config.data_retention_days
+  force_destroy         = var.hipaa_config.s3_force_destroy
+  enable_access_logging = var.hipaa_config.enable_access_logging
+
+  tags = merge(var.tags, {
+    "Component" = "S3"
+    "Service"   = "livekit-agent"
+    "DataType"  = "MediaRecordings"
+  })
+
+  depends_on = [module.vpc]
+}
+
 # DocumentDB Module - HIPAA Compliant Database
 module "documentdb" {
   source = "../../modules/documentdb"

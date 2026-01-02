@@ -30,7 +30,11 @@ ssl_policy = "ELBSecurityPolicy-TLS-1-2-2017-01"
 
 ################################################################################
 # ECS Services Configuration
-# Three services: Home Health, Hospice, and Voice AI (Next.js applications)
+# Four services:
+#   - home-health: Next.js app (ALB routed)
+#   - hospice: Next.js app (ALB routed)
+#   - voice-ai: Next.js app (ALB routed)
+#   - livekit-agent: Python backend job (internal only, no ALB)
 ################################################################################
 ecs_services = {
   "home-health" = {
@@ -208,6 +212,66 @@ ecs_services = {
     alb_host_headers         = ["voice.qa.10xr.co"]
     enable_load_balancer     = true
     enable_service_discovery = true
+    deregistration_delay     = 30
+
+    additional_task_policies = {} # IAM policies are added via locals.tf
+  }
+
+  # LiveKit Agent - Background Python service (no external access needed)
+  "livekit-agent" = {
+    image         = "761018882607.dkr.ecr.us-east-1.amazonaws.com/10xr/livekit"
+    image_tag     = "latest"
+    port          = 8080 # Internal port for health checks only
+    cpu           = 512
+    memory        = 1024
+    desired_count = 1
+
+    environment = {
+      # Python service configuration
+      PYTHONUNBUFFERED = "1"
+    }
+
+    secrets = [] # Secrets are injected via locals.tf (LiveKit credentials)
+
+    # Use only FARGATE (no SPOT) - long-running critical jobs
+    capacity_provider_strategy = [
+      {
+        capacity_provider = "FARGATE"
+        weight            = 1
+        base              = 1
+      }
+    ]
+
+    # Container health check - simple process check for background job
+    container_health_check = {
+      command      = "pgrep -f python || exit 1"
+      interval     = 30
+      timeout      = 10
+      start_period = 60
+      retries      = 3
+    }
+
+    # No ALB health check needed since no load balancer
+    health_check = {
+      path                = "/health"
+      interval            = 30
+      timeout             = 10
+      healthy_threshold   = 2
+      unhealthy_threshold = 3
+      matcher             = "200"
+    }
+
+    enable_auto_scaling        = true
+    auto_scaling_min_capacity  = 1
+    auto_scaling_max_capacity  = 3
+    auto_scaling_cpu_target    = 70
+    auto_scaling_memory_target = 80
+
+    # No external access - internal background service
+    enable_default_routing   = false
+    alb_host_headers         = []    # No ALB routing
+    enable_load_balancer     = false # No load balancer needed
+    enable_service_discovery = true  # Enable for internal service mesh
     deregistration_delay     = 30
 
     additional_task_policies = {} # IAM policies are added via locals.tf

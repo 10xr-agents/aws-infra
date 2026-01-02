@@ -20,9 +20,9 @@ resource "aws_acm_certificate" "main" {
     Environment = var.environment
   })
 
-  lifecycle {
-    create_before_destroy = true
-  }
+  # Note: Removing create_before_destroy to avoid DNS record conflicts in Cloudflare
+  # When adding new SANs, the certificate will be replaced (brief downtime during validation)
+  # This is safer than having conflicting DNS records that block deployment
 }
 
 ################################################################################
@@ -51,9 +51,8 @@ resource "cloudflare_dns_record" "acm_validation" {
 
   comment = "ACM certificate validation for ${each.key} - Managed by Terraform"
 
-  lifecycle {
-    create_before_destroy = true
-  }
+  # Note: Do NOT use create_before_destroy here - it causes conflicts with existing records
+  # The validation records can be safely recreated as ACM will wait for validation
 }
 
 ################################################################################
