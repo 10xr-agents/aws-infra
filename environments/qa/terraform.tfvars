@@ -221,9 +221,9 @@ ecs_services = {
   "livekit-agent" = {
     image         = "761018882607.dkr.ecr.us-east-1.amazonaws.com/10xr/livekit"
     image_tag     = "latest"
-    port          = 8080 # Internal port for health checks only
-    cpu           = 512
-    memory        = 1024
+    port          = 3000
+    cpu           = 1024
+    memory        = 4096
     desired_count = 1
 
     environment = {
