@@ -15,13 +15,21 @@ locals {
   acm_certificate_arn = var.enable_cloudflare_dns ? module.certs.validated_certificate_arn : module.certs.acm_certificate_arn
 
   # DocumentDB database names per service
-  documentdb_database_home_health = "10XR_Home_Health_${var.environment}"
-  documentdb_database_hospice     = "10XR_Hospice_${var.environment}"
-  documentdb_database_voice_ai    = "10XR_Voice_AI_${var.environment}"
+  documentdb_database_home_health  = "10XR_Home_Health_${var.environment}"
+  documentdb_database_hospice      = "10XR_Hospice_${var.environment}"
+  documentdb_database_voice_ai     = "10XR_Voice_AI_${var.environment}"
+  documentdb_database_livekit      = "10XR_LiveKit_${var.environment}"
+
+  # Map service names to their database names
+  service_database_map = {
+    "home-health"   = local.documentdb_database_home_health
+    "hospice"       = local.documentdb_database_hospice
+    "voice-ai"      = local.documentdb_database_voice_ai
+    "livekit-agent" = local.documentdb_database_livekit
+  }
 
   # Services that require database access (DocumentDB, Redis)
-  # voice-ai is a basic Next.js app that may not need these initially
-  services_with_database = ["home-health", "hospice"]
+  services_with_database = ["home-health", "hospice", "voice-ai", "livekit-agent"]
 
   # Services that need LiveKit S3 bucket access
   services_with_livekit_s3 = ["livekit-agent"]
@@ -66,10 +74,10 @@ locals {
             DOCUMENTDB_HOST        = module.documentdb.endpoint
             DOCUMENTDB_READER_HOST = module.documentdb.reader_endpoint
             DOCUMENTDB_PORT        = tostring(module.documentdb.port)
-            DOCUMENTDB_DATABASE    = name == "home-health" ? local.documentdb_database_home_health : local.documentdb_database_hospice
+            DOCUMENTDB_DATABASE    = lookup(local.service_database_map, name, "10XR_Default_${var.environment}")
             DOCUMENTDB_TLS_ENABLED = "true"
-            MONGODB_DATABASE       = name == "home-health" ? local.documentdb_database_home_health : local.documentdb_database_hospice
-            DATABASE_NAME          = name == "home-health" ? local.documentdb_database_home_health : local.documentdb_database_hospice
+            MONGODB_DATABASE       = lookup(local.service_database_map, name, "10XR_Default_${var.environment}")
+            DATABASE_NAME          = lookup(local.service_database_map, name, "10XR_Default_${var.environment}")
 
             # S3 Configuration (using IAM roles instead of access keys)
             S3_BUCKET_NAME = module.s3_patients.bucket_id
@@ -138,27 +146,54 @@ locals {
               value_from = aws_secretsmanager_secret.redis_auth.arn
             }
           ] : [],
-          # Service-specific secrets from Secrets Manager
-          contains(local.services_with_database, name) ? [
+          # home-health specific secrets
+          name == "home-health" ? [
             {
               name       = "NEXTAUTH_SECRET"
-              value_from = name == "home-health" ? "${aws_secretsmanager_secret.home_health.arn}:NEXTAUTH_SECRET::" : "${aws_secretsmanager_secret.hospice.arn}:NEXTAUTH_SECRET::"
+              value_from = "${aws_secretsmanager_secret.home_health.arn}:NEXTAUTH_SECRET::"
             },
             {
               name       = "ONTUNE_SECRET"
-              value_from = name == "home-health" ? "${aws_secretsmanager_secret.home_health.arn}:ONTUNE_SECRET::" : "${aws_secretsmanager_secret.hospice.arn}:ONTUNE_SECRET::"
+              value_from = "${aws_secretsmanager_secret.home_health.arn}:ONTUNE_SECRET::"
             },
             {
               name       = "ADMIN_API_KEY"
-              value_from = name == "home-health" ? "${aws_secretsmanager_secret.home_health.arn}:ADMIN_API_KEY::" : "${aws_secretsmanager_secret.hospice.arn}:ADMIN_API_KEY::"
+              value_from = "${aws_secretsmanager_secret.home_health.arn}:ADMIN_API_KEY::"
             },
             {
               name       = "NEXT_PUBLIC_ADMIN_API_KEY"
-              value_from = name == "home-health" ? "${aws_secretsmanager_secret.home_health.arn}:NEXT_PUBLIC_ADMIN_API_KEY::" : "${aws_secretsmanager_secret.hospice.arn}:NEXT_PUBLIC_ADMIN_API_KEY::"
+              value_from = "${aws_secretsmanager_secret.home_health.arn}:NEXT_PUBLIC_ADMIN_API_KEY::"
             },
             {
               name       = "GEMINI_API_KEY"
-              value_from = name == "home-health" ? "${aws_secretsmanager_secret.home_health.arn}:GEMINI_API_KEY::" : "${aws_secretsmanager_secret.hospice.arn}:GEMINI_API_KEY::"
+              value_from = "${aws_secretsmanager_secret.home_health.arn}:GEMINI_API_KEY::"
+            },
+            {
+              name       = "OPENAI_API_KEY"
+              value_from = "${aws_secretsmanager_secret.home_health.arn}:OPENAI_API_KEY::"
+            }
+          ] : [],
+          # hospice specific secrets
+          name == "hospice" ? [
+            {
+              name       = "NEXTAUTH_SECRET"
+              value_from = "${aws_secretsmanager_secret.hospice.arn}:NEXTAUTH_SECRET::"
+            },
+            {
+              name       = "ONTUNE_SECRET"
+              value_from = "${aws_secretsmanager_secret.hospice.arn}:ONTUNE_SECRET::"
+            },
+            {
+              name       = "ADMIN_API_KEY"
+              value_from = "${aws_secretsmanager_secret.hospice.arn}:ADMIN_API_KEY::"
+            },
+            {
+              name       = "NEXT_PUBLIC_ADMIN_API_KEY"
+              value_from = "${aws_secretsmanager_secret.hospice.arn}:NEXT_PUBLIC_ADMIN_API_KEY::"
+            },
+            {
+              name       = "GEMINI_API_KEY"
+              value_from = "${aws_secretsmanager_secret.hospice.arn}:GEMINI_API_KEY::"
             }
           ] : [],
           # voice-ai specific secrets
@@ -166,22 +201,14 @@ locals {
             {
               name       = "NEXTAUTH_SECRET"
               value_from = "${aws_secretsmanager_secret.voice_ai.arn}:NEXTAUTH_SECRET::"
-            }
-          ] : [],
-          # Add OpenAI API key for home-health and voice-ai
-          name == "home-health" ? [
-            {
-              name       = "OPENAI_API_KEY"
-              value_from = "${aws_secretsmanager_secret.home_health.arn}:OPENAI_API_KEY::"
-            }
-          ] : [],
-          name == "voice-ai" ? [
+            },
             {
               name       = "OPENAI_API_KEY"
               value_from = "${aws_secretsmanager_secret.voice_ai.arn}:OPENAI_API_KEY::"
             }
-            # Note: LIVEKIT_API_KEY and LIVEKIT_API_SECRET are now injected via common livekit secret for all services
           ] : []
+          # Note: livekit-agent gets LiveKit secrets via common livekit secret (already included above)
+          # and MongoDB credentials via services_with_database
         )
 
         # IAM policies for accessing DocumentDB, S3, and Secrets Manager
