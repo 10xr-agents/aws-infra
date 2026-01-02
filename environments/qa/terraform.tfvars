@@ -152,6 +152,66 @@ ecs_services = {
 
     additional_task_policies = {} # IAM policies are added via locals.tf
   }
+
+  "voice-ai" = {
+    image         = "761018882607.dkr.ecr.us-east-1.amazonaws.com/10xr/voice-ai"
+    image_tag     = "latest"
+    port          = 3000
+    cpu           = 1024
+    memory        = 2048
+    desired_count = 2
+
+    environment = {
+      # Basic Next.js configuration
+      PORT = "3000"
+    }
+
+    secrets = [] # Secrets are injected via locals.tf
+
+    capacity_provider_strategy = [
+      {
+        capacity_provider = "FARGATE"
+        weight            = 1
+        base              = 1
+      },
+      {
+        capacity_provider = "FARGATE_SPOT"
+        weight            = 1
+        base              = 0
+      }
+    ]
+
+    container_health_check = {
+      command      = "curl -f http://localhost:3000/api/health || exit 1"
+      interval     = 30
+      timeout      = 10
+      start_period = 60
+      retries      = 3
+    }
+
+    health_check = {
+      path                = "/api/health"
+      interval            = 30
+      timeout             = 10
+      healthy_threshold   = 2
+      unhealthy_threshold = 3
+      matcher             = "200"
+    }
+
+    enable_auto_scaling        = true
+    auto_scaling_min_capacity  = 2
+    auto_scaling_max_capacity  = 6
+    auto_scaling_cpu_target    = 70
+    auto_scaling_memory_target = 80
+
+    enable_default_routing   = false
+    alb_host_headers         = ["voice.qa.10xr.co"]
+    enable_load_balancer     = true
+    enable_service_discovery = true
+    deregistration_delay     = 30
+
+    additional_task_policies = {} # IAM policies are added via locals.tf
+  }
 }
 
 ################################################################################
@@ -196,7 +256,7 @@ enable_cloudflare_dns = true
 domain = "qa.10xr.co"
 
 # DNS is managed automatically via Cloudflare (see cloudflare_dns module)
-# Records created: *.qa.10xr.co, homehealth.qa.10xr.co, hospice.qa.10xr.co, n8n.qa.10xr.co, webhook-n8n.qa.10xr.co
+# Records created: *.qa.10xr.co, homehealth.qa.10xr.co, hospice.qa.10xr.co, voice.qa.10xr.co, n8n.qa.10xr.co, webhook-n8n.qa.10xr.co
 
 ################################################################################
 # HIPAA Configuration (Relaxed for QA/Staging)

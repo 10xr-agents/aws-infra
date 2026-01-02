@@ -22,7 +22,7 @@ module "certs" {
   environment = var.environment
   domain      = var.domain
   subject_alternative_domains = [
-    "*.${var.domain}",        # Covers n8n.qa, webhook-n8n.qa, worker-n8n.qa, etc.
+    "*.${var.domain}", # Covers n8n.qa, webhook-n8n.qa, worker-n8n.qa, etc.
     "homehealth.${var.domain}",
     "hospice.${var.domain}"
   ]
@@ -252,7 +252,7 @@ module "ecs" {
   public_subnet_ids  = module.vpc.public_subnets
 
   acm_certificate_arn = local.acm_certificate_arn
-  enable_https        = true  # Must be static for plan-time evaluation
+  enable_https        = true # Must be static for plan-time evaluation
   create_alb_rules    = true
 
   enable_container_insights = var.enable_container_insights
@@ -397,12 +397,16 @@ module "cloudflare_dns" {
       name    = "hospice"
       proxied = false
     }
+    voice = {
+      name    = "voice"
+      proxied = false
+    }
     n8n = {
       name    = "n8n"
       proxied = false
     }
     webhook-n8n = {
-      name    = "webhook-n8n"  # Hyphen notation instead of nested subdomain
+      name    = "webhook-n8n" # Hyphen notation instead of nested subdomain
       proxied = false
     }
   }

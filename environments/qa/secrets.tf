@@ -64,6 +64,35 @@ resource "aws_secretsmanager_secret_version" "hospice" {
 }
 
 ################################################################################
+# Voice AI Service Secrets
+################################################################################
+
+resource "aws_secretsmanager_secret" "voice_ai" {
+  name                    = "${local.secret_prefix}/voice-ai/secrets"
+  description             = "Secrets for Voice AI service"
+  recovery_window_in_days = 30
+
+  tags = merge(var.tags, {
+    Service = "voice-ai"
+    HIPAA   = "false"
+  })
+}
+
+resource "aws_secretsmanager_secret_version" "voice_ai" {
+  secret_id = aws_secretsmanager_secret.voice_ai.id
+  secret_string = jsonencode({
+    NEXTAUTH_SECRET    = var.nextauth_secret
+    OPENAI_API_KEY     = var.openai_api_key
+    LIVEKIT_API_KEY    = var.livekit_api_key
+    LIVEKIT_API_SECRET = var.livekit_api_secret
+  })
+
+  lifecycle {
+    ignore_changes = [secret_string] # Allow manual updates without Terraform override
+  }
+}
+
+################################################################################
 # SSM Parameters for Non-Sensitive Configuration
 ################################################################################
 
@@ -132,5 +161,39 @@ resource "aws_ssm_parameter" "hospice_node_env" {
 
   tags = merge(var.tags, {
     Service = "hospice"
+  })
+}
+
+# Voice AI SSM Parameters
+resource "aws_ssm_parameter" "voice_ai_base_url" {
+  name        = "/${local.secret_prefix}/voice-ai/NEXT_PUBLIC_BASE_URL"
+  description = "Base URL for Voice AI service"
+  type        = "String"
+  value       = "https://voice.${var.domain}"
+
+  tags = merge(var.tags, {
+    Service = "voice-ai"
+  })
+}
+
+resource "aws_ssm_parameter" "voice_ai_nextauth_url" {
+  name        = "/${local.secret_prefix}/voice-ai/NEXTAUTH_URL"
+  description = "NextAuth URL for Voice AI service"
+  type        = "String"
+  value       = "https://voice.${var.domain}"
+
+  tags = merge(var.tags, {
+    Service = "voice-ai"
+  })
+}
+
+resource "aws_ssm_parameter" "voice_ai_node_env" {
+  name        = "/${local.secret_prefix}/voice-ai/NODE_ENV"
+  description = "Node environment for Voice AI service"
+  type        = "String"
+  value       = "production"
+
+  tags = merge(var.tags, {
+    Service = "voice-ai"
   })
 }

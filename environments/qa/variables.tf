@@ -647,7 +647,26 @@ variable "gemini_api_key" {
 }
 
 variable "openai_api_key" {
-  description = "OpenAI API key for Home Health service"
+  description = "OpenAI API key for Home Health and Voice AI services"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+################################################################################
+# Voice AI Service Secrets
+# These should be set in Terraform Cloud workspace variables (sensitive)
+################################################################################
+
+variable "livekit_api_key" {
+  description = "LiveKit API key for Voice AI service"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "livekit_api_secret" {
+  description = "LiveKit API secret for Voice AI service"
   type        = string
   sensitive   = true
   default     = ""

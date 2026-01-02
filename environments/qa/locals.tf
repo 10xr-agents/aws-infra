@@ -17,6 +17,11 @@ locals {
   # DocumentDB database names per service
   documentdb_database_home_health = "10XR_Home_Health_${var.environment}"
   documentdb_database_hospice     = "10XR_Hospice_${var.environment}"
+  documentdb_database_voice_ai    = "10XR_Voice_AI_${var.environment}"
+
+  # Services that require database access (DocumentDB, Redis)
+  # voice-ai is a basic Next.js app that may not need these initially
+  services_with_database = ["home-health", "hospice"]
 
   # ECS services with all environment and secret overrides
   ecs_services_with_overrides = {
@@ -26,17 +31,30 @@ locals {
         # Environment variables (non-sensitive)
         environment = merge(
           config.environment,
+          # Common environment variables for all services
           {
-            # Common environment variables
             ENVIRONMENT     = var.environment
             ECS_ENVIRONMENT = var.environment
             CLUSTER_NAME    = var.cluster_name
             NODE_ENV        = "production"
+            AWS_REGION      = var.region
 
             # Service-specific URLs based on service name
-            NEXT_PUBLIC_BASE_URL = name == "home-health" ? "https://homehealth.${var.domain}" : "https://hospice.${var.domain}"
-            NEXTAUTH_URL         = name == "home-health" ? "https://homehealth.${var.domain}" : "https://hospice.${var.domain}"
-
+            NEXT_PUBLIC_BASE_URL = (
+              name == "home-health" ? "https://homehealth.${var.domain}" :
+              name == "hospice" ? "https://hospice.${var.domain}" :
+              name == "voice-ai" ? "https://voice.${var.domain}" :
+              "https://${name}.${var.domain}"
+            )
+            NEXTAUTH_URL = (
+              name == "home-health" ? "https://homehealth.${var.domain}" :
+              name == "hospice" ? "https://hospice.${var.domain}" :
+              name == "voice-ai" ? "https://voice.${var.domain}" :
+              "https://${name}.${var.domain}"
+            )
+          },
+          # Database environment variables only for services that need them
+          contains(local.services_with_database, name) ? {
             # DocumentDB connection details (non-sensitive)
             DOCUMENTDB_HOST        = module.documentdb.endpoint
             DOCUMENTDB_READER_HOST = module.documentdb.reader_endpoint
@@ -48,19 +66,19 @@ locals {
 
             # S3 Configuration (using IAM roles instead of access keys)
             S3_BUCKET_NAME = module.s3_patients.bucket_id
-            AWS_REGION     = var.region
 
             # Redis Configuration (TLS enabled for HIPAA compliance)
             REDIS_HOST        = module.redis.redis_primary_endpoint
             REDIS_PORT        = "6379"
             REDIS_TLS_ENABLED = "true"
-          }
+          } : {}
         )
 
         # Secrets from Secrets Manager
         secrets = concat(
           lookup(config, "secrets", []),
-          [
+          # Database secrets only for services that need them
+          contains(local.services_with_database, name) ? [
             # DocumentDB credentials
             {
               name       = "DOCUMENTDB_USERNAME"
@@ -87,7 +105,18 @@ locals {
               name       = "MONGO_DB_URI"
               value_from = "${module.documentdb.secrets_manager_secret_arn}:connection_string::"
             },
-            # Service-specific secrets from Secrets Manager
+            # Redis auth token (TLS Redis)
+            {
+              name       = "REDIS_PASSWORD"
+              value_from = aws_secretsmanager_secret.redis_auth.arn
+            },
+            {
+              name       = "REDIS_AUTH_TOKEN"
+              value_from = aws_secretsmanager_secret.redis_auth.arn
+            }
+          ] : [],
+          # Service-specific secrets from Secrets Manager
+          contains(local.services_with_database, name) ? [
             {
               name       = "NEXTAUTH_SECRET"
               value_from = name == "home-health" ? "${aws_secretsmanager_secret.home_health.arn}:NEXTAUTH_SECRET::" : "${aws_secretsmanager_secret.hospice.arn}:NEXTAUTH_SECRET::"
@@ -107,22 +136,34 @@ locals {
             {
               name       = "GEMINI_API_KEY"
               value_from = name == "home-health" ? "${aws_secretsmanager_secret.home_health.arn}:GEMINI_API_KEY::" : "${aws_secretsmanager_secret.hospice.arn}:GEMINI_API_KEY::"
-            },
-            # Redis auth token (TLS Redis)
-            {
-              name       = "REDIS_PASSWORD"
-              value_from = aws_secretsmanager_secret.redis_auth.arn
-            },
-            {
-              name       = "REDIS_AUTH_TOKEN"
-              value_from = aws_secretsmanager_secret.redis_auth.arn
             }
-          ],
-          # Add OpenAI API key only for home-health
+          ] : [],
+          # voice-ai specific secrets
+          name == "voice-ai" ? [
+            {
+              name       = "NEXTAUTH_SECRET"
+              value_from = "${aws_secretsmanager_secret.voice_ai.arn}:NEXTAUTH_SECRET::"
+            }
+          ] : [],
+          # Add OpenAI API key for home-health and voice-ai
           name == "home-health" ? [
             {
               name       = "OPENAI_API_KEY"
               value_from = "${aws_secretsmanager_secret.home_health.arn}:OPENAI_API_KEY::"
+            }
+          ] : [],
+          name == "voice-ai" ? [
+            {
+              name       = "OPENAI_API_KEY"
+              value_from = "${aws_secretsmanager_secret.voice_ai.arn}:OPENAI_API_KEY::"
+            },
+            {
+              name       = "LIVEKIT_API_KEY"
+              value_from = "${aws_secretsmanager_secret.voice_ai.arn}:LIVEKIT_API_KEY::"
+            },
+            {
+              name       = "LIVEKIT_API_SECRET"
+              value_from = "${aws_secretsmanager_secret.voice_ai.arn}:LIVEKIT_API_SECRET::"
             }
           ] : []
         )
@@ -130,10 +171,12 @@ locals {
         # IAM policies for accessing DocumentDB, S3, and Secrets Manager
         additional_task_policies = merge(
           lookup(config, "additional_task_policies", {}),
-          {
+          contains(local.services_with_database, name) ? {
             "DocumentDBAccess" = module.documentdb.iam_policy_arn
             "S3PatientAccess"  = module.s3_patients.iam_policy_arn
-            "SecretsAccess"    = aws_iam_policy.ecs_secrets_policy.arn
+          } : {},
+          {
+            "SecretsAccess" = aws_iam_policy.ecs_secrets_policy.arn
           }
         )
       }
@@ -159,6 +202,7 @@ resource "aws_iam_policy" "ecs_secrets_policy" {
         Resource = [
           aws_secretsmanager_secret.home_health.arn,
           aws_secretsmanager_secret.hospice.arn,
+          aws_secretsmanager_secret.voice_ai.arn,
           module.documentdb.secrets_manager_secret_arn,
           aws_secretsmanager_secret.redis_auth.arn
         ]
